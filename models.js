@@ -23,21 +23,45 @@ const commonAttributes = {
 
 export const Cinema = sequelize.define("Cinema", {
   ...commonAttributes,
+  // Accepts names that are between 1 and 64 characters long
   name: {
     type: DataTypes.STRING,
     allowNull: false,
+    len: [1,64]
   },
+
+  // Accepts addresses like:
+    // - LOCATION_ABBREVIATIONS LOCATION_NAME LOCATION_NUMBER (optionally with an added letter) 
+    // - LOCATION_NUMBER (optionally with an added letter) LOCATION_NAME LOCATION_ABBREVIATIONS
+    // -- (optionally, in both cases, after a comma other info could be displayed such as CITY_NAME or POSTAL_CODE)
+  // Where:
+    // - LOCATION_NAME accepts any character besides digits and special characters (with an exception of a dash and and a dot) and has to be at least 1 character long
+    // - LOCATION_NUMBER accepts up to 4 digits
+    // - LOCATION_NUMBER_LETTER accepts 1 lowercase latin alphabet characters
+    // - CITY_NAME/POSTAL_CODE accepts any character besides special characters (with an exception of a dash)
+  // Examples:
+    // 13 Green Bannerman Road, London
+    // ul. Wielosławska 34b
   address: {
     type: DataTypes.STRING,
     allowNull: false,
+    is: /^((a-z.)+ [^\d!@#$%^&*()_+=\[\]{};':"\\|,<>?\/]+ \d{1,4}[a-z]?|\d{1,4}[a-z]? [^\d!@#$%^&*()_+=\[\]{};':"\\|,<>?\/]+ (a-z.)+)+(, [^!@#$%^&*()_+=\[\]{};':"\\|,.<>?\/]+)*$/i,
   },
-  longitude: {
-    type: DataTypes.FLOAT,
-    allowNull: false,
-  },
+
+  // Accepts latitudes between -90 and 90 (degrees)
   latitude: {
     type: DataTypes.FLOAT,
     allowNull: false,
+    min: -90,
+    max: 90
+  },
+
+  // Accepts longitudes between -180 and 180 (degrees)
+  longitude: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    min: -180,
+    max: 180
   },
 });
 
