@@ -1,5 +1,5 @@
 import express from "express";
-import * as Constants from "constants.js"
+import * as Constants from "../constants.js"
 import { Cinema } from "../models.js";
 
 const router = express.Router();
