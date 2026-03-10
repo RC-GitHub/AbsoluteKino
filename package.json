@@ -16,7 +16,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon --exec tsx src/server.ts"
   },
   "dependencies": {
     "express": "^5.2.1",
@@ -26,5 +27,13 @@
   "overrides": {
     "minimatch": "^10.2.1",
     "tar": "^7.5.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.3",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

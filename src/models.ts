@@ -1,13 +1,16 @@
-import { Sequelize, DataTypes } from "sequelize";
+import { Sequelize, DataTypes, InferAttributes, InferCreationAttributes, Model } from "sequelize";
+import * as Constants from "./constants.ts";
 
-const sequelize = new Sequelize({
+const sequelize: Sequelize = new Sequelize({
   dialect: "sqlite",
   storage: "db.sqlite",
 });
 
 try {
-  await sequelize.authenticate();
-  console.log("Connection has been established successfully.");
+  async ()=>{
+    await sequelize.authenticate();
+    console.log("Connection has been established successfully.");
+  }
 } catch (error) {
   console.error("Unable to connect to the database:", error);
 }
@@ -21,51 +24,83 @@ const commonAttributes = {
   },
 };
 
-export const Cinema = sequelize.define("Cinema", {
+//---------------------------------
+// Cinema
+//---------------------------------
+
+interface CinemaAttributes {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface CinemaInstance extends Model<CinemaAttributes>, CinemaAttributes {}
+
+export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
   ...commonAttributes,
   // Accepts names that are between 1 and 64 characters long
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-    len: [1,64]
+    validate: {
+      len: [1,64]
+    }
   },
 
   // Accepts addresses like:
-    // - LOCATION_ABBREVIATIONS LOCATION_NAME LOCATION_NUMBER (optionally with an added letter) 
-    // - LOCATION_NUMBER (optionally with an added letter) LOCATION_NAME LOCATION_ABBREVIATIONS
-    // -- (optionally, in both cases, after a comma other info could be displayed such as CITY_NAME or POSTAL_CODE)
+    // - LOCATION_ABBREVIATION LOCATION_NAME LOCATION_NUMBER, LOCATION_POSTAL_CODE, LOCATION_DETAILING (multiple possible; all after a comma)
   // Where:
-    // - LOCATION_NAME accepts any character besides digits and special characters (with an exception of a dash and and a dot) and has to be at least 1 character long
-    // - LOCATION_NUMBER accepts up to 4 digits
-    // - LOCATION_NUMBER_LETTER accepts 1 lowercase latin alphabet characters
-    // - CITY_NAME/POSTAL_CODE accepts any character besides special characters (with an exception of a dash)
+    // - LOCATION_ABBREVIATION accepts one of the following: (al.|ul.|pl.|sq.|os.|ryn.|dz.|tr.)
+    // - LOCATION_NAME accepts any character in the Polish alphabet plus digits, spaces and dashes
+    // - LOCATION_NUMBER accepts up to 4 digits and optional lowercase Latin alphabet letter as well as optional addition consisting of a slash character and up to 2 digits
+    // - LOCATION_POSTAL_CODE accepts a sequence of 2 digits followed by a dash, then another 3 digits and a name consisting of Polish characters after a space
+    // - LOCATION_DETAILING accepts any character in the Polish alphabet plus spaces and dashes after a comma and a space
   // Examples:
-    // 13 Green Bannerman Road, London
     // ul. Wielosławska 34b
+    // Michajowice 12/90, Warszawa
   address: {
     type: DataTypes.STRING,
     allowNull: false,
-    is: /^((a-z.)+ [^\d!@#$%^&*()_+=\[\]{};':"\\|,<>?\/]+ \d{1,4}[a-z]?|\d{1,4}[a-z]? [^\d!@#$%^&*()_+=\[\]{};':"\\|,<>?\/]+ (a-z.)+)+(, [^!@#$%^&*()_+=\[\]{};':"\\|,.<>?\/]+)*$/i,
+    validate: {
+      is: Constants.CINEMA_POLISH_ADDRESS_REGEX
+    }
   },
 
   // Accepts latitudes between -90 and 90 (degrees)
   latitude: {
     type: DataTypes.FLOAT,
     allowNull: false,
-    min: -90,
-    max: 90
+    validate: {
+      min: -90,
+      max: 90
+    }
   },
 
   // Accepts longitudes between -180 and 180 (degrees)
   longitude: {
     type: DataTypes.FLOAT,
     allowNull: false,
-    min: -180,
-    max: 180
+    validate: {
+      min: -180,
+      max: 180
+    }
   },
 });
 
-export const Room = sequelize.define("Room", {
+//---------------------------------
+// Room
+//---------------------------------
+
+interface RoomAttributes {
+  name: string;
+  chairPlacement: string;
+  cinemaId: number;
+}
+
+export interface RoomInstance extends Model<RoomAttributes>, RoomAttributes {}
+
+export const Room = sequelize.define<RoomInstance>("Room", {
   ...commonAttributes,
   name: {
     type: DataTypes.STRING,
@@ -108,7 +143,28 @@ export const Screening = sequelize.define("Screening", {
   },
 });
 
-export const Movie = sequelize.define("Movie", {
+//---------------------------------
+// Movie
+//---------------------------------
+
+interface MovieAttributes {
+  title: string;
+  viewingFormat: string;
+  duration: number;
+  description: string;
+  posterUrl: string;
+  trailerUrl: string;
+  language: string;
+  premiereDate: Date;
+  genre: string;
+  restriction: string;
+  cast: string;
+  director: string;
+}
+
+export interface MovieInstance extends Model<MovieAttributes>, MovieAttributes {}
+
+export const Movie = sequelize.define<MovieInstance>("Movie", {
   ...commonAttributes,
   title: {
     type: DataTypes.STRING,
@@ -119,9 +175,9 @@ export const Movie = sequelize.define("Movie", {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  // duration in minutes
+  // Duration in minutes
   duration: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT,
     allowNull: false,
   },
   description: {
@@ -148,10 +204,12 @@ export const Movie = sequelize.define("Movie", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  // R, PG-13 etc.
   restriction: {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  // Full cast names after commas
   cast: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -162,7 +220,21 @@ export const Movie = sequelize.define("Movie", {
   },
 });
 
-export const Reservation = sequelize.define("Reservation", {
+//---------------------------------
+// Reservation
+//---------------------------------
+
+interface ReservationAttributes {
+  row: number;
+  column: number;
+  dateOfReservation: Date;
+  screeningId: number;
+  clientId: number;
+}
+
+export interface ReservationInstance extends Model<ReservationAttributes>, ReservationAttributes {}
+
+export const Reservation = sequelize.define<ReservationInstance>("Reservation", {
   ...commonAttributes,
   row: {
     type: DataTypes.INTEGER,
@@ -186,13 +258,27 @@ export const Reservation = sequelize.define("Reservation", {
   },
 });
 
-export const User = sequelize.define("User", {
+//---------------------------------
+// User
+//---------------------------------
+
+interface UserAttributes {
+  name: string;
+  accountType: string;
+  password: string;
+  email: string;
+  phoneNumber: string;
+}
+
+export interface UserInstance extends Model<UserAttributes>, UserAttributes {}
+
+export const User = sequelize.define<UserInstance>("User", {
   ...commonAttributes,
   name: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  // client | admin
+  // Client | Admin
   accountType: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -204,19 +290,35 @@ export const User = sequelize.define("User", {
   email: {
     type: DataTypes.STRING,
     allowNull: false,
-    isEmail: true,
+    validate: {
+      isEmail: true,
+    },
   },
   phoneNumber: {
     type: DataTypes.STRING,
     allowNull: false,
-    isUnique: true,
     validate: {
+      isUnique: true,
       len: [9, 12],
     },
   },
 });
 
-export const Product = sequelize.define("Product", {
+//---------------------------------
+// Product
+//---------------------------------
+
+interface ProductAttributes {
+  name: string;
+  price: number;
+  size: string;
+  discount: number;
+  cinemaId: number;
+}
+
+export interface ProductInstance extends Model<ProductAttributes>, ProductAttributes {}
+
+export const Product = sequelize.define<ProductInstance>("Product", {
   ...commonAttributes,
   name: {
     type: DataTypes.STRING,
@@ -239,6 +341,10 @@ export const Product = sequelize.define("Product", {
     allowNull: false,
   },
 });
+
+//---------------------------------
+// Associations
+//---------------------------------
 
 Cinema.hasMany(Room, { foreignKey: "cinemaId" });
 Room.belongsTo(Cinema, { foreignKey: "cinemaId" });
