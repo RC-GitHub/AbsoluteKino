@@ -1,14 +1,14 @@
 import express, { Request, Response } from "express";
 import { Model } from 'sequelize';
 import * as Constants from "../constants.ts"
-import { Cinema, CinemaInstance } from "../models.js";
+import { Cinema, CinemaAttributes , CinemaInstance } from "../models.js";
 
 const router = express.Router();
 
 // Adds a new cinema to the database
 // Requires: name, address, latitude and longitude
 router.post("/new", async (req: Request, res: Response) => {
-  const { name, address, latitude, longitude } = req.body;
+  const { name, address, latitude, longitude } : CinemaAttributes = req.body;
   if (!name || !address || !latitude || !longitude) {
     return res
       .status(400)
@@ -45,7 +45,7 @@ router.get("/id/:id", async (req: Request, res: Response) => {
   if (!id) {
     return res.status(400).json({ error: "ID is invalid" });
   }
-  const cinema = await Cinema.findByPk(id);
+  const cinema: CinemaInstance | null = await Cinema.findByPk(id);
   if (!cinema) {
     return res.status(404).json({ error: "Cinema not found" });
   }
@@ -58,8 +58,8 @@ router.put("/update/:id", async (req: Request, res: Response) => {
   if (!id) {
     return res.status(400).json({ error: "Invalid ID" });
   }
-  const { name, address, latitude, longitude } = req.body;
-  const cinema = await Cinema.findByPk(id);
+  const { name, address, latitude, longitude } : CinemaAttributes = req.body;
+  const cinema : CinemaInstance | null = await Cinema.findByPk(id);
   if (!cinema) {
     return res.status(404).json({ error: "Cinema not found" });
   }
@@ -88,7 +88,7 @@ router.delete("/delete/:id", async (req: Request, res: Response) => {
   if (!id) {
     return res.status(400).json({ error: "ID is invalid" });
   }
-  const cinema = await Cinema.findByPk(id);
+  const cinema : CinemaInstance | null = await Cinema.findByPk(id);
   if (!cinema) {
     return res.status(404).json({ error: "Cinema not found" });
   }

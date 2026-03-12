@@ -28,7 +28,7 @@ const commonAttributes = {
 // Cinema
 //---------------------------------
 
-interface CinemaAttributes {
+export interface CinemaAttributes {
   name: string;
   address: string;
   latitude: number;
@@ -39,6 +39,7 @@ export interface CinemaInstance extends Model<CinemaAttributes>, CinemaAttribute
 
 export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
   ...commonAttributes,
+
   // Accepts names that are between 1 and 64 characters long
   name: {
     type: DataTypes.STRING,
@@ -92,7 +93,7 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
 // Room
 //---------------------------------
 
-interface RoomAttributes {
+export interface RoomAttributes {
   name: string;
   chairPlacement: string;
   cinemaId: number;
@@ -102,25 +103,34 @@ export interface RoomInstance extends Model<RoomAttributes>, RoomAttributes {}
 
 export const Room = sequelize.define<RoomInstance>("Room", {
   ...commonAttributes,
+
+  // Accepts names that are between 1 and 64 characters long
   name: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      len: [3,20]
+    }
   },
   // A string containing the layout of chairs in the room as well as spacing between chairs (eg. A20, A50, G50, A20; )
   // Chairs are split with ',' and rows are split with ';'
-  // 'A' notes an available normal chair
-  // 'B' notes a booked normal chair
-  // 'C' notes a blocked normal chair
-  // 'D' notes an available special needs chair
-  // 'E' notes a booked special needs chair
-  // 'F' notes a blocked special needs chair
-  // 'G' notes an available VIP chair
-  // 'H' notes a booked VIP chair
-  // 'I' notes a blocked VIP chair
+    // - 'A' notes an available normal chair
+    // - 'B' notes a booked normal chair
+    // - 'C' notes a blocked normal chair
+    // - 'D' notes an available special needs chair
+    // - 'E' notes a booked special needs chair
+    // - 'F' notes a blocked special needs chair
+    // - 'G' notes an available VIP chair
+    // - 'H' notes a booked VIP chair
+    // - 'I' notes a blocked VIP chair
   chairPlacement: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      is: Constants.ROOM_LAYOUT_REGEX
+    }
   },
+
   cinemaId: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -147,7 +157,7 @@ export const Screening = sequelize.define("Screening", {
 // Movie
 //---------------------------------
 
-interface MovieAttributes {
+export interface MovieAttributes {
   title: string;
   viewingFormat: string;
   duration: number;
@@ -224,7 +234,7 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
 // Reservation
 //---------------------------------
 
-interface ReservationAttributes {
+export interface ReservationAttributes {
   row: number;
   column: number;
   dateOfReservation: Date;
@@ -262,7 +272,7 @@ export const Reservation = sequelize.define<ReservationInstance>("Reservation", 
 // User
 //---------------------------------
 
-interface UserAttributes {
+export interface UserAttributes {
   name: string;
   accountType: string;
   password: string;
@@ -308,7 +318,7 @@ export const User = sequelize.define<UserInstance>("User", {
 // Product
 //---------------------------------
 
-interface ProductAttributes {
+export interface ProductAttributes {
   name: string;
   price: number;
   size: string;

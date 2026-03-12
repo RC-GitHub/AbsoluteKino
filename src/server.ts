@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
-import sequelize from "./models.js";
-import cinemaRouter from "./routes/cinema.js";
+import sequelize from "./models.ts";
+import cinemaRouter from "./routes/cinema.ts";
+import roomRouter from "./routes/room.ts";
 
 const app = express();
 const port = 3000;
@@ -12,6 +13,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/cinema", cinemaRouter);
+app.use("/room", roomRouter);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
