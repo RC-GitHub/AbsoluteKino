@@ -16,7 +16,7 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
     if (typeof name !== 'string' || typeof address !== 'string' || typeof latitude !== 'number' || typeof longitude !== 'number') {
       return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING });
     }
-    if (name.length < Constants.CINEMA_NAME_MIN_LENGTH || name.length > Constants.CINEMA_NAME_MAX_LENGTH) {
+    if (name.length < Constants.CINEMA_NAME_MIN_LEN || name.length > Constants.CINEMA_NAME_MAX_LEN) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN });
     }
     if (!Constants.CINEMA_POLISH_ADDRESS_REGEX.test(address)) {
@@ -84,7 +84,7 @@ router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFu
     const updateData: Partial<CinemaAttributes> = {};
     if (name !== undefined) {
       if (typeof name !== 'string') return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING });
-      if (name.length < Constants.CINEMA_NAME_MIN_LENGTH || name.length > Constants.CINEMA_NAME_MAX_LENGTH) {
+      if (name.length < Constants.CINEMA_NAME_MIN_LEN || name.length > Constants.CINEMA_NAME_MAX_LEN) {
         return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN });
       }
       updateData.name = name;

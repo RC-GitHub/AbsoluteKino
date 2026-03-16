@@ -16,7 +16,7 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
     if (typeof name !== 'string' || typeof chairPlacement !== 'string' || typeof chairPlacement !== 'string' || !Number.isInteger(cinemaId)) {
       return res.status(400).json({ message: Messages.ROOM_ERR_TYPING });
     }
-    if (name.length < Constants.ROOM_NAME_MIN_LENGTH || name.length > Constants.ROOM_NAME_MAX_LENGTH) {
+    if (name.length < Constants.ROOM_NAME_MIN_LEN || name.length > Constants.ROOM_NAME_MAX_LEN) {
       return res.status(400).json({ message: Messages.ROOM_ERR_NAME_LEN });
     }
     if (!chairPlacement.match(Constants.ROOM_LAYOUT_REGEX)) {
@@ -94,7 +94,7 @@ router.put("/update/:roomId", async (req: Request, res: Response, next: NextFunc
     const updateData: Partial<RoomAttributes> = {};
     if (name !== undefined) {
       if (typeof name !== 'string') return res.status(400).json({ message: Messages.ROOM_ERR_TYPING });
-      if (name.length < Constants.ROOM_NAME_MIN_LENGTH || name.length > Constants.ROOM_NAME_MAX_LENGTH) {
+      if (name.length < Constants.ROOM_NAME_MIN_LEN || name.length > Constants.ROOM_NAME_MAX_LEN) {
         return res.status(400).json({ message: Messages.ROOM_ERR_NAME_LEN });
       }
       updateData.name = name;

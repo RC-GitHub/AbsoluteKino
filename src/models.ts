@@ -23,6 +23,7 @@ const commonAttributes = {
     primaryKey: true,
     validate: {
       isNumeric: true,
+      min: 1
     }
   },
 };
@@ -49,7 +50,7 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [Constants.CINEMA_NAME_MIN_LENGTH, Constants.CINEMA_NAME_MAX_LENGTH]
+      len: [Constants.CINEMA_NAME_MIN_LEN, Constants.CINEMA_NAME_MAX_LEN]
     }
   },
 
@@ -114,7 +115,7 @@ export const Room = sequelize.define<RoomInstance>("Room", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [Constants.ROOM_NAME_MIN_LENGTH, Constants.ROOM_NAME_MAX_LENGTH]
+      len: [Constants.ROOM_NAME_MIN_LEN, Constants.ROOM_NAME_MAX_LEN]
     }
   },
   // A string containing the layout of chairs in the room as well as spacing between chairs (eg. A20, A50, G50, A20; )
@@ -139,6 +140,10 @@ export const Room = sequelize.define<RoomInstance>("Room", {
   cinemaId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    validate: {
+      isNumeric: true,
+      min: 1
+    }
   },
 });
 
@@ -160,14 +165,25 @@ export const Screening = sequelize.define<ScreeningInstance>("Screening", {
   startTime: {
     type: DataTypes.DATE,
     allowNull: false,
+    validate: {
+      isDate: true,
+    }
   },
   movieId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    validate: {
+      isNumeric: true,
+      min: 1
+    }
   },
   roomId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    validate: {
+      isNumeric: true,
+      min: 1
+    }
   },
 });
 
@@ -198,28 +214,44 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   title: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      len: [Constants.MOVIE_NAME_MIN_LEN, Constants.MOVIE_NAME_MAX_LEN]
+    }
   },
   // HD, 3D, 4K etc.
   viewingFormat: {
-    type: DataTypes.STRING,
+    type: DataTypes.ARRAY,
     allowNull: false,
+    defaultValue: ['2D']
   },
   // Duration in minutes
   duration: {
-    type: DataTypes.FLOAT,
+    type: DataTypes.INTEGER,
     allowNull: false,
+    validate: { 
+      len: [Constants.MOVIE_DUR_MIN_LEN, Constants.MOVIE_DUR_MAX_LEN]
+    }
   },
   description: {
-    type: DataTypes.TEXT,
+    type: DataTypes.STRING,
     allowNull: false,
+    validate: { 
+      len: [Constants.MOVIE_DESC_MIN_LEN, Constants.MOVIE_DESC_MAX_LEN]
+    }
   },
   posterUrl: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      isUrl: true
+    }
   },
   trailerUrl: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
+    validate: {
+      isUrl: true
+    }
   },
   language: {
     type: DataTypes.STRING,
@@ -228,19 +260,23 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   premiereDate: {
     type: DataTypes.DATE,
     allowNull: false,
+    validate: {
+      isDate: true
+    }
   },
   genre: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  // R, PG-13 etc.
+  // 18+, 7+, no restrictions etc.
   restriction: {
-    type: DataTypes.STRING,
+    type: DataTypes.ENUM(...Constants.MOVIE_AGE_RESTRICTIONS),
     allowNull: false,
+    defaultValue: Constants.MOVIE_AGE_RESTRICTIONS[0]
   },
   // Full cast names after commas
   cast: {
-    type: DataTypes.STRING,
+    type: DataTypes.ARRAY,
     allowNull: false,
   },
   director: {
