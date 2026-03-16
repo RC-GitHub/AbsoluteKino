@@ -1,6 +1,8 @@
 //---------------------------------
 // Typical Values
 //---------------------------------
+export const TYPICAL_MIN_ID: number = 1;
+
 export const TYPICAL_NAME_MIN_LENGTH: number = 1;
 export const TYPICAL_NAME_MAX_LENGTH: number = 64;
 
@@ -27,4 +29,7 @@ export const CINEMA_MAX_LONGITUDE: number = TYPICAL_MAX_LONGITUDE;
 //---------------------------------
 // Room
 //---------------------------------
-export const ROOM_LAYOUT_REGEX: RegExp = /^([A-I]\d{1,3}(, [A-I]\d{1,3})+;[ \t]?)+$/;
+export const ROOM_NAME_MIN_LENGTH: number = 3;
+export const ROOM_NAME_MAX_LENGTH: number = 20;
+
+export const ROOM_LAYOUT_REGEX: RegExp = /^([A-I]\d{1,3}(, [A-I]\d{1,3})*(;[ \t]?|$))+$/;

@@ -1,99 +1,141 @@
-import express, { Request, Response } from "express";
-import { Model } from 'sequelize';
+import express, { Request, Response, NextFunction } from "express";
 import * as Constants from "../constants.ts"
+import * as Messages from "../messages.ts"
 import { Cinema, CinemaAttributes , CinemaInstance } from "../models.js";
 
 const router = express.Router();
 
 // Adds a new cinema to the database
 // Requires: name, address, latitude and longitude
-router.post("/new", async (req: Request, res: Response) => {
-  const { name, address, latitude, longitude } : CinemaAttributes = req.body;
-  if (!name || !address || !latitude || !longitude) {
-    return res
-      .status(400)
-      .json({ message: "Name, address and both coordinates are all required" });
+router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, address, latitude, longitude } : CinemaAttributes = req.body;
+    if (name == null || address == null || latitude == null || longitude == null) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_EMPTY_ARGS });
+    }
+    if (typeof name !== 'string' || typeof address !== 'string' || typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING });
+    }
+    if (name.length < Constants.CINEMA_NAME_MIN_LENGTH || name.length > Constants.CINEMA_NAME_MAX_LENGTH) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN });
+    }
+    if (!Constants.CINEMA_POLISH_ADDRESS_REGEX.test(address)) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ADDRESS });
+    }
+    if (latitude && (latitude < Constants.CINEMA_MIN_LATITUDE || latitude > Constants.CINEMA_MAX_LATITUDE)) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_LATITUDE_VAL });
+    }
+    if (longitude && (longitude < Constants.CINEMA_MIN_LONGITUDE || longitude > Constants.CINEMA_MAX_LONGITUDE)) {
+      return res.status(400).json({ message:  Messages.CINEMA_ERR_LONGITUDE_VAL });
+    }
+    const cinema = await Cinema.create({ name, address, latitude, longitude });
+    res.send(cinema);
   }
-  if (name.length < Constants.CINEMA_NAME_MIN_LENGTH || name.length > Constants.CINEMA_NAME_MAX_LENGTH) {
-    return res.status(400).json({ error: `Cinema name length is incorrect (it should be between ${Constants.CINEMA_NAME_MIN_LENGTH} and ${Constants.CINEMA_NAME_MAX_LENGTH})` });
+  catch (error: any) {
+    next(error);
   }
-  if (!address.match(Constants.CINEMA_POLISH_ADDRESS_REGEX)) {
-    return res.status(400).json({ error: `Cinema address does not match the specified format (look into the documentation)` });
-  }
-  if (latitude && (latitude < Constants.CINEMA_MIN_LATITUDE || latitude > Constants.CINEMA_MAX_LATITUDE)) {
-    return res.status(400).json({ error: `Cinema latitude must be between -90 and 90 (degrees)` });
-  }
-  if (longitude && (longitude < Constants.CINEMA_MIN_LONGITUDE || longitude > Constants.CINEMA_MAX_LONGITUDE)) {
-    return res.status(400).json({ error: `Cinema longitude must be between -180 and 180 (degrees)` });
-  }
-  const cinema = await Cinema.create({ name, address, latitude, longitude });
-  res.send(cinema);
 });
 
 // Sends data about all cinemas in the database
-router.get("/all", async (req: Request, res: Response) => {
-  const cinemas: CinemaInstance[] = await Cinema.findAll();
-  if (!cinemas || cinemas.length === 0) {
-    return res.status(404).json({ error: "No cinemas were found" });
+router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cinemas: CinemaInstance[] = await Cinema.findAll();
+    if (cinemas.length === 0) {
+      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND_ALL });
+    }
+    res.send(cinemas);
   }
-  res.send(cinemas);
+  catch (error: any) {
+    next(error);
+  }
 });
 
-// Sends data about a cinema with the specified id
-router.get("/id/:id", async (req: Request, res: Response) => {
-  const id: number = parseInt(req.params.id.toString());
-  if (!id) {
-    return res.status(400).json({ error: "ID is invalid" });
+// Sends data about a cinema with the specified ID
+router.get("/id/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cinemaId: number = parseInt(req.params.cinemaId.toString());
+    if (!cinemaId) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
+    }
+    const cinema: CinemaInstance | null = await Cinema.findByPk(cinemaId);
+    if (!cinema) {
+      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
+    }
+    res.send(cinema);
   }
-  const cinema: CinemaInstance | null = await Cinema.findByPk(id);
-  if (!cinema) {
-    return res.status(404).json({ error: "Cinema not found" });
+  catch (error: any) {
+    next(error);
   }
-  res.send(cinema);
 });
 
-// Updates data for a cinema with the specified id
-router.put("/update/:id", async (req: Request, res: Response) => {
-  const id: number = parseInt(req.params.id.toString());
-  if (!id) {
-    return res.status(400).json({ error: "Invalid ID" });
+// Updates data for a cinema with the specified ID
+router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cinemaId: number = parseInt(req.params.cinemaId.toString());
+    if (!cinemaId) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
+    }
+    const cinema : CinemaInstance | null = await Cinema.findByPk(cinemaId);
+    if (!cinema) {
+      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
+    }
+
+    const { name, address, latitude, longitude } = req.body;
+    const updateData: Partial<CinemaAttributes> = {};
+    if (name !== undefined) {
+      if (typeof name !== 'string') return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING });
+      if (name.length < Constants.CINEMA_NAME_MIN_LENGTH || name.length > Constants.CINEMA_NAME_MAX_LENGTH) {
+        return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN });
+      }
+      updateData.name = name;
+    }
+    if (address !== undefined) {
+      if (typeof address !== 'string') return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING });
+      if (!Constants.CINEMA_POLISH_ADDRESS_REGEX.test(address)) {
+        return res.status(400).json({ message: Messages.CINEMA_ERR_ADDRESS });
+      }
+      updateData.address = address;
+    }
+    if (latitude !== undefined) {
+      if (typeof latitude !== 'number') return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING });
+      if (latitude < Constants.CINEMA_MIN_LATITUDE || latitude > Constants.CINEMA_MAX_LATITUDE) {
+        return res.status(400).json({ message: Messages.CINEMA_ERR_LATITUDE_VAL });
+      }
+      updateData.latitude = latitude;
+    }
+    if (longitude !== undefined) {
+      if (typeof longitude !== 'number') return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING });
+      if (longitude < Constants.CINEMA_MIN_LONGITUDE || longitude > Constants.CINEMA_MAX_LONGITUDE) {
+        return res.status(400).json({ message: Messages.CINEMA_ERR_LONGITUDE_VAL });
+      }
+      updateData.latitude = latitude;
+    }
+    await cinema.update(updateData);
+    res.send(cinema);
   }
-  const { name, address, latitude, longitude } : CinemaAttributes = req.body;
-  const cinema : CinemaInstance | null = await Cinema.findByPk(id);
-  if (!cinema) {
-    return res.status(404).json({ error: "Cinema not found" });
+  catch (error: any) {
+    next(error);
   }
-  if (name && (name.length < Constants.CINEMA_NAME_MIN_LENGTH || name.length > Constants.CINEMA_NAME_MAX_LENGTH)) {
-    return res.status(400).json({ error: `Cinema name length is incorrect (it should be between ${Constants.CINEMA_NAME_MIN_LENGTH} and ${Constants.CINEMA_NAME_MAX_LENGTH})` });
-  }
-  if (!address.match(Constants.CINEMA_POLISH_ADDRESS_REGEX)) {
-    return res.status(400).json({ error: `Cinema address does not match the specified format (look into the documentation)` });
-  }
-  if (latitude && (latitude < Constants.CINEMA_MIN_LATITUDE || latitude > Constants.CINEMA_MAX_LATITUDE)) {
-    return res.status(400).json({ error: `Cinema latitude must be between -90 and 90 (degrees)` });
-  }
-  if (longitude && (longitude < Constants.CINEMA_MIN_LONGITUDE || longitude > Constants.CINEMA_MAX_LONGITUDE)) {
-    return res.status(400).json({ error: `Cinema longitude must be between -180 and 180 (degrees)` });
-  }
-  await cinema.update({ 
-    name: name ? name : cinema.name, 
-    address: address ? address : cinema.address, 
-    latitude: latitude ? latitude : cinema.latitude, 
-    longitude: longitude ? longitude : cinema.longitude });
-  res.send(cinema);
 });
 
-router.delete("/delete/:id", async (req: Request, res: Response) => {
-  const id: number = parseInt(req.params.id.toString());
-  if (!id) {
-    return res.status(400).json({ error: "ID is invalid" });
+// Deletes a cinema with the specified ID
+router.delete("/delete/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cinemaId: number = parseInt(req.params.cinemaId.toString());
+    if (!cinemaId) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
+    }
+    const deletedRows: number = await Cinema.destroy({
+      where: { id: cinemaId }
+    });
+    if (deletedRows === 0) {
+      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
+    }
+    res.status(200).json({ message: Messages.CINEMA_MSG_DEL });
   }
-  const cinema : CinemaInstance | null = await Cinema.findByPk(id);
-  if (!cinema) {
-    return res.status(404).json({ error: "Cinema not found" });
+  catch (error: any) {
+    next(error);
   }
-  await cinema.destroy();
-  res.status(204).send({ message: "Cinema deleted successfully" });
 });
 
 export default router;

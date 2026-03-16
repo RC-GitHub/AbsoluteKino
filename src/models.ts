@@ -21,6 +21,9 @@ const commonAttributes = {
     autoIncrement: true,
     allowNull: false,
     primaryKey: true,
+    validate: {
+      isNumeric: true,
+    }
   },
 };
 
@@ -29,6 +32,7 @@ const commonAttributes = {
 //---------------------------------
 
 export interface CinemaAttributes {
+  id?: number;
   name: string;
   address: string;
   latitude: number;
@@ -45,7 +49,7 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [1,64]
+      len: [Constants.CINEMA_NAME_MIN_LENGTH, Constants.CINEMA_NAME_MAX_LENGTH]
     }
   },
 
@@ -70,21 +74,21 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
 
   // Accepts latitudes between -90 and 90 (degrees)
   latitude: {
-    type: DataTypes.FLOAT,
+    type: DataTypes.DECIMAL(10, 8),
     allowNull: false,
     validate: {
-      min: -90,
-      max: 90
+      min: Constants.CINEMA_MIN_LATITUDE,
+      max: Constants.CINEMA_MAX_LATITUDE
     }
   },
 
   // Accepts longitudes between -180 and 180 (degrees)
   longitude: {
-    type: DataTypes.FLOAT,
+    type: DataTypes.DECIMAL(10, 8),
     allowNull: false,
     validate: {
-      min: -180,
-      max: 180
+      min: Constants.CINEMA_MIN_LONGITUDE,
+      max: Constants.CINEMA_MAX_LONGITUDE
     }
   },
 });
@@ -94,6 +98,7 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
 //---------------------------------
 
 export interface RoomAttributes {
+  id?: number;
   name: string;
   chairPlacement: string;
   cinemaId: number;
@@ -109,7 +114,7 @@ export const Room = sequelize.define<RoomInstance>("Room", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [3,20]
+      len: [Constants.ROOM_NAME_MIN_LENGTH, Constants.ROOM_NAME_MAX_LENGTH]
     }
   },
   // A string containing the layout of chairs in the room as well as spacing between chairs (eg. A20, A50, G50, A20; )
@@ -137,7 +142,20 @@ export const Room = sequelize.define<RoomInstance>("Room", {
   },
 });
 
-export const Screening = sequelize.define("Screening", {
+//---------------------------------
+// Movie
+//---------------------------------
+
+export interface ScreeningAttributes {
+  id?: number;
+  startTime: Date;
+  movieId: number;
+  roomId: number;
+}
+
+export interface ScreeningInstance extends Model<ScreeningAttributes>, ScreeningAttributes {}
+
+export const Screening = sequelize.define<ScreeningInstance>("Screening", {
   ...commonAttributes,
   startTime: {
     type: DataTypes.DATE,
@@ -158,6 +176,7 @@ export const Screening = sequelize.define("Screening", {
 //---------------------------------
 
 export interface MovieAttributes {
+  id?: number;
   title: string;
   viewingFormat: string;
   duration: number;
@@ -235,6 +254,7 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
 //---------------------------------
 
 export interface ReservationAttributes {
+  id?: number;
   row: number;
   column: number;
   dateOfReservation: Date;
@@ -273,6 +293,7 @@ export const Reservation = sequelize.define<ReservationInstance>("Reservation", 
 //---------------------------------
 
 export interface UserAttributes {
+  id?: number;
   name: string;
   accountType: string;
   password: string;
@@ -319,6 +340,7 @@ export const User = sequelize.define<UserInstance>("User", {
 //---------------------------------
 
 export interface ProductAttributes {
+  id?: number;
   name: string;
   price: number;
   size: string;
