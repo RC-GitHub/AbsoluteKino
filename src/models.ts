@@ -220,9 +220,9 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   },
   // HD, 3D, 4K etc.
   viewingFormat: {
-    type: DataTypes.ARRAY,
+    type: DataTypes.STRING,
     allowNull: false,
-    defaultValue: ['2D']
+    defaultValue: '2D'
   },
   // Duration in minutes
   duration: {
@@ -276,7 +276,7 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   },
   // Full cast names after commas
   cast: {
-    type: DataTypes.ARRAY,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   director: {

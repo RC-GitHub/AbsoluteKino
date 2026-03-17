@@ -10,6 +10,7 @@ const router = express.Router();
 router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, address, latitude, longitude } : CinemaAttributes = req.body;
+    console.log(name, address, latitude, longitude)
     if (name == null || address == null || latitude == null || longitude == null) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_EMPTY_ARGS });
     }
@@ -19,17 +20,18 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
     if (name.length < Constants.CINEMA_NAME_MIN_LEN || name.length > Constants.CINEMA_NAME_MAX_LEN) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN });
     }
+    if (latitude < Constants.CINEMA_MIN_LATITUDE || latitude > Constants.CINEMA_MAX_LATITUDE) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_LATITUDE_VAL });
+    }
+    if (longitude < Constants.CINEMA_MIN_LONGITUDE || longitude > Constants.CINEMA_MAX_LONGITUDE) {
+      return res.status(400).json({ message:  Messages.CINEMA_ERR_LONGITUDE_VAL });
+    }
     if (!Constants.CINEMA_POLISH_ADDRESS_REGEX.test(address)) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_ADDRESS });
     }
-    if (latitude && (latitude < Constants.CINEMA_MIN_LATITUDE || latitude > Constants.CINEMA_MAX_LATITUDE)) {
-      return res.status(400).json({ message: Messages.CINEMA_ERR_LATITUDE_VAL });
-    }
-    if (longitude && (longitude < Constants.CINEMA_MIN_LONGITUDE || longitude > Constants.CINEMA_MAX_LONGITUDE)) {
-      return res.status(400).json({ message:  Messages.CINEMA_ERR_LONGITUDE_VAL });
-    }
+
     const cinema = await Cinema.create({ name, address, latitude, longitude });
-    res.send(cinema);
+    res.send({cinemas: [cinema]});
   }
   catch (error: any) {
     next(error);
@@ -43,7 +45,7 @@ router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
     if (cinemas.length === 0) {
       return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND_ALL });
     }
-    res.send(cinemas);
+    res.send({cinemas: cinemas});
   }
   catch (error: any) {
     next(error);
@@ -61,7 +63,7 @@ router.get("/id/:cinemaId", async (req: Request, res: Response, next: NextFuncti
     if (!cinema) {
       return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
     }
-    res.send(cinema);
+    res.send({cinemas: [cinema]});
   }
   catch (error: any) {
     next(error);
@@ -111,7 +113,7 @@ router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFu
       updateData.latitude = latitude;
     }
     await cinema.update(updateData);
-    res.send(cinema);
+    res.send({cinemas: [cinema]});
   }
   catch (error: any) {
     next(error);
@@ -131,7 +133,7 @@ router.delete("/delete/:cinemaId", async (req: Request, res: Response, next: Nex
     if (deletedRows === 0) {
       return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
     }
-    res.status(200).json({ message: Messages.CINEMA_MSG_DEL });
+    res.status(200).json({ cinemas: [], message: Messages.CINEMA_MSG_DEL });
   }
   catch (error: any) {
     next(error);

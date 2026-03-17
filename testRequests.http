@@ -2,10 +2,10 @@ POST http://localhost:3000/cinema/new HTTP/1.1
 content-type: application/json
 
 {
-    "name": "absolute",
-    "address": "ul. Uwunia 12a/34, 31-888 Uwu, Warszawa, Polska",
-    "latitude": 25.4,
-    "longitude": 45.6
+    "name": "Test Cinema",
+    "address": "Example St 123a, Example City, Poland", 
+    "latitude": 50.0615,
+    "longitude": -200
 }
 
 ###
