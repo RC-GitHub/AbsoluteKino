@@ -9,14 +9,14 @@ const router = express.Router();
 // Requires: name, address, latitude and longitude
 router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, address, latitude, longitude } : CinemaAttributes = req.body;
-    console.log(name, address, latitude, longitude)
+    let { name, address, latitude, longitude } : CinemaAttributes = req.body;
     if (name == null || address == null || latitude == null || longitude == null) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
     }
     if (typeof name !== 'string' || typeof address !== 'string' || typeof latitude !== 'number' || typeof longitude !== 'number') {
       return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
     }
+    name = name.trim();
     if (name.length < Constants.CINEMA_NAME_MIN_LEN || name.length > Constants.CINEMA_NAME_MAX_LEN) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
     }
@@ -59,6 +59,9 @@ router.get("/id/:cinemaId", async (req: Request, res: Response, next: NextFuncti
     if (!cinemaId) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_ID, cinemas: [] });
     }
+    if (cinemaId < Constants.TYPICAL_MIN_ID) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID, cinemas: [] });
+    }
     const cinema: CinemaInstance | null = await Cinema.findByPk(cinemaId);
     if (!cinema) {
       return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND, cinemas: [] });
@@ -77,18 +80,22 @@ router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFu
     if (!cinemaId) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_ID, cinemas: [] });
     }
+    if (cinemaId < Constants.TYPICAL_MIN_ID) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID, cinemas: [] });
+    }
     const cinema : CinemaInstance | null = await Cinema.findByPk(cinemaId);
     if (!cinema) {
       return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND, cinemas: [] });
     }
 
-    const { name, address, latitude, longitude } = req.body;
+    let { name, address, latitude, longitude } = req.body;
     if (name == null && address == null && latitude == null && longitude == null) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
     }
     const updateData: Partial<CinemaAttributes> = {};
     if (name !== undefined) {
       if (typeof name !== 'string') return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
+      name = name.trim();
       if (name.length < Constants.CINEMA_NAME_MIN_LEN || name.length > Constants.CINEMA_NAME_MAX_LEN) {
         return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
       }
@@ -128,6 +135,9 @@ router.delete("/delete/:cinemaId", async (req: Request, res: Response, next: Nex
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
     if (!cinemaId) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
+    }
+    if (cinemaId < Constants.TYPICAL_MIN_ID) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
     }
     const deletedRows: number = await Cinema.destroy({

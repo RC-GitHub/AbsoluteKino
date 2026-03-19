@@ -9,27 +9,32 @@ const router = express.Router();
 // Requires: name, chair placement and cinema ID
 router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, chairPlacement, cinemaId } : RoomAttributes = req.body;
-    if (name == null || chairPlacement == null || cinemaId == null) {
-      return res.status(400).json({ message: Messages.ROOM_ERR_EMPTY_ARGS });
+    let { name, chairPlacement, cinemaId } : RoomAttributes = req.body;
+    if (name == null || chairPlacement == null || cinemaId === undefined) {
+      return res.status(400).json({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
     }
     if (typeof name !== 'string' || typeof chairPlacement !== 'string' || typeof chairPlacement !== 'string' || !Number.isInteger(cinemaId)) {
-      return res.status(400).json({ message: Messages.ROOM_ERR_TYPING });
+      return res.status(400).json({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
     }
-    if (name.length < Constants.ROOM_NAME_MIN_LEN || name.length > Constants.ROOM_NAME_MAX_LEN) {
-      return res.status(400).json({ message: Messages.ROOM_ERR_NAME_LEN });
-    }
-    if (!chairPlacement.match(Constants.ROOM_LAYOUT_REGEX)) {
-      return res.status(400).json({ message: Messages.ROOM_ERR_LAYOUT });
+    if (!cinemaId) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID, rooms: [] });
     }
 
     const cinema: CinemaInstance | null = await Cinema.findByPk(cinemaId)
     if (!cinema) {
-      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
+      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND, rooms: [] });
+    }
+
+    name = name.trim();
+    if (name.length < Constants.ROOM_NAME_MIN_LEN || name.length > Constants.ROOM_NAME_MAX_LEN) {
+      return res.status(400).json({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
+    }
+    if (!chairPlacement.match(Constants.ROOM_LAYOUT_REGEX)) {
+      return res.status(400).json({ message: Messages.ROOM_ERR_LAYOUT, rooms: [] });
     }
 
     const room = await Room.create({ name, chairPlacement, cinemaId });
-    res.send(room);
+    res.send({rooms: [room]});
   }
   catch (error: any) {
     next(error);
@@ -41,18 +46,21 @@ router.get("/all/:cinemaId", async (req: Request, res: Response, next: NextFunct
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
     if (!cinemaId) {
-      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID, rooms: [] });
+    }
+    if (cinemaId < Constants.TYPICAL_MIN_ID) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID, rooms: [] });
     }
     const cinema: CinemaInstance | null = await Cinema.findByPk(cinemaId)
     if (!cinema) {
-      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
+      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND, rooms: [] });
     }
 
     const rooms: RoomInstance[] = await Room.findAll({where: {cinemaId: cinemaId}});
     if (rooms.length === 0) {
-      return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND });
+      return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND, rooms: [] });
     }
-    res.send(rooms);
+    res.send({rooms: rooms});
   }
   catch (error: any) {
     next(error);
@@ -64,13 +72,16 @@ router.get("/id/:roomId", async (req: Request, res: Response, next: NextFunction
   try {
     const roomId: number = parseInt(req.params.roomId.toString());
     if (!roomId) {
-      return res.status(400).json({ message: Messages.ROOM_ERR_ID });
+      return res.status(400).json({ message: Messages.ROOM_ERR_ID, rooms: [] });
+    }
+    if (roomId < Constants.TYPICAL_MIN_ID) {
+      return res.status(400).json({ message: Messages.ROOM_ERR_ID, rooms: [] });
     }
     const room: RoomInstance | null = await Room.findByPk(roomId);
     if (!room) {
-      return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL });
+      return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, rooms: [] });
     }
-    res.send(room);
+    res.send({rooms: [room]});
   }
   catch (error: any) {
     next(error);
@@ -83,38 +94,45 @@ router.put("/update/:roomId", async (req: Request, res: Response, next: NextFunc
   try {
     const roomId: number = parseInt(req.params.roomId.toString());
     if (!roomId) {
-      return res.status(400).json({ message: Messages.ROOM_ERR_ID });
+      return res.status(400).json({ message: Messages.ROOM_ERR_ID, rooms: [] });
+    }
+    if (roomId < Constants.TYPICAL_MIN_ID) {
+      return res.status(400).json({ message: Messages.ROOM_ERR_ID, rooms: [] });
     }
     const room : RoomInstance | null = await Room.findByPk(roomId);
     if (!room) {
-      return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND });
+      return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND, rooms: [] });
     }
 
-    const { name, chairPlacement, cinemaId } : RoomAttributes = req.body;
+    let { name, chairPlacement, cinemaId } : RoomAttributes = req.body;
+    if (name == null && chairPlacement == null && cinemaId == null) {
+      return res.status(400).json({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+    }
     const updateData: Partial<RoomAttributes> = {};
     if (name !== undefined) {
-      if (typeof name !== 'string') return res.status(400).json({ message: Messages.ROOM_ERR_TYPING });
+      if (typeof name !== 'string') return res.status(400).json({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
+      name = name.trim();
       if (name.length < Constants.ROOM_NAME_MIN_LEN || name.length > Constants.ROOM_NAME_MAX_LEN) {
-        return res.status(400).json({ message: Messages.ROOM_ERR_NAME_LEN });
+        return res.status(400).json({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
       }
       updateData.name = name;
     }
     if (chairPlacement !== undefined) {
-      if (typeof chairPlacement !== 'string') return res.status(400).json({ message: Messages.ROOM_ERR_TYPING });
+      if (typeof chairPlacement !== 'string') return res.status(400).json({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
       if (!Constants.ROOM_LAYOUT_REGEX.test(chairPlacement)) {
-        return res.status(400).json({ message: Messages.ROOM_ERR_LAYOUT });
+        return res.status(400).json({ message: Messages.ROOM_ERR_LAYOUT, rooms: [] });
       }
       updateData.chairPlacement = chairPlacement;
     }
     if (cinemaId !== undefined) {
-      if (typeof cinemaId !== 'number' || !Number.isInteger(cinemaId)) return res.status(400).json({ message: Messages.ROOM_ERR_TYPING });
+      if (typeof cinemaId !== 'number' || !Number.isInteger(cinemaId)) return res.status(400).json({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
       if (cinemaId < Constants.TYPICAL_MIN_ID) {
-        return res.status(400).json({ message: Messages.ROOM_ERR_ID });
+        return res.status(400).json({ message: Messages.CINEMA_ERR_ID, rooms: [] });
       }
       updateData.cinemaId = cinemaId;
     }
     await room.update(updateData);
-    res.send(room);
+    res.send({rooms: [room]});
   }
   catch (error: any) {
     next(error);
@@ -126,6 +144,9 @@ router.delete("/delete/:roomId", async (req: Request, res: Response, next: NextF
   try {
     const roomId: number = parseInt(req.params.roomId.toString());
     if (!roomId) {
+      return res.status(400).json({ message: Messages.ROOM_ERR_ID });
+    }
+    if (roomId < Constants.TYPICAL_MIN_ID) {
       return res.status(400).json({ message: Messages.ROOM_ERR_ID });
     }
     const deletedRows: number = await Room.destroy({

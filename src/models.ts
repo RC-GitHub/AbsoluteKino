@@ -4,6 +4,7 @@ import * as Constants from "./constants.ts";
 const sequelize: Sequelize = new Sequelize({
   dialect: "sqlite",
   storage: "db.sqlite",
+  logging: false,
 });
 
 try {

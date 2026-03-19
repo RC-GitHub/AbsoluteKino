@@ -8,6 +8,12 @@ export const cinemaData = {
     longitude: 19.9383
 };
 
+export const roomData = {
+    name: "Test Room",
+    chairPlacement: "A20, B15, C25; A20, B14, B15",
+    cinemaId: 1
+}
+
 export async function sendRequest(endPoint: string, httpStatus: number, type: string, requestData = {}) {
     switch (type.toUpperCase()) {
         case "GET": {
