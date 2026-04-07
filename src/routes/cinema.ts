@@ -56,10 +56,7 @@ router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
 router.get("/id/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
-    if (!cinemaId) {
-      return res.status(400).json({ message: Messages.CINEMA_ERR_ID, cinemas: [] });
-    }
-    if (cinemaId < Constants.TYPICAL_MIN_ID) {
+    if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_ID, cinemas: [] });
     }
     const cinema: CinemaInstance | null = await Cinema.findByPk(cinemaId);
@@ -77,10 +74,7 @@ router.get("/id/:cinemaId", async (req: Request, res: Response, next: NextFuncti
 router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
-    if (!cinemaId) {
-      return res.status(400).json({ message: Messages.CINEMA_ERR_ID, cinemas: [] });
-    }
-    if (cinemaId < Constants.TYPICAL_MIN_ID) {
+    if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_ID, cinemas: [] });
     }
     const cinema : CinemaInstance | null = await Cinema.findByPk(cinemaId);
@@ -134,10 +128,7 @@ router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFu
 router.delete("/delete/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
-    if (!cinemaId) {
-      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
-    }
-    if (cinemaId < Constants.TYPICAL_MIN_ID) {
+    if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
     }
     const deletedRows: number = await Cinema.destroy({

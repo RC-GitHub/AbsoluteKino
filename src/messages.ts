@@ -55,6 +55,7 @@ export const MOVIE_ERR_TRAILER_URL: string = `Movie trailer URL should be a vali
 export const MOVIE_ERR_LANG_LEN: string = `Movie language length is incorrect (it should be between ${Constants.MOVIE_LANG_MIN_LEN} and ${Constants.MOVIE_LANG_MAX_LEN})`;
 export const MOVIE_ERR_PREMIERE_DATE: string = `Movie premiere date is an invalid date`;
 export const MOVIE_ERR_GENRE_LEN: string = `Movie genre length is incorrect (it should be between ${Constants.MOVIE_GENRE_MIN_LEN} and ${Constants.MOVIE_GENRE_MAX_LEN})`;
+export const MOVIE_ERR_RESTRICTIONS: string = `Movie restrictions do not match the specified format (look into the documentation)`;
 export const MOVIE_ERR_CAST_LEN: string = `Movie cast length is incorrect (it should be between ${Constants.MOVIE_CAST_MIN_LEN} and ${Constants.MOVIE_CAST_MAX_LEN})`;
 export const MOVIE_ERR_DIR_LEN: string = `Movie director length is incorrect (it should be between ${Constants.MOVIE_DIR_MIN_LEN} and ${Constants.MOVIE_DIR_MAX_LEN})`;
 export const MOVIE_ERR_NOT_FOUND_ALL: string = "No movies were found in the database";
