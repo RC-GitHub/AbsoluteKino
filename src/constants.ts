@@ -37,14 +37,26 @@ export const ROOM_LAYOUT_REGEX: RegExp = /^([A-I]\d{1,3}(, [A-I]\d{1,3})*(;[ \t]
 //---------------------------------
 // Movie
 //---------------------------------
-export const MOVIE_NAME_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
-export const MOVIE_NAME_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 2;
+export const MOVIE_TITLE_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const MOVIE_TITLE_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 2;
 
-export const MOVIE_DUR_MIN_LEN: number = 1;
-export const MOVIE_DUR_MAX_LEN: number = 857 * 60; // The duration of the longest movie in the world, i.e. 'Logistics' (2012)
+export const MOVIE_STD_VIEWING_FORMATS = ['2D', '3D', 'HD', 'FHD', '4K', '4D', 'IMAX', 'IMAX 3D', '4DX', 'ScreenX', '70mm', 'VIP'];
+export const MOVIE_AGE_RESTRICTIONS = ['BO', '7+', '12+', '15+', '16+', '18+'] as const;
+
+export const MOVIE_DUR_MIN: number = 1;
+export const MOVIE_DUR_MAX: number = 857 * 60; // The duration of the longest movie in the world, i.e. 'Logistics' (2012)
 
 export const MOVIE_DESC_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
 export const MOVIE_DESC_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 16;
 
-export const MOVIE_STD_VIEWING_FORMATS = ['2D', '3D', 'HD', 'FHD', '4K', '4D', 'IMAX', 'IMAX 3D', '4DX', 'ScreenX', '70mm', 'VIP'];
-export const MOVIE_AGE_RESTRICTIONS = ['BO', '7+', '12+', '15+', '18+'] as const;
+export const MOVIE_LANG_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const MOVIE_LANG_MAX_LEN: number = TYPICAL_NAME_MAX_LEN;
+
+export const MOVIE_GENRE_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const MOVIE_GENRE_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 6;
+
+export const MOVIE_CAST_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const MOVIE_CAST_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 12;
+
+export const MOVIE_DIR_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const MOVIE_DIR_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 2;

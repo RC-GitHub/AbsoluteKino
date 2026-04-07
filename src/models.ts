@@ -149,12 +149,12 @@ export const Room = sequelize.define<RoomInstance>("Room", {
 });
 
 //---------------------------------
-// Movie
+// Screening
 //---------------------------------
 
 export interface ScreeningAttributes {
   id?: number;
-  startTime: Date;
+  startDate: Date;
   movieId: number;
   roomId: number;
 }
@@ -163,7 +163,7 @@ export interface ScreeningInstance extends Model<ScreeningAttributes>, Screening
 
 export const Screening = sequelize.define<ScreeningInstance>("Screening", {
   ...commonAttributes,
-  startTime: {
+  startDate: {
     type: DataTypes.DATE,
     allowNull: false,
     validate: {
@@ -203,7 +203,7 @@ export interface MovieAttributes {
   language: string;
   premiereDate: Date;
   genre: string;
-  restriction: string;
+  restrictions: string;
   cast: string;
   director: string;
 }
@@ -216,21 +216,21 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [Constants.MOVIE_NAME_MIN_LEN, Constants.MOVIE_NAME_MAX_LEN]
+      len: [Constants.MOVIE_TITLE_MIN_LEN, Constants.MOVIE_TITLE_MAX_LEN]
     }
   },
   // HD, 3D, 4K etc.
   viewingFormat: {
     type: DataTypes.STRING,
     allowNull: false,
-    defaultValue: '2D'
+    defaultValue: Constants.MOVIE_STD_VIEWING_FORMATS[0]
   },
   // Duration in minutes
   duration: {
     type: DataTypes.INTEGER,
     allowNull: false,
     validate: { 
-      len: [Constants.MOVIE_DUR_MIN_LEN, Constants.MOVIE_DUR_MAX_LEN]
+      len: [Constants.MOVIE_DUR_MIN, Constants.MOVIE_DUR_MAX]
     }
   },
   description: {
@@ -257,6 +257,9 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   language: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: { 
+      len: [Constants.MOVIE_LANG_MIN_LEN, Constants.MOVIE_LANG_MAX_LEN]
+    }
   },
   premiereDate: {
     type: DataTypes.DATE,
@@ -268,21 +271,30 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   genre: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: { 
+      len: [Constants.MOVIE_GENRE_MIN_LEN, Constants.MOVIE_GENRE_MAX_LEN]
+    }
   },
   // 18+, 7+, no restrictions etc.
-  restriction: {
+  restrictions: {
     type: DataTypes.ENUM(...Constants.MOVIE_AGE_RESTRICTIONS),
     allowNull: false,
-    defaultValue: Constants.MOVIE_AGE_RESTRICTIONS[0]
+    defaultValue: Constants.MOVIE_AGE_RESTRICTIONS[2]
   },
   // Full cast names after commas
   cast: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: { 
+      len: [Constants.MOVIE_CAST_MIN_LEN, Constants.MOVIE_CAST_MAX_LEN]
+    }
   },
   director: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: { 
+      len: [Constants.MOVIE_DIR_MIN_LEN, Constants.MOVIE_DIR_MAX_LEN]
+    }
   },
 });
 

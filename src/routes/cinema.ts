@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from "express";
 import * as Constants from "../constants.ts"
 import * as Messages from "../messages.ts"
-import { Cinema, CinemaAttributes , CinemaInstance } from "../models.js";
+import { Cinema, CinemaAttributes , CinemaInstance, Room } from "../models.js";
 
 const router = express.Router();
 
@@ -16,8 +16,8 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
     if (typeof name !== 'string' || typeof address !== 'string' || typeof latitude !== 'number' || typeof longitude !== 'number') {
       return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
     }
-    name = name.trim();
-    if (name.length < Constants.CINEMA_NAME_MIN_LEN || name.length > Constants.CINEMA_NAME_MAX_LEN) {
+    const trimmedName = name.trim();
+    if (trimmedName.length < Constants.CINEMA_NAME_MIN_LEN || trimmedName.length > Constants.CINEMA_NAME_MAX_LEN) {
       return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
     }
     if (latitude < Constants.CINEMA_MIN_LATITUDE || latitude > Constants.CINEMA_MAX_LATITUDE) {
@@ -30,7 +30,7 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ message: Messages.CINEMA_ERR_ADDRESS, cinemas: [] });
     }
 
-    const cinema = await Cinema.create({ name, address, latitude, longitude });
+    const cinema = await Cinema.create({ name: trimmedName, address, latitude, longitude });
     res.send({cinemas: [cinema]});
   }
   catch (error: any) {
@@ -95,11 +95,11 @@ router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFu
     const updateData: Partial<CinemaAttributes> = {};
     if (name !== undefined) {
       if (typeof name !== 'string') return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
-      name = name.trim();
-      if (name.length < Constants.CINEMA_NAME_MIN_LEN || name.length > Constants.CINEMA_NAME_MAX_LEN) {
+      const trimmedName = name.trim();
+      if (trimmedName.length < Constants.CINEMA_NAME_MIN_LEN || trimmedName.length > Constants.CINEMA_NAME_MAX_LEN) {
         return res.status(400).json({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
       }
-      updateData.name = name;
+      updateData.name = trimmedName;
     }
     if (latitude !== undefined) {
       if (typeof latitude !== 'number') return res.status(400).json({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
@@ -152,5 +152,36 @@ router.delete("/delete/:cinemaId", async (req: Request, res: Response, next: Nex
     next(error);
   }
 });
+
+// TODO:
+// Deletes a cinema with the specified ID and everything connected with it
+/*router.delete("/delete/force/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const cinemaId: number = parseInt(req.params.cinemaId.toString());
+    if (!cinemaId) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
+    }
+    if (cinemaId < Constants.TYPICAL_MIN_ID) {
+      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
+    }
+    const deletedCinemaRows: number = await Cinema.destroy({
+      where: { id: cinemaId }
+    });
+    if (deletedCinemaRows < 1) {
+      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
+    }
+
+    const deletedRoomRows: number = await Room.destroy({
+      where: { cinemaId: cinemaId }
+    });
+    if (deletedRoomRows < 1) {
+      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
+    }
+    res.status(200).json({ message: Messages.CINEMA_MSG_DEL });
+  }
+  catch (error: any) {
+    next(error);
+  }
+});*/
 
 export default router;

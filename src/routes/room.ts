@@ -10,10 +10,10 @@ const router = express.Router();
 router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
   try {
     let { name, chairPlacement, cinemaId } : RoomAttributes = req.body;
-    if (name == null || chairPlacement == null || cinemaId === undefined) {
+    if (name == null || chairPlacement == null || cinemaId == null) {
       return res.status(400).json({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
     }
-    if (typeof name !== 'string' || typeof chairPlacement !== 'string' || typeof chairPlacement !== 'string' || !Number.isInteger(cinemaId)) {
+    if (typeof name !== 'string' || typeof chairPlacement !== 'string' || typeof cinemaId !== 'number' || !Number.isInteger(cinemaId)) {
       return res.status(400).json({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
     }
     if (!cinemaId) {
@@ -25,15 +25,15 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
       return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND, rooms: [] });
     }
 
-    name = name.trim();
-    if (name.length < Constants.ROOM_NAME_MIN_LEN || name.length > Constants.ROOM_NAME_MAX_LEN) {
+    const trimmedName = name.trim();
+    if (trimmedName.length < Constants.ROOM_NAME_MIN_LEN || trimmedName.length > Constants.ROOM_NAME_MAX_LEN) {
       return res.status(400).json({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
     }
     if (!chairPlacement.match(Constants.ROOM_LAYOUT_REGEX)) {
       return res.status(400).json({ message: Messages.ROOM_ERR_LAYOUT, rooms: [] });
     }
 
-    const room = await Room.create({ name, chairPlacement, cinemaId });
+    const room = await Room.create({ name: trimmedName, chairPlacement, cinemaId });
     res.send({rooms: [room]});
   }
   catch (error: any) {
@@ -111,11 +111,11 @@ router.put("/update/:roomId", async (req: Request, res: Response, next: NextFunc
     const updateData: Partial<RoomAttributes> = {};
     if (name !== undefined) {
       if (typeof name !== 'string') return res.status(400).json({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
-      name = name.trim();
-      if (name.length < Constants.ROOM_NAME_MIN_LEN || name.length > Constants.ROOM_NAME_MAX_LEN) {
+      const trimmedName = name.trim();
+      if (trimmedName.length < Constants.ROOM_NAME_MIN_LEN || trimmedName.length > Constants.ROOM_NAME_MAX_LEN) {
         return res.status(400).json({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
       }
-      updateData.name = name;
+      updateData.name = trimmedName;
     }
     if (chairPlacement !== undefined) {
       if (typeof chairPlacement !== 'string') return res.status(400).json({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
@@ -161,5 +161,7 @@ router.delete("/delete/:roomId", async (req: Request, res: Response, next: NextF
     next(error);
   }
 });
+
+// TODO: /delete/force
 
 export default router;

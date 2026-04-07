@@ -1,5 +1,6 @@
 import request from "supertest";
 import app from "../src/server";
+import * as Constants from "../src/constants";
 
 export const cinemaData = {
     name: "Test Cinema",
@@ -12,6 +13,27 @@ export const roomData = {
     name: "Test Room",
     chairPlacement: "A20, B15, C25; A20, B14, B15",
     cinemaId: 1
+}
+
+export const movieData = {
+    title: "Test Movie",
+    viewingFormat: Constants.MOVIE_STD_VIEWING_FORMATS[0],
+    duration: 120,
+    description: "A truly great movie containing themes and such",
+    posterUrl: "https://poster.com/123",
+    trailerUrl: "https://trailer.com/123",
+    language: "English",
+    premiereDate: new Date("12-12-2000"),
+    genre: "Action",
+    restrictions: Constants.MOVIE_AGE_RESTRICTIONS[3],
+    cast: "Michael Mind, Louis Armstrong",
+    director: "Quentin Tarantino"
+}
+
+export const screeningData = {
+    startDate: new Date(),
+    roomId: 1,
+    movieId: 1
 }
 
 export async function sendRequest(endPoint: string, httpStatus: number, type: string, requestData = {}) {

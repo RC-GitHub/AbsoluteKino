@@ -28,87 +28,98 @@ describe("Cinema Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if required fields are missing", async () => {
-            const invalidCinemaData = {
-                name: "Test Cinema",
-                // address is missing
-                latitude: 50.0615,
-                longitude: 19.9383
-            };
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaData);
+            // name: undefined or null
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, name: undefined });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, name: null });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
 
+            // address: undefined or null
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, address: undefined });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, address: null });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
+
+            // latitude: undefined or null
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, latitude: undefined });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, latitude: null });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
+
+            // longitude: undefined or null
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, longitude: undefined });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, longitude: null });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
+
+
+            // all are undefined
             response = await Utils.sendRequest("/cinema/new", 400, "POST", {});
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
 
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", {name: "  ", address: undefined, latitude: null, longitude: undefined});
+            // Mixed invalid
+            const mixedInvalid = { 
+                name: "  ", 
+                address: undefined, 
+                latitude: null, 
+                longitude: undefined 
+            };
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", mixedInvalid);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
-            const invalidCinemaDataName = { ...Utils.cinemaData, name: 20 };
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataName);
+            // invalid name
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, name: 20 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
 
-            const invalidCinemaDataAddress = { ...Utils.cinemaData, address: 1 };
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataAddress);
+            // invalid address
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, address: 1 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
 
-            const invalidCinemaDataLatitude = { ...Utils.cinemaData, latitude: "180" };
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataLatitude);
+            // invalid latitude
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, latitude: "180" });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
 
-            const invalidCinemaDataLongitude = { ...Utils.cinemaData, longitude: "180" };
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataLongitude);
+            // invalid longitude
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, longitude: "180" });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
         });
         
         it("should respond with 400 if name is too short or too long", async () => {
-            const invalidCinemaDataShortName = { ...Utils.cinemaData }
-            invalidCinemaDataShortName.name = "";
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, name: "" });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
 
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataShortName);
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, name: "  " });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
 
             const invalidCinemaDataLongName =  { ...Utils.cinemaData }
             invalidCinemaDataLongName.name = "Example Example Example Example Example Example Example Example Example"
-        
             response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataLongName);   
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
         });
 
         it("should respond with 400 if address does not match RegExp", async () => {
-            const invalidCinemaData = { ...Utils.cinemaData };
-            invalidCinemaData.address = "Example St 123ab, Example City, Poland"; // LOCATION_NUMBER can't have more than one a-z character after it
-
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaData);
+            // LOCATION_NUMBER can't have more than one a-z character after it
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, address: "Example St 123ab, Example City, Poland" });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ADDRESS, cinemas: [] });
         });
 
         it("should respond with 400 if latitude is less than -90 or bigger than 90", async () => {
-            const invalidCinemaDataLowerBound = { ...Utils.cinemaData } 
-            invalidCinemaDataLowerBound.latitude = -100; // latitude should be a number between -90 and 90
-
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataLowerBound);
+            // latitude should be a number between -90 and 90
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, latitude: -100 } );
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_LATITUDE_VAL, cinemas: [] });
 
-            const invalidCinemaDataUpperBound = { ...Utils.cinemaData } 
-            invalidCinemaDataUpperBound.latitude = 100;
-
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataUpperBound);
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, latitude: 100 } );
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_LATITUDE_VAL, cinemas: [] });
         });
 
         it("should respond with 400 if longitude is less than -180 or bigger than 180", async () => {
-            const invalidCinemaDataLowerBound = { ...Utils.cinemaData } 
-            invalidCinemaDataLowerBound.longitude = -200; // latitude should be a number between -90 and 90
-
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataLowerBound);
+            // latitude should be a number between -90 and 90
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, longitude: -200 } );
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_LONGITUDE_VAL, cinemas: [] });
 
-            const invalidCinemaDataUpperBound = { ...Utils.cinemaData } 
-            invalidCinemaDataUpperBound.longitude = 200;
-
-            response = await Utils.sendRequest("/cinema/new", 400, "POST", invalidCinemaDataUpperBound);
+            response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, longitude: 200 } );
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_LONGITUDE_VAL, cinemas: [] });
         });
     });
@@ -123,7 +134,6 @@ describe("Cinema Lifecycle Flow", async () => {
 
     describe("GET /cinema/all", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all cinema objects in the database", async () => {
-
             // Creating 3 new cinemas to check if GET /cinema/all will fetch all cinemas in the database
             await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
             await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
@@ -172,8 +182,7 @@ describe("Cinema Lifecycle Flow", async () => {
 
     describe("PUT /cinema/update/:cinemaId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and modified data", async () => {
-            const cinemaDataUpdated =  { ...Utils.cinemaData };
-            cinemaDataUpdated.name = "Test Cinema v2";
+            const cinemaDataUpdated =  { ...Utils.cinemaData, name: "Test Cinema v2" };
             response = await Utils.sendRequest("/cinema/update/1", 200, "PUT", cinemaDataUpdated);
 
             expect(response.body).toHaveProperty("cinemas");
@@ -194,78 +203,71 @@ describe("Cinema Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if all fields are missing", async () => {
+            // all are undefined
             response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", {});
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
 
+            // mixed invalid
             response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", {name: null, address: undefined, latitude: null, longitude: undefined});
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
+
+            // all are null
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", {name: null, address: null, latitude: null, longitude: null});
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
-            const invalidCinemaDataName = { ...Utils.cinemaData, name: 20 };
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataName);
+            // invalid name
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, name: 20 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
 
-            const invalidCinemaDataAddress = { ...Utils.cinemaData, address: 1 };
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataAddress);
+            // invalid address
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, address: 1 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
 
-            const invalidCinemaDataLatitude = { ...Utils.cinemaData, latitude: "180" };
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataLatitude);
+            // invalid latitude
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, latitude: "180" });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
 
-            const invalidCinemaDataLongitude = { ...Utils.cinemaData, longitude: "180" };
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataLongitude);
+            // invalid longitude
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, longitude: "180" });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
         });
 
         it("should respond with 400 if name is too short or too long", async () => {
-            const invalidCinemaDataShortName = { ...Utils.cinemaData }
-            invalidCinemaDataShortName.name = "";
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, name: "" });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
 
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataShortName);
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, name: "  " });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
 
             const invalidCinemaDataLongName =  { ...Utils.cinemaData }
             invalidCinemaDataLongName.name = "Example Example Example Example Example Example Example Example Example"
-
             response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataLongName);   
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NAME_LEN, cinemas: [] });
         });
 
         it("should respond with 400 if address does not match RegExp", async () => {
-            const invalidCinemaData = { ...Utils.cinemaData };
-            invalidCinemaData.address = "Example St 123ab, Example City, Poland"; // LOCATION_NUMBER can't have more than one a-z character after it
-
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaData);
+            // LOCATION_NUMBER can't have more than one a-z character after it
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, address: "Example St 123ab, Example City, Poland" });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ADDRESS, cinemas: [] });
         });
 
         it("should respond with 400 if latitude is less than -90 or bigger than 90", async () => {
-            const invalidCinemaDataLowerBound = { ...Utils.cinemaData } 
-            invalidCinemaDataLowerBound.latitude = -100; // latitude should be a number between -90 and 90
-
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataLowerBound);
+            // latitude should be a number between -90 and 90
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, latitude: -100 } );
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_LATITUDE_VAL, cinemas: [] });
 
-            const invalidCinemaDataUpperBound = { ...Utils.cinemaData } 
-            invalidCinemaDataUpperBound.latitude = 100;
-
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataUpperBound);
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, latitude: 100 } );
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_LATITUDE_VAL, cinemas: [] });
         });
 
         it("should respond with 400 if longitude is less than -180 or bigger than 180", async () => {
-            const invalidCinemaDataLowerBound = { ...Utils.cinemaData } 
-            invalidCinemaDataLowerBound.longitude = -200; // latitude should be a number between -90 and 90
-
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataLowerBound);
+            // longitude should be a number between -180 and 180
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, longitude: -200 } );
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_LONGITUDE_VAL, cinemas: [] });
-
-            const invalidCinemaDataUpperBound = { ...Utils.cinemaData } 
-            invalidCinemaDataUpperBound.longitude = 200;
-
-            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", invalidCinemaDataUpperBound);
+            
+            response = await Utils.sendRequest("/cinema/update/1", 400, "PUT", { ...Utils.cinemaData, longitude: 200 } );
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_LONGITUDE_VAL, cinemas: [] });
         });
 

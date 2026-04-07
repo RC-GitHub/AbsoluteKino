@@ -33,70 +33,78 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if required fields are missing", async () => {
-            const invalidRoomData = {
-                name: "Test Room",
-                // chairPlacement is missing
-                cinemaId: 1
-            };
-            response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomData);
+            // name: undefined or null
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: undefined });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: null });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
 
+            // chairPlacement: undefined or null
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, chairPlacement: undefined });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, chairPlacement: null });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+
+            // cinemaId: undefined or null
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: undefined });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: null });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+
+            // all are undefined
             response = await Utils.sendRequest("/room/new", 400, "POST", {});
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
 
-            response = await Utils.sendRequest("/room/new", 400, "POST", {name: null, chairPlacement: undefined, cinemaId: null});
+            // mixed invalid
+            const mixedInvalid = { 
+                name: null, 
+                chairPlacement: undefined, 
+                cinemaId: null 
+            };
+            response = await Utils.sendRequest("/room/new", 400, "POST", mixedInvalid);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
-            const invalidRoomDataName = { ...Utils.roomData, name: 20 };
-            response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomDataName);
+            // invalid name
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: 20 });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
-            const invalidRoomDataChairPlacement = { ...Utils.roomData, chairPlacement: 1 };
-            response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomDataChairPlacement);
+            // invalid chair placement
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, chairPlacement: 1 });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
-            const invalidRoomDataCinemaId = { ...Utils.roomData, cinemaId: "1" };
-            response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomDataCinemaId);
+            // invalid cinema id
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: "1" });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
         });
 
         it("should respond with 400 if cinemaId is not valid", async () => {
-            const invalidRoomData = { ...Utils.roomData };
-            invalidRoomData.cinemaId = 0; 
-
-            response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomData);
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: 0 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
         });
 
         it("should respond with 404 if specified cinema object is not found in the database", async () => {
-            const roomDataCinemaId = { ...Utils.roomData };
-            roomDataCinemaId.cinemaId = 2; 
-
-            response = await Utils.sendRequest("/room/new", 404, "POST", roomDataCinemaId);
+            response = await Utils.sendRequest("/room/new", 404, "POST", { ...Utils.roomData, cinemaId: 2 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, rooms: [] });
         });
 
         it("should respond with 400 if name is too short or too long", async () => {
-            const invalidRoomDataShortName = { ...Utils.roomData }
-            invalidRoomDataShortName.name = "";
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: "" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
 
-            response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomDataShortName);
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: "  " });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
 
             const invalidRoomDataLongName =  { ...Utils.roomData }
             invalidRoomDataLongName.name = "Example Example Example Example Example Example Example Example Example"
-        
             response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomDataLongName);   
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
         });
 
         it("should respond with 400 if address does not match RegExp", async () => {
-            const invalidRoomData = { ...Utils.roomData };
-            invalidRoomData.chairPlacement = "AA20, B20."; 
-
-            response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomData);
+            // only letters from A-I are allowed, and there can't be more than one next to the number
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, chairPlacement: "AA20, B20." });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_LAYOUT, rooms: [] });
         });
     });
@@ -106,7 +114,7 @@ describe("Room Lifecycle Flow", async () => {
     //---------------------------------
     // 3 further room objects are created and connected with the one cinema object
     // These rooms get fetched either all at once or individually with varying level of success
-    // Then 1 more cinema object is created - no rooms are connected to it, to test fetching in this scenario
+    // Then 1 more cinema object is created - no rooms are connected to it, to test fetching rooms in this scenario
     // At the end of the step only 4 room objects and 2 cinema objects are in the database
     //---------------------------------
 
@@ -191,8 +199,7 @@ describe("Room Lifecycle Flow", async () => {
 
     describe("PUT /room/update/:roomId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and modified data", async () => {
-            const roomDataUpdated =  { ...Utils.roomData };
-            roomDataUpdated.name = "Test Room v2";
+            const roomDataUpdated =  { ...Utils.roomData, name: "Test Room v2" };
             response = await Utils.sendRequest("/room/update/1", 200, "PUT", roomDataUpdated);
 
             expect(response.body).toHaveProperty("rooms");
@@ -218,54 +225,54 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if all fields are missing", async () => {
+            // all are undefined
             response = await Utils.sendRequest("/room/update/1", 400, "PUT", {});
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
 
+            // mixed invalid
             response = await Utils.sendRequest("/room/update/1", 400, "PUT", {name: null, chairPlacement: undefined, cinemaId: null});
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+
+            // all are null
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", {name: null, chairPlacement: null, cinemaId: null});
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
-            const invalidRoomDataName = { ...Utils.roomData, name: 20 };
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", invalidRoomDataName);
+            // invalid name
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, name: 20 });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
-            const invalidRoomDataChairPlacement = { ...Utils.roomData, chairPlacement: 20 };
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", invalidRoomDataChairPlacement);
+            // invalid chair placement
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, chairPlacement: 20 });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
-            const invalidRoomDataCinemaId = { ...Utils.roomData, cinemaId: "1" };
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", invalidRoomDataCinemaId);
+            // invalid cinema id
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, cinemaId: "1" });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
         });
 
         it("should respond with 400 if name is too short or too long", async () => {
-            const invalidRoomDataShortName = { ...Utils.roomData }
-            invalidRoomDataShortName.name = "";
-
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", invalidRoomDataShortName);
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, name: "" });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
 
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, name: "  " });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
+            
             const invalidRoomDataLongName =  { ...Utils.roomData }
             invalidRoomDataLongName.name = "Example Example Example Example Example Example Example Example Example"
-
             response = await Utils.sendRequest("/room/update/1", 400, "PUT", invalidRoomDataLongName);   
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
         });
 
         it("should respond with 400 if chair placement does not match RegExp", async () => {
-            const invalidRoomData = { ...Utils.roomData };
-            invalidRoomData.chairPlacement = "AA20, B20."; 
-
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", invalidRoomData);
+            // only letters from A-I are allowed, and there can't be more than one next to the number
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, chairPlacement: "AA20, B20." });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_LAYOUT, rooms: [] });
         });
 
         it("should respond with 400 if cinemaId is not valid", async () => {
-            const invalidRoomData = { ...Utils.roomData };
-            invalidRoomData.cinemaId = -1;
-
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", invalidRoomData);
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, cinemaId: -1 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
         });
     });
