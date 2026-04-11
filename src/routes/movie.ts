@@ -85,6 +85,13 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ message: Messages.MOVIE_ERR_LANG_LEN, movies: [] });
     }
 
+    if (isNaN(parsedDate.getTime()) || parsedDate.toISOString() === "Invalid Date") {
+      return res.status(400).json({ message: Messages.MOVIE_ERR_PREMIERE_DATE, movies: [] });
+    }
+    if (!(premiereDate as unknown as string).includes(parsedDate.toISOString().substring(0, 10))) {
+       return res.status(400).json({ message: Messages.MOVIE_ERR_PREMIERE_DATE, movies: [] });
+    }
+
     const validRestrictions = Constants.MOVIE_AGE_RESTRICTIONS as readonly string[];
     if (!validRestrictions.includes(restrictions)) {
       return res.status(400).json({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
@@ -252,9 +259,20 @@ router.put("/update/:movieId", async (req: Request, res: Response, next: NextFun
     }
 
     if (premiereDate !== undefined) {
+      if (typeof premiereDate !== "string") {
+        return res.status(400).json({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
+      }
+
       const parsedDate = new Date(premiereDate);
       if (isNaN(parsedDate.getTime())) {
-        return res.status(400).json({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
+        return res.status(400).json({ message: Messages.MOVIE_ERR_PREMIERE_DATE, movies: [] });
+      }
+
+      const inputDatePart = premiereDate.substring(0, 10);
+      const outputDatePart = parsedDate.toISOString().substring(0, 10);
+
+      if (inputDatePart !== outputDatePart) {
+        return res.status(400).json({ message: Messages.MOVIE_ERR_PREMIERE_DATE, movies: [] });
       }
       updateData.premiereDate = parsedDate;
     }

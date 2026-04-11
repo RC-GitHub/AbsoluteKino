@@ -162,11 +162,6 @@ describe("Movie Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TITLE_LEN, movies: [] });
         });
 
-        it("should respond with 400 if duration is out of range", async () => {
-            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, duration: Constants.MOVIE_DUR_MAX + 1 });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DURATION, movies: [] });
-        });
-
         it("should respond with 400 if viewingFormat is invalid", async () => {
             // format not in MOVIE_STD_VIEWING_FORMATS
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, viewingFormat: "INVALID_FORMAT" });
@@ -175,6 +170,14 @@ describe("Movie Lifecycle Flow", async () => {
             // one is invalid
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, viewingFormat: "IMAX INVALID" });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
+        });
+
+        it("should respond with 400 if duration is out of range", async () => {
+            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, duration: Constants.MOVIE_DUR_MIN - 1 });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DURATION, movies: [] });
+
+            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, duration: Constants.MOVIE_DUR_MAX + 1 });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DURATION, movies: [] });
         });
 
         it("should respond with 400 if description length is invalid", async () => {
@@ -189,7 +192,7 @@ describe("Movie Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DESC, movies: [] });
         });
 
-        it("should respond with 400 if posterURL is invalid", async () => {
+        it("should respond with 400 if poster url is invalid", async () => {
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, posterUrl: "ftp://wrong-protocol.com" });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_POSTER_URL, movies: [] });
             
@@ -197,7 +200,7 @@ describe("Movie Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_POSTER_URL, movies: [] });
         });
 
-        it("should respond with 400 if trailerUrl is invalid", async () => {
+        it("should respond with 400 if trailer url is invalid", async () => {
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, trailerUrl: "ftp://wrong-protocol.com" });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TRAILER_URL, movies: [] });
             
@@ -218,9 +221,9 @@ describe("Movie Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_LANG_LEN, movies: [] });
         });
 
-        it("should respond with 400 if restrictions value is not in Enum", async () => {
-            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, restrictions: "Unrated" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
+        it("should respond with 400 if premiere date is invalid", async () => {
+            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, premiereDate: "2000-02-30T00:00:00.000Z" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_PREMIERE_DATE, movies: [] });
         });
 
         it("should respond with 400 if genre length is invalid", async () => {
@@ -233,6 +236,11 @@ describe("Movie Lifecycle Flow", async () => {
             // Too long
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, genre: "a".repeat(Constants.MOVIE_GENRE_MAX_LEN + 1) });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_GENRE_LEN, movies: [] });
+        });
+
+        it("should respond with 400 if restrictions value is not in Enum", async () => {
+            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, restrictions: "Unrated" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
         });
 
         it("should respond with 400 if cast length is invalid", async () => {
@@ -299,12 +307,12 @@ describe("Movie Lifecycle Flow", async () => {
         });
 
         it("should respond with 404 if movie object is not found in the database", async () => {
-            response = await Utils.sendRequest("/movie/id/99", 404, "GET");
+            response = await Utils.sendRequest("/movie/id/5", 404, "GET");
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_NOT_FOUND, movies: [] });
         });
     });
 
-//---------------------------------
+    //---------------------------------
     // Step 3 - PUT
     //---------------------------------
     // First movie object is modified successfully
@@ -316,7 +324,7 @@ describe("Movie Lifecycle Flow", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and modified data", async () => {
             const updatedData = { title: "Updated Movie Title" };
             response = await Utils.sendRequest("/movie/update/1", 200, "PUT", updatedData);
-            expect(response.body.movies[0]).toHaveProperty("title", "Updated Movie Title");
+            expect(response.body.movies[0]).toHaveProperty("title", updatedData.title);
         });
 
         it("should respond with 400 if all update fields are missing", async () => {
@@ -347,7 +355,7 @@ describe("Movie Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_EMPTY_ARGS, movies: [] });
         });
 
-it("should respond with 400 if update types are incorrect", async () => {
+        it("should respond with 400 if update types are incorrect", async () => {
             // title: not a string
             response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { title: 123 });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
@@ -409,6 +417,11 @@ it("should respond with 400 if update types are incorrect", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TITLE_LEN, movies: [] });
         });
 
+        it("should respond with 400 if updated viewingFormat is invalid", async () => {
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { viewingFormat: "4K_ULTRA_FAKE" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
+        });
+
         it("should respond with 400 if updated duration is out of range", async () => {
             response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { duration: Constants.MOVIE_DUR_MIN - 1 });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DURATION, movies: [] });
@@ -417,9 +430,32 @@ it("should respond with 400 if update types are incorrect", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DURATION, movies: [] });
         });
 
-        it("should respond with 400 if updated viewingFormat is invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { viewingFormat: "4K_ULTRA_FAKE" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
+        it("should respond with 400 if updated description length is invalid", async () => {
+            // Too short
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { description: "" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DESC, movies: [] });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { description: " " });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DESC, movies: [] });
+
+            // Too long
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { description: "a".repeat(Constants.MOVIE_DESC_MAX_LEN + 1) });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DESC, movies: [] });
+        });
+
+        it("should respond with 400 if updated poster url is invalid", async () => {
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: "ftp://wrong-protocol.com" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_POSTER_URL, movies: [] });
+            
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: "just_string" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_POSTER_URL, movies: [] });
+        });
+
+        it("should respond with 400 if updated trailer url is invalid", async () => {
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: "ftp://wrong-protocol.com" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TRAILER_URL, movies: [] });
+            
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: "just_string" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TRAILER_URL, movies: [] });
         });
 
         it("should respond with 400 if updated language length is invalid", async () => {
@@ -435,6 +471,11 @@ it("should respond with 400 if update types are incorrect", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_LANG_LEN, movies: [] });
         });
 
+        it("should respond with 400 if updated premiere date is invalid", async () => {
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { premiereDate: "2000-02-30T00:00:00.000Z" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_PREMIERE_DATE, movies: [] });
+        });
+
         it("should respond with 400 if updated genre length is invalid", async () => {
             // too short
             response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { genre: "" });
@@ -446,6 +487,11 @@ it("should respond with 400 if update types are incorrect", async () => {
             // too long
             response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { genre: "a".repeat(Constants.MOVIE_GENRE_MAX_LEN + 1) });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_GENRE_LEN, movies: [] });
+        });
+
+        it("should respond with 400 if updated restrictions value is not in Enum", async () => {
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { restrictions: "21+" }); 
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
         });
 
         it("should respond with 400 if updated cast length is invalid", async () => {
@@ -474,33 +520,20 @@ it("should respond with 400 if update types are incorrect", async () => {
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DIR_LEN, movies: [] });
         });
 
-        it("should respond with 400 if updated URLs are invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: "not-a-url" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_POSTER_URL, movies: [] });
+        it("should respond with 400 if movieId is invalid", async () => {
+            response = await Utils.sendRequest("/movie/update/abc", 400, "PUT", { title: "Updated Movie Title" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
 
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: "not-a-url" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TRAILER_URL, movies: [] });
-        });
+            response = await Utils.sendRequest("/movie/update/0", 400, "PUT", { title: "Updated Movie Title" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
 
-        it("should respond with 400 if updated restrictions value is not in Enum", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { restrictions: "21+" }); 
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
+            response = await Utils.sendRequest("/movie/update/-1", 400, "PUT", { title: "Updated Movie Title" });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
         });
 
         it("should respond with 404 if specified movie is not found", async () => {
-            response = await Utils.sendRequest("/movie/update/99", 404, "PUT", { title: "Ghost Movie" });
+            response = await Utils.sendRequest("/movie/update/5", 404, "PUT", { title: "Ghost Movie" });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_NOT_FOUND, movies: [] });
-        });
-
-        it("should respond with 400 if movieId is invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/abc", 400, "PUT", { title: "Title" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
-
-            response = await Utils.sendRequest("/movie/update/0", 400, "PUT", { title: "Title" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
-
-            response = await Utils.sendRequest("/movie/update/-1", 400, "PUT", { title: "Title" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
         });
     });
 

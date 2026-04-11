@@ -10,7 +10,8 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "types": ["vitest/globals"]
   },
-  "include": ["*.ts", "src/server.ts"],                         
+  "include": ["*.ts", "src/*.ts", "tests/*.ts"],                         
   "exclude": ["node_modules"]                  
 }
