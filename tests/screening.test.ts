@@ -39,6 +39,7 @@ describe("Screening Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData);
             expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings[0]).toHaveProperty("startDate", Utils.screeningData.startDate.toISOString());
+            expect(response.body.screenings[0]).toHaveProperty("basePrice", Utils.screeningData.basePrice);
             expect(response.body.screenings[0]).toHaveProperty("movieId", Utils.screeningData.movieId);
             expect(response.body.screenings[0]).toHaveProperty("roomId", Utils.screeningData.roomId);
 
@@ -85,12 +86,21 @@ describe("Screening Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: {} });
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
+            // invalid base price
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, basePrice: "1" });
+            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
+
             // invalid room id
             response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: "1" });
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
             // invalid movie id
             response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: "1" });
+            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
+        });
+
+        it("should respond with 400 if base price is not valid", async () => {
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, basePrice: "-1" });
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
         });
 
@@ -291,7 +301,7 @@ describe("Screening Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
 
             // some are null, some are undefined
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", {startDate: null, roomId: undefined, movieId: null});
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", {startDate: null, roomId: undefined, movieId: null, basePrice: undefined});
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
 
             // all are null
@@ -303,6 +313,9 @@ describe("Screening Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, startDate: 1 });
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, basePrice: "1" });
+            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
+
             response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, roomId: "1" });
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
@@ -310,17 +323,22 @@ describe("Screening Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
         });
 
-        it("should respond with 400 if name is too short or too long", async () => {
+        it("should respond with 400 if updated name is too short or too long", async () => {
             response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, startDate: "2000-02-30T00:00:00.000Z" });
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_START_DATE, screenings: [] });
         });
 
-        it("should respond with 400 if roomId is not valid", async () => {
+        it("should respond with 400 if updated base price is not valid", async () => {
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, basePrice: -1 });
+            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_PRICE, screenings: [] });
+        });
+
+        it("should respond with 400 if updated roomId is not valid", async () => {
             response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, roomId: -1 });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
         });
 
-        it("should respond with 400 if movieId is not valid", async () => {
+        it("should respond with 400 if updated movieId is not valid", async () => {
             response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, movieId: -1 });
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, screenings: [] });
         });

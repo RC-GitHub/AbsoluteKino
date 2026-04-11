@@ -25,7 +25,7 @@ const commonAttributes = {
     primaryKey: true,
     validate: {
       isNumeric: true,
-      min: 1
+      min: Constants.TYPICAL_MIN_ID
     }
   },
 };
@@ -177,6 +177,7 @@ export const Room = sequelize.define<RoomInstance>("Room", {
 export interface ScreeningAttributes {
   id?: number;
   startDate: Date;
+  basePrice: number;
   movieId: number;
   roomId: number;
 }
@@ -194,6 +195,14 @@ export const Screening = sequelize.define<ScreeningInstance>("Screening", {
         msg: Messages.SCREENING_ERR_START_DATE
       },
     }
+  },
+  basePrice: {
+    type: DataTypes.DECIMAL,
+    allowNull: false,
+    validate: {
+      isNumeric: true
+    },
+    defaultValue: Constants.SCREENING_BASE_SEAT_PRICE
   },
   movieId: {
     type: DataTypes.INTEGER,
@@ -364,7 +373,7 @@ export interface ReservationAttributes {
   id?: number;
   row: number;
   column: number;
-  dateOfReservation: Date;
+  reservationDate: Date | null;
   screeningId: number;
   clientId: number;
 }
@@ -376,14 +385,33 @@ export const Reservation = sequelize.define<ReservationInstance>("Reservation", 
   row: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    validate: {
+      len: {
+        args: [Constants.RESERVATION_MIN_ROW_VAL, Constants.RESERVATION_MAX_ROW_VAL],
+        msg: Messages.RESERVATION_ERR_ROW_VAL
+      }
+    }
   },
   column: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    validate: {
+      len: {
+        args: [Constants.RESERVATION_MIN_COL_VAL, Constants.RESERVATION_MAX_COL_VAL],
+        msg: Messages.RESERVATION_ERR_COL_VAL
+      }
+    }
   },
-  dateOfReservation: {
+  reservationDate: {
     type: DataTypes.DATE,
     allowNull: false,
+    validate: {
+      isDate: {
+        args: true,
+        msg: Messages.RESERVATION_ERR_DATE
+      }
+    },
+    defaultValue: DataTypes.NOW
   },
   screeningId: {
     type: DataTypes.INTEGER,

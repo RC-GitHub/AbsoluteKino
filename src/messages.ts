@@ -32,8 +32,9 @@ export const ROOM_MSG_DEL: string = "Room deleted successfully";
 //---------------------------------
 export const SCREENING_ERR_EMPTY_ARGS: string = "Screening name and corresponding room id and movie id are all required";
 export const SCREENING_ERR_ID: string = "Screening ID should be a positive integer";
-export const SCREENING_ERR_TYPING: string = "Screening name and corresponding room id and movie id should have correct typings (string, integer and integer respectively)";
+export const SCREENING_ERR_TYPING: string = "Screening start date and corresponding room id and movie id should have correct typings (string, integer and integer respectively)";
 export const SCREENING_ERR_START_DATE: string = `Screening start date is an invalid date`;
+export const SCREENING_ERR_PRICE: string = `Screening price cannot be lower than 0`;
 export const SCREENING_ERR_NOT_FOUND_ALL: string = "No screenings were found in the database";
 export const SCREENING_ERR_NOT_FOUND_ROOM: string = "No screenings connected with the specified room were found";
 export const SCREENING_ERR_NOT_FOUND_MOVIE: string = "No screenings connected with the specified movie were found";
@@ -79,3 +80,19 @@ export const USER_ERR_PHONE_UNIQUE = `User with this phone number already exists
 export const USER_ERR_NOT_FOUND_ALL: string = "No users were found in the database";
 export const USER_ERR_NOT_FOUND: string = "User with specified ID was not found in the database";
 export const USER_MSG_DEL: string = "User deleted successfully";
+
+//---------------------------------
+// Reservation
+//---------------------------------
+export const RESERVATION_ERR_EMPTY_ARGS: string = "Reservation row, column, reservation date, screening ID and client ID are all required";
+export const RESERVATION_ERR_ID: string = "Reservation ID should be a positive integer";
+export const RESERVATION_ERR_TYPING: string = "Reservation row, column,  screening ID and client ID sould have correct typings (integer, integer, integer and integer respectively)";
+export const RESERVATION_ERR_ROW_VAL: string = `Row must be between ${Constants.RESERVATION_MIN_ROW_VAL} and ${Constants.RESERVATION_MAX_ROW_VAL}`;
+export const RESERVATION_ERR_COL_VAL: string = `Column must be between ${Constants.RESERVATION_MIN_COL_VAL} and ${Constants.RESERVATION_MAX_COL_VAL}`;
+export const RESERVATION_ERR_DATE: string = "Reservation date is an invalid date";
+export const RESERVATION_ERR_OCCUPIED: string = "This seat is already reserved for this screening";
+export const RESERVATION_ERR_NOT_FOUND_ALL: string = "No reservations were found in the database";
+export const RESERVATION_ERR_NOT_FOUND_CLIENT: string = "No reservations were found for the specified client";
+export const RESERVATION_ERR_NOT_FOUND_SCREENING: string = "No reservations were found for the specified screening";
+export const RESERVATION_ERR_NOT_FOUND: string = "Reservation with specified ID was not found in the database";
+export const RESERVATION_MSG_DEL: string = "Reservation cancelled successfully";

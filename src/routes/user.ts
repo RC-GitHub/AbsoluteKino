@@ -16,10 +16,11 @@ const isValidEmail = (email: string): boolean => {
     return regex.test(email);
 };
 
-// Adds a new user to the database
-// Requires: name and account type
-// Based on whether the user is authorized or not
-// the request can also include the password, email and the phone number
+/** Adds a new user to the database
+ * Requires: name and account type
+ * Based on whether the user is authorized or not
+ * the request can also include the password, email and the phone number
+ */
 router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
         let { name, accountType, password, email, phoneNumber }: UserAttributes = req.body;
@@ -112,7 +113,9 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
     }
 });
 
-// Sends data about all users in the database
+/**
+ * Sends data about all users in the database
+ */ 
 router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users: UserInstance[] = await User.findAll();

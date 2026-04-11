@@ -62,6 +62,11 @@ export const MOVIE_DIR_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
 export const MOVIE_DIR_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 2;
 
 //---------------------------------
+// Screening
+//---------------------------------
+export const SCREENING_BASE_SEAT_PRICE: number = 26.00;
+
+//---------------------------------
 // User
 //---------------------------------
 export const USER_NAME_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
@@ -76,3 +81,12 @@ export const USER_PASS_SALT_ROUNDS: number = 10;
 export const USER_EMAIL_REGEX: RegExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export const USER_PHONE_REGEX: RegExp = /^[1-9]\d{6,14}$/;
+
+//---------------------------------
+// Reservation
+//---------------------------------
+export const RESERVATION_MIN_ROW_VAL: number = 1;
+export const RESERVATION_MAX_ROW_VAL: number = 32;
+
+export const RESERVATION_MIN_COL_VAL: number = 1;
+export const RESERVATION_MAX_COL_VAL: number = 32;

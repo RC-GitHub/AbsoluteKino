@@ -5,15 +5,25 @@ import { Room, RoomAttributes, RoomInstance, Movie, MovieAttributes, MovieInstan
 
 const router = express.Router();
 
+function vipPrice(price: number): number {
+  if (price <= 0) return 0;
+  else return (price * 1.25) + 3;
+}
+
+function discountedPrice(price: number): number {
+  if (price <= 0) return 0;
+  else return price * 0.8;
+}
+
 // Adds a new screening and connects it with a room and a movie
 // Requires: startDate, room ID and movie ID
 router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    let { startDate, roomId, movieId } : ScreeningAttributes = req.body;
+    let { startDate, basePrice, roomId, movieId } : ScreeningAttributes = req.body;
     if (startDate == null || roomId == null || movieId == null) {
       return res.status(400).json({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
     }
-    if (typeof startDate !== 'string') {
+    if (typeof startDate !== 'string' || (basePrice != null && typeof basePrice !== 'number')) {
       return res.status(400).json({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
     }
     
@@ -45,7 +55,12 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
       return res.status(404).json({ message: Messages.MOVIE_ERR_NOT_FOUND, screenings: [] });
     }
 
-    const screening = await Screening.create({ startDate: parsedDate, roomId, movieId });
+    if (basePrice <= 0) {
+      return res.status(404).json({ message: Messages.SCREENING_ERR_PRICE, screenings: [] }); 
+    }
+
+    let screeningPrice = basePrice == null ? Constants.SCREENING_BASE_SEAT_PRICE : basePrice
+    const screening = await Screening.create({ startDate: parsedDate, basePrice: screeningPrice, roomId, movieId });
     res.send({screenings: [screening]});
   }
   catch (error: any) {
@@ -154,8 +169,9 @@ router.put("/update/:screeningId", async (req: Request, res: Response, next: Nex
       return res.status(404).json({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL, screenings: [] });
     }
 
-    let { startDate, roomId, movieId }: ScreeningAttributes = req.body;
+    let { startDate, basePrice, roomId, movieId }: ScreeningAttributes = req.body;
     if ((startDate === undefined || startDate === null) && 
+        (basePrice === undefined || basePrice === null) && 
         (roomId === undefined || roomId === null) && 
         (movieId === undefined || movieId === null)) {
       return res.status(400).json({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
@@ -173,6 +189,17 @@ router.put("/update/:screeningId", async (req: Request, res: Response, next: Nex
       }
       
       updateData.startDate = parsedDate;
+    }
+    if (basePrice !== undefined) {
+      if (typeof basePrice !== 'number') {
+        return res.status(400).json({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
+      }
+
+      if (basePrice <= 0) {
+        return res.status(400).json({ message: Messages.SCREENING_ERR_PRICE, screenings: [] });
+      }
+      
+      updateData.basePrice = basePrice;
     }
     if (roomId !== undefined) {
       if (typeof roomId !== 'number' || !Number.isInteger(roomId)) {
@@ -227,7 +254,7 @@ router.delete("/delete/:screeningId", async (req: Request, res: Response, next: 
     if (deletedRows === 0) {
       return res.status(404).json({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL });
     }
-    res.status(200).json({ message: Messages.SCREENING_MSG_DEL });
+    res.send({ message: Messages.SCREENING_MSG_DEL });
   }
   catch (error: any) {
     next(error);

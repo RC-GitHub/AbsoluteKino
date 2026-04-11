@@ -32,6 +32,7 @@ export const movieData = {
 
 export const screeningData = {
     startDate: new Date(),
+    basePrice: Constants.SCREENING_BASE_SEAT_PRICE,
     roomId: 1,
     movieId: 1
 }
@@ -51,6 +52,13 @@ export const userDataUnauthorized = {
     email: "unauthorized@email.com",
     phoneNumber: null
 }
+
+export const reservationData = {
+    row: 5,
+    column: 10,
+    screeningId: 1,
+    clientId: 1
+};
 
 export async function sendRequest(endPoint: string, httpStatus: number, type: string, requestData = {}) {
     switch (type.toUpperCase()) {
