@@ -554,7 +554,13 @@ describe("Movie Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if movieId is invalid", async () => {
+            response = await Utils.sendRequest("/movie/delete/abc", 400, "DELETE");
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID });
+
             response = await Utils.sendRequest("/movie/delete/0", 400, "DELETE");
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID });
+
+            response = await Utils.sendRequest("/movie/delete/-1", 400, "DELETE");
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID });
         });
 

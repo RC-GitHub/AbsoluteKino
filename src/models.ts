@@ -1,5 +1,6 @@
 import { Sequelize, DataTypes, InferAttributes, InferCreationAttributes, Model } from "sequelize";
 import * as Constants from "./constants.ts";
+import * as Messages from "./messages.ts";
 
 const sequelize: Sequelize = new Sequelize({
   dialect: "sqlite",
@@ -51,7 +52,10 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [Constants.CINEMA_NAME_MIN_LEN, Constants.CINEMA_NAME_MAX_LEN]
+      len: {
+        args: [Constants.CINEMA_NAME_MIN_LEN, Constants.CINEMA_NAME_MAX_LEN],
+        msg: Messages.CINEMA_ERR_NAME_LEN
+      }
     }
   },
 
@@ -70,7 +74,10 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      is: Constants.CINEMA_POLISH_ADDRESS_REGEX
+      is: { 
+        args: Constants.CINEMA_POLISH_ADDRESS_REGEX, 
+        msg: Messages.CINEMA_ERR_ADDRESS
+      }
     }
   },
 
@@ -79,8 +86,10 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
     type: DataTypes.DECIMAL(10, 8),
     allowNull: false,
     validate: {
-      min: Constants.CINEMA_MIN_LATITUDE,
-      max: Constants.CINEMA_MAX_LATITUDE
+      len: {
+        args: [Constants.CINEMA_MIN_LATITUDE, Constants.CINEMA_MAX_LATITUDE],
+        msg: Messages.CINEMA_ERR_LATITUDE_VAL
+      }
     }
   },
 
@@ -89,8 +98,10 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
     type: DataTypes.DECIMAL(10, 8),
     allowNull: false,
     validate: {
-      min: Constants.CINEMA_MIN_LONGITUDE,
-      max: Constants.CINEMA_MAX_LONGITUDE
+      len: {
+        args: [Constants.CINEMA_MIN_LONGITUDE, Constants.CINEMA_MAX_LONGITUDE],
+        msg: Messages.CINEMA_ERR_LONGITUDE_VAL
+      }
     }
   },
 });
@@ -116,7 +127,10 @@ export const Room = sequelize.define<RoomInstance>("Room", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [Constants.ROOM_NAME_MIN_LEN, Constants.ROOM_NAME_MAX_LEN]
+      len: { 
+        args: [Constants.ROOM_NAME_MIN_LEN, Constants.ROOM_NAME_MAX_LEN],
+        msg: Messages.ROOM_ERR_NAME_LEN
+      }
     }
   },
   // A string containing the layout of chairs in the room as well as spacing between chairs (eg. A20, A50, G50, A20; )
@@ -134,7 +148,10 @@ export const Room = sequelize.define<RoomInstance>("Room", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      is: Constants.ROOM_LAYOUT_REGEX
+      is: {
+        args: Constants.ROOM_LAYOUT_REGEX,
+        msg: Messages.ROOM_ERR_LAYOUT
+      }
     }
   },
 
@@ -142,8 +159,13 @@ export const Room = sequelize.define<RoomInstance>("Room", {
     type: DataTypes.INTEGER,
     allowNull: false,
     validate: {
-      isNumeric: true,
-      min: 1
+      isNumeric: {
+        msg: Messages.CINEMA_ERR_ID
+      },
+      min: {
+        args: [Constants.TYPICAL_MIN_ID],
+        msg: Messages.CINEMA_ERR_ID
+      }
     }
   },
 });
@@ -167,7 +189,10 @@ export const Screening = sequelize.define<ScreeningInstance>("Screening", {
     type: DataTypes.DATE,
     allowNull: false,
     validate: {
-      isDate: true,
+      isDate: {
+        args: true,
+        msg: Messages.SCREENING_ERR_START_DATE
+      },
     }
   },
   movieId: {
@@ -182,8 +207,13 @@ export const Screening = sequelize.define<ScreeningInstance>("Screening", {
     type: DataTypes.INTEGER,
     allowNull: false,
     validate: {
-      isNumeric: true,
-      min: 1
+      isNumeric: {
+        msg: Messages.ROOM_ERR_ID
+      },
+      min: {
+        args: [Constants.TYPICAL_MIN_ID],
+        msg: Messages.ROOM_ERR_ID
+      }
     }
   },
 });
@@ -216,7 +246,10 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: [Constants.MOVIE_TITLE_MIN_LEN, Constants.MOVIE_TITLE_MAX_LEN]
+      len: {
+        args: [Constants.MOVIE_TITLE_MIN_LEN, Constants.MOVIE_TITLE_MAX_LEN],
+        msg: Messages.MOVIE_ERR_TITLE_LEN
+      }
     }
   },
   // HD, 3D, 4K etc.
@@ -230,49 +263,68 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
     type: DataTypes.INTEGER,
     allowNull: false,
     validate: { 
-      len: [Constants.MOVIE_DUR_MIN, Constants.MOVIE_DUR_MAX]
+      len: {
+        args: [Constants.MOVIE_DUR_MIN, Constants.MOVIE_DUR_MAX],
+        msg: Messages.MOVIE_ERR_DURATION
+      }
     }
   },
   description: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: { 
-      len: [Constants.MOVIE_DESC_MIN_LEN, Constants.MOVIE_DESC_MAX_LEN]
+      len: {
+        args: [Constants.MOVIE_DESC_MIN_LEN, Constants.MOVIE_DESC_MAX_LEN],
+        msg: Messages.MOVIE_ERR_DESC
+      }
     }
   },
   posterUrl: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      isUrl: true
+      isUrl: {
+        msg: Messages.MOVIE_ERR_POSTER_URL
+      }
     }
   },
   trailerUrl: {
     type: DataTypes.STRING,
     allowNull: true,
     validate: {
-      isUrl: true
+      isUrl: {
+        msg: Messages.MOVIE_ERR_TRAILER_URL
+      }
     }
   },
   language: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: { 
-      len: [Constants.MOVIE_LANG_MIN_LEN, Constants.MOVIE_LANG_MAX_LEN]
+      len: {
+        args: [Constants.MOVIE_LANG_MIN_LEN, Constants.MOVIE_LANG_MAX_LEN],
+        msg: Messages.MOVIE_ERR_LANG_LEN
+      } 
     }
   },
   premiereDate: {
     type: DataTypes.DATE,
     allowNull: false,
     validate: {
-      isDate: true
+      isDate: {
+        args: true,
+        msg: Messages.MOVIE_ERR_PREMIERE_DATE
+      }
     }
   },
   genre: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: { 
-      len: [Constants.MOVIE_GENRE_MIN_LEN, Constants.MOVIE_GENRE_MAX_LEN]
+      len: {
+        args: [Constants.MOVIE_GENRE_MIN_LEN, Constants.MOVIE_GENRE_MAX_LEN],
+        msg: Messages.MOVIE_ERR_GENRE_LEN
+      }
     }
   },
   // 18+, 7+, no restrictions etc.
@@ -286,14 +338,20 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: { 
-      len: [Constants.MOVIE_CAST_MIN_LEN, Constants.MOVIE_CAST_MAX_LEN]
+      len: {
+        args: [Constants.MOVIE_CAST_MIN_LEN, Constants.MOVIE_CAST_MAX_LEN],
+        msg: Messages.MOVIE_ERR_CAST_LEN
+      } 
     }
   },
   director: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: { 
-      len: [Constants.MOVIE_DIR_MIN_LEN, Constants.MOVIE_DIR_MAX_LEN]
+      len: {
+        args: [Constants.MOVIE_DIR_MIN_LEN, Constants.MOVIE_DIR_MAX_LEN],
+        msg: Messages.MOVIE_ERR_DIR_LEN
+      }
     }
   },
 });
@@ -345,9 +403,9 @@ export interface UserAttributes {
   id?: number;
   name: string;
   accountType: string;
-  password: string;
-  email: string;
-  phoneNumber: string;
+  password: string | null;
+  email: string | null;
+  phoneNumber: string | number | null;
 }
 
 export interface UserInstance extends Model<UserAttributes>, UserAttributes {}
@@ -357,29 +415,47 @@ export const User = sequelize.define<UserInstance>("User", {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      len: {
+        args: [Constants.USER_NAME_MIN_LEN, Constants.USER_NAME_MAX_LEN],
+        msg: Messages.USER_ERR_NAME_LEN
+      },
+    }
   },
-  // Client | Admin
   accountType: {
-    type: DataTypes.STRING,
+    type: DataTypes.ENUM(...Constants.USER_ACC_TYPES),
     allowNull: false,
+    defaultValue: Constants.USER_ACC_TYPES[0]
   },
   password: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   email: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
+    unique: {
+      name: 'email',
+      msg: Messages.USER_ERR_EMAIL_UNIQUE 
+    },
     validate: {
-      isEmail: true,
+      isEmail: {
+        msg: Messages.USER_ERR_EMAIL
+      }
     },
   },
   phoneNumber: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
+    unique: {
+      name: 'phoneNumber',
+      msg: Messages.USER_ERR_PHONE_UNIQUE
+    },
     validate: {
-      isUnique: true,
-      len: [9, 12],
+      is: {
+        args: Constants.USER_PHONE_REGEX, 
+        msg: Messages.USER_ERR_PHONE
+      }
     },
   },
 });

@@ -60,3 +60,19 @@ export const MOVIE_CAST_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 12;
 
 export const MOVIE_DIR_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
 export const MOVIE_DIR_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 2;
+
+//---------------------------------
+// User
+//---------------------------------
+export const USER_NAME_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const USER_NAME_MAX_LEN: number = TYPICAL_NAME_MAX_LEN;
+
+export const USER_ACC_TYPES = ['Unauthenticated customer', 'Authenticated customer', 'Cinema admin', 'Site admin'] as const;
+
+export const USER_PASS_MIN_LEN: number = 12;
+export const USER_PASS_MAX_LEN: number = 72;
+export const USER_PASS_SALT_ROUNDS: number = 10;
+
+export const USER_EMAIL_REGEX: RegExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+export const USER_PHONE_REGEX: RegExp = /^[1-9]\d{6,14}$/;

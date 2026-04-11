@@ -4,6 +4,7 @@ import cinemaRouter from "./routes/cinema.ts";
 import roomRouter from "./routes/room.ts";
 import movieRouter from "./routes/movie.ts";
 import screeningRouter from "./routes/screening.ts";
+import userRouter from "./routes/user.ts";
 
 const app = express();
 const port = 3000;
@@ -18,6 +19,7 @@ app.use("/cinema", cinemaRouter);
 app.use("/room", roomRouter);
 app.use("/movie", movieRouter);
 app.use("/screening", screeningRouter);
+app.use("/user", userRouter);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);

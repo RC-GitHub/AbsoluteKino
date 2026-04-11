@@ -61,3 +61,21 @@ export const MOVIE_ERR_DIR_LEN: string = `Movie director length is incorrect (it
 export const MOVIE_ERR_NOT_FOUND_ALL: string = "No movies were found in the database";
 export const MOVIE_ERR_NOT_FOUND: string = "Movie with specified ID was not found in the database";
 export const MOVIE_MSG_DEL: string = "Movie deleted successfully";
+
+//---------------------------------
+// User
+//---------------------------------
+export const USER_ERR_EMPTY_ARGS: string = "User arguments are all required";
+export const USER_ERR_ID: string = "User ID should be a positive integer";
+export const USER_ERR_TYPING: string = "User name, account type, password, email and phone number should have correct typings (string, string, string or null, string or null and string or null respectively)";
+export const USER_ERR_NAME_LEN: string = `User name length is incorrect (it should be between ${Constants.USER_NAME_MIN_LEN} and ${Constants.USER_NAME_MAX_LEN})`;
+export const USER_ERR_ACC_TYPE: string = `User account type should be one of the following: 'Unauthenticated customer', 'Authenticated customer', 'Cinema admin' or 'Site admin'`;
+export const USER_ERR_UNAUTHORIZED: string = `Unauthenticated user must provide email address and/or phone number`;
+export const USER_ERR_PASS_LEN: string = `User password length is incorrect (it should be between ${Constants.USER_PASS_MIN_LEN} and ${Constants.USER_PASS_MAX_LEN})`;
+export const USER_ERR_EMAIL = `User email should adhere to the standard email format as provided by Sequelize`;
+export const USER_ERR_EMAIL_UNIQUE = `User with this email already exists`;
+export const USER_ERR_PHONE = `User phone number does not match the specified format (look into the documentation)`;
+export const USER_ERR_PHONE_UNIQUE = `User with this phone number already exists`;
+export const USER_ERR_NOT_FOUND_ALL: string = "No users were found in the database";
+export const USER_ERR_NOT_FOUND: string = "User with specified ID was not found in the database";
+export const USER_MSG_DEL: string = "User deleted successfully";

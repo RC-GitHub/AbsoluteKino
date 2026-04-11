@@ -36,6 +36,22 @@ export const screeningData = {
     movieId: 1
 }
 
+export const userData = {
+    name: "Test User",
+    accountType: Constants.USER_ACC_TYPES[1],
+    password: "Test password",
+    email: "test-mail@email.com",
+    phoneNumber: "+48512616092"
+}
+
+export const userDataUnauthorized = {
+    name: null,
+    accountType: Constants.USER_ACC_TYPES[0],
+    password: null,
+    email: "unauthorized@email.com",
+    phoneNumber: null
+}
+
 export async function sendRequest(endPoint: string, httpStatus: number, type: string, requestData = {}) {
     switch (type.toUpperCase()) {
         case "GET": {

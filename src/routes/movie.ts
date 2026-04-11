@@ -1,9 +1,27 @@
+import { Movie, MovieAttributes, MovieInstance } from "../models.js";
 import express, { Request, Response, NextFunction } from "express";
 import * as Constants from "../constants.ts";
 import * as Messages from "../messages.ts";
-import { Movie, MovieAttributes, MovieInstance } from "../models.js";
 
 const router = express.Router();
+
+function isViewingFormatCorrect(viewingFormat: string): boolean {
+  const viewingFormats: string[] = viewingFormat.split(" ");
+  return viewingFormats.every((format) => Constants.MOVIE_STD_VIEWING_FORMATS.includes(format));
+}
+
+function isValidURL(url: string): boolean {
+  const pattern = new RegExp(
+    "^(https?:\\/\\/)?" + // protocol
+      "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
+      "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
+      "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+      "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+      "(\\#[-a-z\\d_]*)?$",
+    "i"
+  );
+  return !!pattern.test(url);
+}
 
 // Adds a new movie to the database
 // Requires: title, viewing format, duration, description, poster url, 
@@ -351,24 +369,5 @@ router.delete("/delete/:movieId", async (req: Request, res: Response, next: Next
     next(error);
   }
 });
-
-
-function isViewingFormatCorrect(viewingFormat: string): boolean {
-  const viewingFormats: string[] = viewingFormat.split(" ");
-  return viewingFormats.every((format) => Constants.MOVIE_STD_VIEWING_FORMATS.includes(format));
-}
-
-function isValidURL(url: string): boolean {
-  const pattern = new RegExp(
-    "^(https?:\\/\\/)?" + // protocol
-      "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
-      "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
-      "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
-      "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
-      "(\\#[-a-z\\d_]*)?$",
-    "i"
-  );
-  return !!pattern.test(url);
-}
 
 export default router;

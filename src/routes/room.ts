@@ -1,7 +1,7 @@
+import { Cinema, CinemaInstance, CinemaAttributes, Room, RoomAttributes , RoomInstance } from "../models.js";
 import express, { Request, Response, NextFunction } from "express";
 import * as Constants from "../constants.ts"
 import * as Messages from "../messages.ts"
-import { Cinema, CinemaInstance, CinemaAttributes, Room, RoomAttributes , RoomInstance } from "../models.js";
 
 const router = express.Router();
 
