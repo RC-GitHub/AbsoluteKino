@@ -57,7 +57,15 @@ export const reservationData = {
     row: 5,
     column: 10,
     screeningId: 1,
-    clientId: 1
+    userId: 1
+};
+
+export const productData = {
+    name: "Nachos",
+    price: 8.50,
+    size: "Medium",
+    discount: 0,
+    cinemaId: 1
 };
 
 export async function sendRequest(endPoint: string, httpStatus: number, type: string, requestData = {}) {

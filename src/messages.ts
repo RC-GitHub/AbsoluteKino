@@ -96,3 +96,21 @@ export const RESERVATION_ERR_NOT_FOUND_CLIENT: string = "No reservations were fo
 export const RESERVATION_ERR_NOT_FOUND_SCREENING: string = "No reservations were found for the specified screening";
 export const RESERVATION_ERR_NOT_FOUND: string = "Reservation with specified ID was not found in the database";
 export const RESERVATION_MSG_DEL: string = "Reservation cancelled successfully";
+
+//---------------------------------
+// Product
+//---------------------------------
+//---------------------------------
+// Product
+//---------------------------------
+export const PRODUCT_ERR_EMPTY_ARGS: string = "Product name, price, size, and cinema ID are all required";
+export const PRODUCT_ERR_ID: string = "Product ID should be a positive integer";
+export const PRODUCT_ERR_TYPING: string = "Product name, size, price, and discount should have correct typings (string, string, number, and number respectively)";
+export const PRODUCT_ERR_NAME_LEN: string = `Product name length is incorrect (it should be between ${Constants.PRODUCT_NAME_MIN_LEN} and ${Constants.PRODUCT_NAME_MAX_LEN})`;
+export const PRODUCT_ERR_PRICE: string = "Product price must be a positive decimal value";
+export const PRODUCT_ERR_SIZE: string = "Product size must be one of the following: 'Small', 'Medium', 'Large', 'XL'";
+export const PRODUCT_ERR_DISCOUNT: string = `Product discount must be a percentage between ${Constants.PRODUCT_DISCOUNT_MIN_VAL} and ${Constants.PRODUCT_DISCOUNT_MAX_VAL}`;
+export const PRODUCT_ERR_NOT_FOUND_ALL: string = "No products were found in the database";
+export const PRODUCT_ERR_NOT_FOUND: string = "Product with specified ID was not found in the database";
+export const PRODUCT_ERR_NOT_FOUND_CINEMA: string = "No products were found for the specified cinema";
+export const PRODUCT_MSG_DEL: string = "Product deleted successfully";

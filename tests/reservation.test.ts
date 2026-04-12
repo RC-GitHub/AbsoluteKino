@@ -58,10 +58,10 @@ describe("Reservation Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, screeningId: null });
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
 
-            // Missing clientId
-            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, clientId: undefined });
+            // Missing userId
+            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, userId: undefined });
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
-            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, clientId: null });
+            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, userId: null });
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
 
             // all are undefined
@@ -82,8 +82,8 @@ describe("Reservation Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, screeningId: "5" });
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
 
-            // clientId as string
-            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, clientId: "5" });
+            // userId as string
+            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, userId: "5" });
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
         });
 
@@ -117,21 +117,21 @@ describe("Reservation Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID, reservations: [] });
         });
 
-        it("should respond with 400 if client id is invalid", async () => {
-            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, clientId: 0 });
+        it("should respond with 400 if user id is invalid", async () => {
+            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, userId: 0 });
             expect(response.body).toEqual({ message: Messages.USER_ERR_ID, reservations: [] });
 
-            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, clientId: -1 });
+            response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, userId: -1 });
             expect(response.body).toEqual({ message: Messages.USER_ERR_ID, reservations: [] });
         });
 
-        it("should respond with 404 if screening or client does not exist", async () => {
+        it("should respond with 404 if screening or user does not exist", async () => {
             // Non-existent screening
             response = await Utils.sendRequest("/reservation/new", 404, "POST", { ...Utils.reservationData, screeningId: 99 });
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL, reservations: [] });
 
-            // Non-existent client
-            response = await Utils.sendRequest("/reservation/new", 404, "POST", { ...Utils.reservationData, clientId: 99 });
+            // Non-existent user
+            response = await Utils.sendRequest("/reservation/new", 404, "POST", { ...Utils.reservationData, userId: 99 });
             expect(response.body).toEqual({ message: Messages.USER_ERR_NOT_FOUND, reservations: [] });
         });
     });
@@ -140,7 +140,7 @@ describe("Reservation Lifecycle Flow", async () => {
     // Step 2 - GET
     //---------------------------------
     // Multiple reservations are created to test collection fetching.
-    // Fetching by ID, by Screening, and by Client are all verified.
+    // Fetching by ID, by Screening, and by User are all verified.
     // At the end, 2 reservations exist in the database.
     //---------------------------------
 
@@ -286,7 +286,9 @@ describe("Reservation Lifecycle Flow", async () => {
     //---------------------------------
     // Step 4 - DELETE
     //---------------------------------
-    // Database is cleared of reservations.
+    // All reservation objects are being deleted one by one
+    // Then tests go over all cases which result in deletion failure
+    // At the end of the step no reservation objects are in the database
     //---------------------------------
 
     describe("DELETE /reservation/delete/:reservationId", async () => {
@@ -314,7 +316,9 @@ describe("Reservation Lifecycle Flow", async () => {
     });
 
     //---------------------------------
-    // Step 5 - GET (404 Empty State)
+    // Step 5 - GET (404)
+    //---------------------------------
+    // Database is empty, fetching all should 404
     //---------------------------------
 
     describe("GET (404) /reservation/all", async () => {

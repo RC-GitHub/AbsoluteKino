@@ -11,28 +11,28 @@ const router = express.Router();
 
 /**
  * Adds a new reservation.
- * Handles single seat selection with systematic validation.
+ * Requires a reservation row, column, screening id and client id (user id)
  */
 router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
     try {
-        let { row, column, screeningId, clientId }: ReservationAttributes = req.body;
+        let { row, column, screeningId, userId }: ReservationAttributes = req.body;
 
-        if (row == null || column == null || screeningId == null || clientId == null) {
+        if (row == null || column == null || screeningId == null || userId == null) {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
         }
 
-        if (typeof row !== 'number' || typeof column !== 'number' || typeof screeningId !== 'number' || typeof clientId !== 'number') {
+        if (typeof row !== 'number' || typeof column !== 'number' || typeof screeningId !== 'number' || typeof userId !== 'number') {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
         }
 
-        if (!Number.isInteger(row) || !Number.isInteger(column) || !Number.isInteger(screeningId) || !Number.isInteger(clientId)) {
+        if (!Number.isInteger(row) || !Number.isInteger(column) || !Number.isInteger(screeningId) || !Number.isInteger(userId)) {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
         }
 
         if (screeningId < Constants.TYPICAL_MIN_ID) {
             return res.status(400).json({ message: Messages.SCREENING_ERR_ID, reservations: [] });
         }
-        if (clientId < Constants.TYPICAL_MIN_ID) {
+        if (userId < Constants.TYPICAL_MIN_ID) {
             return res.status(400).json({ message: Messages.USER_ERR_ID, reservations: [] });
         }
 
@@ -48,7 +48,7 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
             return res.status(404).json({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL, reservations: [] });
         }
 
-        const user: UserInstance | null = await User.findByPk(clientId);
+        const user: UserInstance | null = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, reservations: [] });
         }
@@ -58,7 +58,7 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_OCCUPIED, reservations: [] });
         }
 
-        const reservation = await Reservation.create({ row, column, screeningId, clientId });
+        const reservation = await Reservation.create({ row, column, screeningId, userId });
         res.send({ reservations: [reservation] });
     } catch (error: any) {
         next(error);
@@ -120,7 +120,7 @@ router.get("/all/user/:userId", async (req: Request, res: Response, next: NextFu
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, reservations: [] });
         }
 
-        const reservations = await Reservation.findAll({ where: { clientId: userId } });
+        const reservations = await Reservation.findAll({ where: { userId } });
         if (reservations.length === 0) {
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, reservations: [] });
         }

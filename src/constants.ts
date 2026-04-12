@@ -90,3 +90,16 @@ export const RESERVATION_MAX_ROW_VAL: number = 32;
 
 export const RESERVATION_MIN_COL_VAL: number = 1;
 export const RESERVATION_MAX_COL_VAL: number = 32;
+
+//---------------------------------
+// Product
+//---------------------------------
+export const PRODUCT_NAME_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const PRODUCT_NAME_MAX_LEN: number = TYPICAL_NAME_MAX_LEN;
+
+export const PRODUCT_PRICE_MIN_VAL: number = 0;
+
+export const PRODUCT_DISCOUNT_MIN_VAL: number = 0.00;
+export const PRODUCT_DISCOUNT_MAX_VAL: number = 100.00;
+
+export const PRODUCT_SIZES = ['Small', 'Medium', 'Large', 'XL']

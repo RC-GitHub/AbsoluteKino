@@ -208,8 +208,13 @@ export const Screening = sequelize.define<ScreeningInstance>("Screening", {
     type: DataTypes.INTEGER,
     allowNull: false,
     validate: {
-      isNumeric: true,
-      min: 1
+      isNumeric: {
+        msg: Messages.MOVIE_ERR_ID
+      },
+      min: {
+        args: [Constants.TYPICAL_MIN_ID],
+        msg: Messages.MOVIE_ERR_ID
+      }
     }
   },
   roomId: {
@@ -375,7 +380,7 @@ export interface ReservationAttributes {
   column: number;
   reservationDate: Date | null;
   screeningId: number;
-  clientId: number;
+  userId: number;
 }
 
 export interface ReservationInstance extends Model<ReservationAttributes>, ReservationAttributes {}
@@ -416,10 +421,28 @@ export const Reservation = sequelize.define<ReservationInstance>("Reservation", 
   screeningId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    validate: {
+      isNumeric: {
+        msg: Messages.SCREENING_ERR_ID
+      },
+      min: {
+        args: [Constants.TYPICAL_MIN_ID],
+        msg: Messages.SCREENING_ERR_ID
+      }
+    }
   },
-  clientId: {
+  userId: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    validate: {
+      isNumeric: {
+        msg: Messages.USER_ERR_ID
+      },
+      min: {
+        args: [Constants.TYPICAL_MIN_ID],
+        msg: Messages.USER_ERR_ID
+      }
+    }
   },
 });
 
@@ -508,25 +531,52 @@ export const Product = sequelize.define<ProductInstance>("Product", {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: {
+        args: [Constants.PRODUCT_NAME_MIN_LEN, Constants.PRODUCT_NAME_MAX_LEN],
+        msg: Messages.PRODUCT_ERR_NAME_LEN
+      }
+    }
   },
   price: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
+    validate: {
+      isDecimal: true,
+      min: {
+        args: [Constants.PRODUCT_PRICE_MIN_VAL],
+        msg: Messages.PRODUCT_ERR_PRICE
+      } 
+    }
   },
   size: {
-    type: DataTypes.STRING,
+    type: DataTypes.ENUM(...Constants.PRODUCT_SIZES),
     allowNull: false,
+    defaultValue: Constants.PRODUCT_SIZES[1]
   },
   discount: {
     type: DataTypes.DECIMAL(5, 2),
     allowNull: false,
+    defaultValue: Constants.PRODUCT_DISCOUNT_MIN_VAL,
+    validate: {
+      len: {
+        args: [Constants.PRODUCT_DISCOUNT_MIN_VAL, Constants.PRODUCT_DISCOUNT_MAX_VAL],
+        msg: Messages.PRODUCT_ERR_DISCOUNT
+      }
+    }
   },
   cinemaId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-  },
+    validate: {
+      min: {
+        args: [Constants.TYPICAL_MIN_ID],
+        msg: Messages.CINEMA_ERR_ID
+      }
+    }
+  }
 });
-
 //---------------------------------
 // Associations
 //---------------------------------
