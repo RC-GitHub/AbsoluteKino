@@ -11,8 +11,19 @@ export const cinemaData = {
 
 export const roomData = {
     name: "Test Room",
-    chairPlacement: "A20, B15, C25; A20, B14, B15",
+    width: Constants.ROOM_WIDTH_DEF_VAL,
+    depth: Constants.ROOM_DEPTH_DEF_VAL,
+    rowAmount: Constants.ROOM_ROWS_DEF_VAL,
+    colAmount: Constants.ROOM_COLS_DEF_VAL,
     cinemaId: 1
+}
+
+export const roomDataWithStairs = {
+    ...roomData,
+    stairsPlacements: [
+        { x: 200, width: 60 },
+        { x: 700, width: 60 }
+    ]
 }
 
 export const movieData = {
@@ -69,22 +80,41 @@ export const productData = {
 };
 
 export async function sendRequest(endPoint: string, httpStatus: number, type: string, requestData = {}) {
-    switch (type.toUpperCase()) {
-        case "GET": {
-            return await request(app).get(endPoint).send(requestData).expect("Content-Type", /json/).expect(httpStatus)
-            break;
+    try {
+        let req;
+        switch (type.toUpperCase()) {
+            case "GET":
+                req = request(app).get(endPoint).send(requestData);
+                break;
+            case "PUT":
+                req = request(app).put(endPoint).send(requestData);
+                break;
+            case "DELETE":
+                req = request(app).delete(endPoint).send(requestData);
+                break;
+            default:
+                req = request(app).post(endPoint).send(requestData);
+                break;
         }
-        case "PUT": {
-            return await request(app).put(endPoint).send(requestData).expect("Content-Type", /json/).expect(httpStatus)
-            break;
+        return await req.expect("Content-Type", /json/).expect(httpStatus);
+
+    } catch (error: any) {
+        console.error(`\n [Test Request Error]`);
+        console.error(` Target: ${type.toUpperCase()} ${endPoint}`);
+        console.error(` Expected Status: ${httpStatus}`);
+        
+        if (error.response) {
+            console.error(` Actual Status: ${error.response.status}`);
+            console.error(` Actual Body:`, JSON.stringify(error.response.body, null, 2));
+            
+            if (error.response.text && !error.response.body) {
+                console.error(` Raw Text (First 200 chars): ${error.response.text.substring(0, 200)}...`);
+            }
+        } else {
+            console.error(` Message: ${error.message}`);
         }
-        case "DELETE": {
-            return await request(app).delete(endPoint).send(requestData).expect("Content-Type", /json/).expect(httpStatus)
-            break;
-        }
-        default: {
-            return await request(app).post(endPoint).send(requestData).expect("Content-Type", /json/).expect(httpStatus)
-            break;
-        }
+        console.error(`---------------------------\n`);
+        
+        throw error;
     }
 }

@@ -4,6 +4,7 @@ import * as Messages from "../messages.ts";
 import { 
     Reservation, ReservationAttributes, ReservationInstance, 
     Screening, ScreeningInstance, 
+    Seat, SeatInstance, 
     User, UserInstance 
 } from "../models.js";
 
@@ -15,20 +16,29 @@ const router = express.Router();
  */
 router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
     try {
-        let { row, column, screeningId, userId }: ReservationAttributes = req.body;
+        let { type, seatId, screeningId, userId }: ReservationAttributes = req.body;
 
-        if (row == null || column == null || screeningId == null || userId == null) {
+        if (
+            type == null || 
+            seatId == null || 
+            screeningId == null || 
+            userId == null
+        ) {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
         }
 
-        if (typeof row !== 'number' || typeof column !== 'number' || typeof screeningId !== 'number' || typeof userId !== 'number') {
+        if (
+            typeof type !== 'number' || 
+            typeof seatId !== 'number' || !Number.isInteger(seatId) ||
+            typeof screeningId !== 'number' || !Number.isInteger(screeningId) ||
+            typeof userId !== 'number' || !Number.isInteger(userId)
+        ) {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
         }
 
-        if (!Number.isInteger(row) || !Number.isInteger(column) || !Number.isInteger(screeningId) || !Number.isInteger(userId)) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
+        if (seatId < Constants.TYPICAL_MIN_ID) {
+            return res.status(400).json({ message: Messages.SEAT_ERR_ID, reservations: [] });
         }
-
         if (screeningId < Constants.TYPICAL_MIN_ID) {
             return res.status(400).json({ message: Messages.SCREENING_ERR_ID, reservations: [] });
         }
@@ -36,29 +46,39 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
             return res.status(400).json({ message: Messages.USER_ERR_ID, reservations: [] });
         }
 
-        if (row < Constants.RESERVATION_MIN_ROW_VAL || row >= Constants.RESERVATION_MAX_ROW_VAL) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_ROW_VAL, reservations: [] });
-        }
-        if (column < Constants.RESERVATION_MIN_COL_VAL || column >= Constants.RESERVATION_MAX_COL_VAL) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_COL_VAL, reservations: [] });
+        if (!Constants.RESERVATION_TYPES.includes(type)) {
+            return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPE, reservations: [] });
         }
 
+        const seat: SeatInstance | null = await Seat.findByPk(seatId);
+        if (!seat) {
+            return res.status(404).json({ message: Messages.SEAT_ERR_NOT_FOUND, reservations: [] });
+        }
         const screening: ScreeningInstance | null = await Screening.findByPk(screeningId);
         if (!screening) {
             return res.status(404).json({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL, reservations: [] });
         }
-
         const user: UserInstance | null = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, reservations: [] });
         }
 
-        const existing = await Reservation.findOne({ where: { screeningId, row, column } });
+        const existing = await Reservation.findOne({ where: { screeningId, seatId } });
         if (existing) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_OCCUPIED, reservations: [] });
+            if (existing.type === Constants.RESERVATION_TYPES[0]) {
+                return res.status(400).json({ message: Messages.RESERVATION_ERR_BLOCKED, reservations: [] });
+            }
+            else {
+                return res.status(400).json({ message: Messages.RESERVATION_ERR_RESERVED, reservations: [] });
+            }
         }
 
-        const reservation = await Reservation.create({ row, column, screeningId, userId });
+        const reservation = await Reservation.create({ 
+            type,
+            seatId,
+            screeningId, 
+            userId 
+        });
         res.send({ reservations: [reservation] });
     } catch (error: any) {
         next(error);
@@ -146,40 +166,44 @@ router.put("/update/:reservationId", async (req: Request, res: Response, next: N
             return res.status(404).json({ message: Messages.RESERVATION_ERR_NOT_FOUND, reservations: [] });
         }
 
-        let { row, column }: Partial<ReservationAttributes> = req.body;
+        let { type, seatId }: Partial<ReservationAttributes> = req.body;
 
-        if (row == null && column == null) {
+        if (type == null && seatId == null) {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
         }
 
         const updateData: Partial<ReservationAttributes> = {};
 
-        if (row !== undefined) {
-            if (typeof row !== 'number') return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
-            if (row < Constants.RESERVATION_MIN_ROW_VAL || row >= Constants.RESERVATION_MAX_ROW_VAL) {
-                return res.status(400).json({ message: Messages.RESERVATION_ERR_ROW_VAL, reservations: [] });
+        if (type !== undefined) {
+            if (typeof type !== 'string') return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
+            if (!(Constants.RESERVATION_TYPES).includes(type as any)) {
+                return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPE, reservations: [] });
             }
-            updateData.row = row;
+            updateData.type = type;
         }
 
-        if (column !== undefined) {
-            if (typeof column !== 'number') return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
-            if (column < Constants.RESERVATION_MIN_COL_VAL || column >= Constants.RESERVATION_MAX_COL_VAL) {
-                return res.status(400).json({ message: Messages.RESERVATION_ERR_ROW_VAL, reservations: [] }); 
+        if (seatId !== undefined) {
+            if (typeof seatId !== 'number' || !Number.isInteger(seatId)) return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
+            if (seatId < Constants.TYPICAL_MIN_ID) {
+                return res.status(400).json({ message: Messages.SEAT_ERR_ID, reservations: [] }); 
             }
-            updateData.column = column;
-        }
-        
-        const targetRow = updateData.row ?? reservation.row;
-        const targetCol = updateData.column ?? reservation.column;
-        
-        const conflict = await Reservation.findOne({ 
-            where: { screeningId: reservation.screeningId, row: targetRow, column: targetCol } 
-        });
 
-        if (conflict && conflict.id !== reservation.id) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_OCCUPIED, reservations: [] });
-        }
+            const seat: SeatInstance | null = await Seat.findByPk(seatId);
+            if (!seat) {
+                return res.status(404).json({ message: Messages.SEAT_ERR_NOT_FOUND, reservations: [] });
+            }
+
+            const seatReservation: ReservationInstance | null = await Reservation.findOne({where: { seatId, screeningId: reservation.screeningId }});
+            if (seatReservation) {
+                if (seatReservation.type === Constants.RESERVATION_TYPES[0]) {
+                    return res.status(400).json({ message: Messages.RESERVATION_ERR_BLOCKED, reservations: [] });
+                }
+                else {
+                    return res.status(400).json({ message: Messages.RESERVATION_ERR_RESERVED, reservations: [] });
+                }
+            }
+            updateData.seatId = seatId;
+        }        
 
         await reservation.update(updateData);
         res.send({ reservations: [reservation] });

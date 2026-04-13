@@ -110,10 +110,18 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
 // Room
 //---------------------------------
 
+export interface Stairs {
+  x: number;
+  width: number;
+}
+
 export interface RoomAttributes {
   id?: number;
   name: string;
-  chairPlacement: string;
+  width: number | null;
+  depth: number | null;
+  rowAmount: number | null;
+  colAmount: number | null;
   cinemaId: number;
 }
 
@@ -122,7 +130,6 @@ export interface RoomInstance extends Model<RoomAttributes>, RoomAttributes {}
 export const Room = sequelize.define<RoomInstance>("Room", {
   ...commonAttributes,
 
-  // Accepts names that are between 1 and 64 characters long
   name: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -133,26 +140,45 @@ export const Room = sequelize.define<RoomInstance>("Room", {
       }
     }
   },
-  // A string containing the layout of chairs in the room as well as spacing between chairs (eg. A20, A50, G50, A20; )
-  // Chairs are split with ',' and rows are split with ';'
-    // - 'A' notes an available normal chair
-    // - 'B' notes a booked normal chair
-    // - 'C' notes a blocked normal chair
-    // - 'D' notes an available special needs chair
-    // - 'E' notes a booked special needs chair
-    // - 'F' notes a blocked special needs chair
-    // - 'G' notes an available VIP chair
-    // - 'H' notes a booked VIP chair
-    // - 'I' notes a blocked VIP chair
-  chairPlacement: {
-    type: DataTypes.STRING,
+
+  width: {
+    type: DataTypes.DECIMAL,
     allowNull: false,
     validate: {
-      is: {
-        args: Constants.ROOM_LAYOUT_REGEX,
-        msg: Messages.ROOM_ERR_LAYOUT
-      }
-    }
+      min: { args: [Constants.ROOM_WIDTH_MIN_VAL], msg: Messages.ROOM_ERR_WIDTH },
+      max: { args: [Constants.ROOM_WIDTH_MAX_VAL], msg: Messages.ROOM_ERR_WIDTH }
+    },
+    defaultValue: Constants.ROOM_WIDTH_DEF_VAL
+  },
+
+  depth: {
+    type: DataTypes.DECIMAL,
+    allowNull: false,
+    validate: {
+      min: { args: [Constants.ROOM_DEPTH_MIN_VAL], msg: Messages.ROOM_ERR_DEPTH },
+      max: { args: [Constants.ROOM_DEPTH_MAX_VAL], msg: Messages.ROOM_ERR_DEPTH }
+    },
+    defaultValue: Constants.ROOM_DEPTH_DEF_VAL
+  },
+
+  rowAmount: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: { args: [Constants.ROOM_ROWS_MIN_VAL], msg: Messages.ROOM_ERR_ROWS },
+      max: { args: [Constants.ROOM_ROWS_MAX_VAL], msg: Messages.ROOM_ERR_ROWS }
+    },
+    defaultValue: Constants.ROOM_ROWS_DEF_VAL
+  },
+
+  colAmount: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: { args: [Constants.ROOM_COLS_MIN_VAL], msg: Messages.ROOM_ERR_COLS },
+      max: { args: [Constants.ROOM_COLS_MAX_VAL], msg: Messages.ROOM_ERR_COLS }
+    },
+    defaultValue: Constants.ROOM_COLS_DEF_VAL
   },
 
   cinemaId: {
@@ -165,6 +191,146 @@ export const Room = sequelize.define<RoomInstance>("Room", {
       min: {
         args: [Constants.TYPICAL_MIN_ID],
         msg: Messages.CINEMA_ERR_ID
+      }
+    }
+  },
+});
+
+//---------------------------------
+// Seat
+//---------------------------------
+
+export interface SeatAttributes {
+  id?: number;
+  x: number;
+  y: number;
+  width: number;
+  depth: number;
+  row: number;
+  column: number;
+  type: string;
+  roomId: number;
+}
+
+export interface SeatInstance extends Model<SeatAttributes>, SeatAttributes {}
+
+export interface SeatAttributes {
+  id?: number;
+  x: number;
+  y: number;
+  width: number;
+  depth: number;
+  row: number;
+  column: number;
+  type: string;
+  roomId: number;
+}
+
+export interface SeatInstance extends Model<SeatAttributes>, SeatAttributes {}
+
+export const Seat = sequelize.define<SeatInstance>("Seat", {
+  ...commonAttributes,
+  x: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      isNumeric: true,
+      min: {
+        args: [0],
+        msg: Messages.SEAT_ERR_X_VAL
+      }
+    }
+  },
+  y: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      isNumeric: true,
+      min: {
+        args: [0],
+        msg: Messages.SEAT_ERR_Y_VAL
+      }
+    }
+  },
+  width: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: Constants.SEAT_WIDTH_DEF_VAL,
+    validate: {
+      min: {
+        args: [Constants.SEAT_WIDTH_MIN_VAL],
+        msg: Messages.SEAT_ERR_WIDTH_VAL
+      },
+      max: {
+        args: [Constants.SEAT_WIDTH_MAX_VAL],
+        msg: Messages.SEAT_ERR_WIDTH_VAL
+      }
+    }
+  },
+  depth: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: Constants.SEAT_DEPTH_DEF_VAL,
+    validate: {
+      min: {
+        args: [Constants.SEAT_DEPTH_MIN_VAL],
+        msg: Messages.SEAT_ERR_DEPTH_VAL
+      },
+      max: {
+        args: [Constants.SEAT_DEPTH_MAX_VAL],
+        msg: Messages.SEAT_ERR_DEPTH_VAL
+      }
+    }
+  },
+  row: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: {
+        args: [0],
+        msg: Messages.SEAT_ERR_ROW_VAL
+      },
+      max: {
+        args: [Constants.ROOM_ROWS_MAX_VAL],
+        msg: Messages.SEAT_ERR_ROW_VAL
+      }
+    }
+  },
+  column: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: {
+        args: [0],
+        msg: Messages.SEAT_ERR_COL_VAL
+      },
+      max: {
+        args: [Constants.ROOM_COLS_MAX_VAL],
+        msg: Messages.SEAT_ERR_COL_VAL
+      }
+    }
+  },
+  type: {
+    type: DataTypes.ENUM(...Constants.SEAT_TYPES),
+    allowNull: false,
+    defaultValue: Constants.SEAT_TYPES[0],
+    validate: {
+      isIn: {
+        args: [Constants.SEAT_TYPES as unknown as string[][]],
+        msg: Messages.SEAT_ERR_TYPE
+      }
+    }
+  },
+  roomId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      isNumeric: {
+        msg: Messages.ROOM_ERR_ID
+      },
+      min: {
+        args: [Constants.TYPICAL_MIN_ID],
+        msg: Messages.ROOM_ERR_ID
       }
     }
   },
@@ -376,9 +542,9 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
 
 export interface ReservationAttributes {
   id?: number;
-  row: number;
-  column: number;
   reservationDate: Date | null;
+  type: string;
+  seatId: number;
   screeningId: number;
   userId: number;
 }
@@ -387,36 +553,40 @@ export interface ReservationInstance extends Model<ReservationAttributes>, Reser
 
 export const Reservation = sequelize.define<ReservationInstance>("Reservation", {
   ...commonAttributes,
-  row: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    validate: {
-      len: {
-        args: [Constants.RESERVATION_MIN_ROW_VAL, Constants.RESERVATION_MAX_ROW_VAL],
-        msg: Messages.RESERVATION_ERR_ROW_VAL
-      }
-    }
-  },
-  column: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    validate: {
-      len: {
-        args: [Constants.RESERVATION_MIN_COL_VAL, Constants.RESERVATION_MAX_COL_VAL],
-        msg: Messages.RESERVATION_ERR_COL_VAL
-      }
-    }
-  },
   reservationDate: {
     type: DataTypes.DATE,
     allowNull: false,
+    defaultValue: DataTypes.NOW,
     validate: {
       isDate: {
         args: true,
         msg: Messages.RESERVATION_ERR_DATE
       }
-    },
-    defaultValue: DataTypes.NOW
+    }
+  },
+  type: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: Constants.RESERVATION_TYPES[0],
+    validate: {
+      isIn: {
+        args: [Constants.RESERVATION_TYPES as unknown as string[][]],
+        msg: Messages.RESERVATION_ERR_TYPE
+      }
+    }
+  },
+  seatId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      isNumeric: {
+        msg: Messages.SEAT_ERR_ID
+      },
+      min: {
+        args: [Constants.TYPICAL_MIN_ID],
+        msg: Messages.SEAT_ERR_ID
+      }
+    }
   },
   screeningId: {
     type: DataTypes.INTEGER,

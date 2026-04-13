@@ -32,7 +32,57 @@ export const CINEMA_MAX_LONGITUDE: number = TYPICAL_MAX_LONGITUDE;
 export const ROOM_NAME_MIN_LEN: number = 3;
 export const ROOM_NAME_MAX_LEN: number = TYPICAL_NAME_MAX_LEN / 2;
 
-export const ROOM_LAYOUT_REGEX: RegExp = /^([A-I]\d{1,3}(, [A-I]\d{1,3})*(;[ \t]?|$))+$/;
+// export const ROOM_LAYOUT_REGEX: RegExp = /^([A-I]\d{1,3}(, [A-I]\d{1,3})*(;[ \t]?|$))+$/;
+
+// These values might be used to create a dynamic SVG
+// Rather than sticking to pixel values which might break on smaller devices
+export const ROOM_WIDTH_MIN_VAL: number = 400;
+export const ROOM_WIDTH_MAX_VAL: number = 3000;
+export const ROOM_WIDTH_DEF_VAL: number = 1000;
+
+export const ROOM_DEPTH_MIN_VAL: number = 300;
+export const ROOM_DEPTH_MAX_VAL: number = 2000;
+export const ROOM_DEPTH_DEF_VAL: number = 750;
+
+export const ROOM_ROWS_MIN_VAL: number = 4;
+export const ROOM_ROWS_MAX_VAL: number = 24;
+export const ROOM_ROWS_DEF_VAL: number = 8;
+
+export const ROOM_COLS_MIN_VAL: number = 8;
+export const ROOM_COLS_MAX_VAL: number = 32;
+export const ROOM_COLS_DEF_VAL: number = 10;
+
+// Gap between the edges of the room and rows and columns (if they're next to the edges of the room)
+export const ROOM_PADDING_MIN_VAL: number = 0.025 // 2.5%
+export const ROOM_PADDING_MAX_VAL: number = 0.1 // 10%
+export const ROOM_PADDING_DEF_VAL: number = 0.05 // 5%
+
+// Gap between the screen and the first row
+export const ROOM_SCREEN_GAP_MIN_VAL: number = ROOM_DEPTH_MIN_VAL * 0.2;
+export const ROOM_SCREEN_GAP_MAX_VAL: number = ROOM_DEPTH_MAX_VAL * 0.15;
+export const ROOM_SCREEN_GAP_DEF_VAL: number = ROOM_DEPTH_MIN_VAL * 0.175;
+
+export const ROOM_STAIRS_MIN_VAL: number = 30;
+export const ROOM_STAIRS_MAX_VAL: number = 120;
+export const ROOM_STAIRS_DEF_VAL: number = 60;
+
+//---------------------------------
+// Seat
+//---------------------------------
+export const SEAT_SIZE_DEF_VAL: number = 30
+
+export const SEAT_WIDTH_MIN_VAL: number = 15
+export const SEAT_WIDTH_MAX_VAL: number = 180
+export const SEAT_WIDTH_DEF_VAL: number = SEAT_SIZE_DEF_VAL
+
+export const SEAT_DEPTH_MIN_VAL: number = 15
+export const SEAT_DEPTH_MAX_VAL: number = 90
+export const SEAT_DEPTH_DEF_VAL: number = SEAT_SIZE_DEF_VAL
+
+export const SEAT_LEG_MARGIN: number = SEAT_SIZE_DEF_VAL
+export const SEAT_BETWEEN_MARGIN: number = SEAT_SIZE_DEF_VAL / 4
+
+export const SEAT_TYPES = ['Normal', 'Special needs', 'VIP'] as const;
 
 //---------------------------------
 // Movie
@@ -85,11 +135,13 @@ export const USER_PHONE_REGEX: RegExp = /^[1-9]\d{6,14}$/;
 //---------------------------------
 // Reservation
 //---------------------------------
-export const RESERVATION_MIN_ROW_VAL: number = 1;
-export const RESERVATION_MAX_ROW_VAL: number = 32;
+// export const RESERVATION_MIN_ROW_VAL: number = 1;
+// export const RESERVATION_MAX_ROW_VAL: number = 32;
 
-export const RESERVATION_MIN_COL_VAL: number = 1;
-export const RESERVATION_MAX_COL_VAL: number = 32;
+// export const RESERVATION_MIN_COL_VAL: number = 1;
+// export const RESERVATION_MAX_COL_VAL: number = 32;
+
+export const RESERVATION_TYPES = ['Incomplete', 'Complete'] as const;
 
 //---------------------------------
 // Product
@@ -102,4 +154,4 @@ export const PRODUCT_PRICE_MIN_VAL: number = 0;
 export const PRODUCT_DISCOUNT_MIN_VAL: number = 0.00;
 export const PRODUCT_DISCOUNT_MAX_VAL: number = 100.00;
 
-export const PRODUCT_SIZES = ['Small', 'Medium', 'Large', 'XL']
+export const PRODUCT_SIZES = ['Small', 'Medium', 'Large', 'XL'];

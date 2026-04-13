@@ -17,15 +17,45 @@ export const CINEMA_MSG_DEL: string = "Cinema deleted successfully";
 //---------------------------------
 // Room
 //---------------------------------
-export const ROOM_ERR_EMPTY_ARGS: string = "Room name, chair placement and corresponding cinema id are all required";
+export const ROOM_ERR_EMPTY_ARGS: string = "Room name, width, depth, row amount, column amount and corresponding cinema id are all required";
+export const ROOM_ERR_EMPTY_ARGS_EX: string = "Room name, width, depth, row amount, column amount, stairs placements and cinema id are all required";
 export const ROOM_ERR_ID: string = "Room ID should be a positive integer";
 export const ROOM_ERR_TYPING: string = "Room name, chair placement and corresponding cinema id should have correct typings (string, string and integer respectively)";
 export const ROOM_ERR_NAME_LEN: string = `Room name length is incorrect (it should be between ${Constants.ROOM_NAME_MIN_LEN} and ${Constants.ROOM_NAME_MAX_LEN})`;
-export const ROOM_ERR_LAYOUT: string = "Room layout does not match the specified format (look into the documentation)";
+export const ROOM_ERR_WIDTH: string = `Room width is incorrect (it should be between ${Constants.ROOM_WIDTH_MIN_VAL} and ${Constants.ROOM_WIDTH_MAX_VAL})`;
+export const ROOM_ERR_DEPTH: string = `Room depth is incorrect (it should be between ${Constants.ROOM_DEPTH_MIN_VAL} and ${Constants.ROOM_DEPTH_MAX_VAL})`;
+export const ROOM_ERR_ROWS: string = `Room row amount is incorrect (it should be between ${Constants.ROOM_ROWS_MIN_VAL} and ${Constants.ROOM_ROWS_MAX_VAL})`;
+export const ROOM_ERR_COLS: string = `Room col amount is incorrect (it should be between ${Constants.ROOM_COLS_MIN_VAL} and ${Constants.ROOM_COLS_MAX_VAL})`;
+export const ROOM_ERR_STAIRS: string = `Room stairs positions should be a non-empty array of objects containing positive integer 'x's and a 'widths' between ${Constants.ROOM_STAIRS_MIN_VAL} and ${Constants.ROOM_STAIRS_MAX_VAL}`;
+export const ROOM_ERR_EXCEED: string = `Seating layout exceeds room dimensions. Adjust room size or seat counts`;
 export const ROOM_ERR_NOT_FOUND_ALL: string = "No rooms were found in the database";
 export const ROOM_ERR_NOT_FOUND: string = "No rooms were found in the specified cinema";
 export const ROOM_ERR_NOT_FOUND_GLOBAL: string = "Room with specified ID was not found in the database";
 export const ROOM_MSG_DEL: string = "Room deleted successfully";
+
+//---------------------------------
+// Seat
+//---------------------------------
+export const SEAT_ERR_EMPTY_ARGS: string = "Seat x coordinate, y coordinate, row, column, type and room Id are all required";
+export const SEAT_ERR_ID: string = "Seat ID should be a positive integer";
+export const SEAT_ERR_TYPING: string = "Seat x coordinate, y coordinate, row, column, type and room Id should have correct typings (integer, integer, integer, integer, string and integer respectively)";
+export const SEAT_ERR_X_VAL: string = `Seat x coordinate should be a positive integer`;
+export const SEAT_ERR_X_INVALID: string = `Seat x coordinate is outside of Room's bounds`;
+export const SEAT_ERR_Y_VAL: string = `Seat y coordinate should be a positive integer`;
+export const SEAT_ERR_Y_INVALID: string = `Seat y coordinate is outside of Room's bounds`;
+export const SEAT_ERR_WIDTH_VAL: string = `Seat width must be between ${Constants.SEAT_WIDTH_MIN_VAL} and ${Constants.SEAT_WIDTH_MAX_VAL}`;
+export const SEAT_ERR_DEPTH_VAL: string = `Seat depth must be between ${Constants.SEAT_DEPTH_MIN_VAL} and ${Constants.SEAT_DEPTH_MAX_VAL}`;
+export const SEAT_ERR_ROW_VAL: string = `Seat row must be between ${Constants.ROOM_ROWS_MIN_VAL} and ${Constants.ROOM_ROWS_MAX_VAL}`;
+export const SEAT_ERR_ROW_INVALID: string = `Seat row is outside of Room's allowed row amount`;
+export const SEAT_ERR_COL_VAL: string = `Seat column must be between ${Constants.ROOM_COLS_MIN_VAL} and ${Constants.ROOM_COLS_MAX_VAL}`;
+export const SEAT_ERR_COL_INVALID: string = `Seat column is outside of Room's allowed column amount`;
+export const SEAT_ERR_TYPE: string = `Seat type should be one of the following: ${Constants.SEAT_TYPES.join(", ")}`;
+export const SEAT_ERR_OCCUPIED: string = "This seat is currently occupied for this screening";
+export const SEAT_ERR_RESERVED: string = "This seat is already reserved for this screening";
+export const SEAT_ERR_NOT_FOUND_ALL: string = "No seats were found in the database";
+export const SEAT_ERR_NOT_FOUND_ROOM: string = "No seats were found for the specified room";
+export const SEAT_ERR_NOT_FOUND: string = "Seat with specified ID was not found in the database";
+export const SEAT_MSG_DEL: string = "Reservation cancelled successfully";
 
 //---------------------------------
 // Screening
@@ -70,7 +100,7 @@ export const USER_ERR_EMPTY_ARGS: string = "User arguments are all required";
 export const USER_ERR_ID: string = "User ID should be a positive integer";
 export const USER_ERR_TYPING: string = "User name, account type, password, email and phone number should have correct typings (string, string, string or null, string or null and string or null respectively)";
 export const USER_ERR_NAME_LEN: string = `User name length is incorrect (it should be between ${Constants.USER_NAME_MIN_LEN} and ${Constants.USER_NAME_MAX_LEN})`;
-export const USER_ERR_ACC_TYPE: string = `User account type should be one of the following: 'Unauthenticated customer', 'Authenticated customer', 'Cinema admin' or 'Site admin'`;
+export const USER_ERR_ACC_TYPE: string = `User account type should be one of the following: ${Constants.USER_ACC_TYPES.join(", ")}`;
 export const USER_ERR_UNAUTHORIZED: string = `Unauthenticated user must provide email address and/or phone number`;
 export const USER_ERR_PASS_LEN: string = `User password length is incorrect (it should be between ${Constants.USER_PASS_MIN_LEN} and ${Constants.USER_PASS_MAX_LEN})`;
 export const USER_ERR_EMAIL = `User email should adhere to the standard email format as provided by Sequelize`;
@@ -84,22 +114,22 @@ export const USER_MSG_DEL: string = "User deleted successfully";
 //---------------------------------
 // Reservation
 //---------------------------------
-export const RESERVATION_ERR_EMPTY_ARGS: string = "Reservation row, column, reservation date, screening ID and client ID are all required";
+export const RESERVATION_ERR_EMPTY_ARGS: string = "Reservation row, column, reservation date, screening ID and user ID are all required";
 export const RESERVATION_ERR_ID: string = "Reservation ID should be a positive integer";
-export const RESERVATION_ERR_TYPING: string = "Reservation row, column,  screening ID and client ID sould have correct typings (integer, integer, integer and integer respectively)";
-export const RESERVATION_ERR_ROW_VAL: string = `Row must be between ${Constants.RESERVATION_MIN_ROW_VAL} and ${Constants.RESERVATION_MAX_ROW_VAL}`;
-export const RESERVATION_ERR_COL_VAL: string = `Column must be between ${Constants.RESERVATION_MIN_COL_VAL} and ${Constants.RESERVATION_MAX_COL_VAL}`;
+export const RESERVATION_ERR_TYPING: string = "Reservation row, column,  screening ID and user ID should have correct typings (integer, integer, integer and integer respectively)";
+// export const RESERVATION_ERR_ROW_VAL: string = `Reservation row amount must be between ${Constants.RESERVATION_MIN_ROW_VAL} and ${Constants.RESERVATION_MAX_ROW_VAL}`;
+// export const RESERVATION_ERR_COL_VAL: string = `Reservation column amount must be between ${Constants.RESERVATION_MIN_COL_VAL} and ${Constants.RESERVATION_MAX_COL_VAL}`;
 export const RESERVATION_ERR_DATE: string = "Reservation date is an invalid date";
-export const RESERVATION_ERR_OCCUPIED: string = "This seat is already reserved for this screening";
+export const RESERVATION_ERR_TYPE: string = `Reservation type should be one of the following: ${Constants.RESERVATION_TYPES.join(", ")}`;
+export const RESERVATION_ERR_BLOCKED: string = "Reservation is temporarily blocked as someone is undergoing a transaction containing one of the chosen seats";
+export const RESERVATION_ERR_RESERVED: string = "Reservation cannot be completed as one of the chosen seats is already reserved";
 export const RESERVATION_ERR_NOT_FOUND_ALL: string = "No reservations were found in the database";
-export const RESERVATION_ERR_NOT_FOUND_CLIENT: string = "No reservations were found for the specified client";
+export const RESERVATION_ERR_NOT_FOUND_SEAT: string = "No reservations were found for the specified seat";
+export const RESERVATION_ERR_NOT_FOUND_USER: string = "No reservations were found for the specified user";
 export const RESERVATION_ERR_NOT_FOUND_SCREENING: string = "No reservations were found for the specified screening";
 export const RESERVATION_ERR_NOT_FOUND: string = "Reservation with specified ID was not found in the database";
 export const RESERVATION_MSG_DEL: string = "Reservation cancelled successfully";
 
-//---------------------------------
-// Product
-//---------------------------------
 //---------------------------------
 // Product
 //---------------------------------
@@ -108,7 +138,7 @@ export const PRODUCT_ERR_ID: string = "Product ID should be a positive integer";
 export const PRODUCT_ERR_TYPING: string = "Product name, size, price, and discount should have correct typings (string, string, number, and number respectively)";
 export const PRODUCT_ERR_NAME_LEN: string = `Product name length is incorrect (it should be between ${Constants.PRODUCT_NAME_MIN_LEN} and ${Constants.PRODUCT_NAME_MAX_LEN})`;
 export const PRODUCT_ERR_PRICE: string = "Product price must be a positive decimal value";
-export const PRODUCT_ERR_SIZE: string = "Product size must be one of the following: 'Small', 'Medium', 'Large', 'XL'";
+export const PRODUCT_ERR_SIZE: string = `Product size must be one of the following: ${Constants.PRODUCT_SIZES.join(", ")}`;
 export const PRODUCT_ERR_DISCOUNT: string = `Product discount must be a percentage between ${Constants.PRODUCT_DISCOUNT_MIN_VAL} and ${Constants.PRODUCT_DISCOUNT_MAX_VAL}`;
 export const PRODUCT_ERR_NOT_FOUND_ALL: string = "No products were found in the database";
 export const PRODUCT_ERR_NOT_FOUND: string = "Product with specified ID was not found in the database";

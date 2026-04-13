@@ -1,6 +1,9 @@
 import sequelize from "../src/models";
+import * as Constants from "../src/constants"
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
+
+// TODO: Adjust to new format
 
 beforeAll(async () => {
     await sequelize.sync({ force: true });
@@ -13,9 +16,11 @@ describe("Room Lifecycle Flow", async () => {
     // Step 1 - POST
     //---------------------------------
     // First cinema object is created successfully
-    // Then a room connected with that cinema
+    // Then two rooms connected with that cinema
     // Then tests go over all cases which result in failure
-    // At the end of the step only 1 cinema object and 1 room are in the database
+    // Then yet another two rooms connected with that cinema, which also create many seats
+    // Then tests go over all cases which result in failure
+    // At the end of the step only 1 cinema object and 4 rooms are in the database
     //---------------------------------
 
     describe("POST /room/new", async () => {
@@ -28,8 +33,17 @@ describe("Room Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms[0]).toHaveProperty("name", Utils.roomData.name);
-            expect(response.body.rooms[0]).toHaveProperty("chairPlacement", Utils.roomData.chairPlacement);
+            expect(response.body.rooms[0]).toHaveProperty("width", Utils.roomData.width);
             expect(response.body.rooms[0]).toHaveProperty("cinemaId", Utils.roomData.cinemaId);
+
+            // Creating a room with a non-default size
+            const nonDefaultRoomData = { ...Utils.roomData, width: 1250, depth: 1000, rowAmount: 17, colAmount: 22 }
+            response = await Utils.sendRequest("/room/new", 200, "POST", nonDefaultRoomData);
+            expect(response.body).toHaveProperty("rooms");
+            expect(response.body.rooms[0]).toHaveProperty("width", nonDefaultRoomData.width);
+            expect(response.body.rooms[0]).toHaveProperty("depth", nonDefaultRoomData.depth);
+            expect(response.body.rooms[0]).toHaveProperty("rowAmount", nonDefaultRoomData.rowAmount);
+            expect(response.body.rooms[0]).toHaveProperty("colAmount", nonDefaultRoomData.colAmount);
         });
 
         it("should respond with 400 if required fields are missing", async () => {
@@ -37,12 +51,6 @@ describe("Room Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: undefined });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
             response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: null });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
-
-            // chairPlacement: undefined or null
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, chairPlacement: undefined });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, chairPlacement: null });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
 
             // cinemaId: undefined or null
@@ -58,29 +66,43 @@ describe("Room Lifecycle Flow", async () => {
             // mixed invalid
             const mixedInvalid = { 
                 name: null, 
-                chairPlacement: undefined, 
-                cinemaId: null 
+                cinemaId: undefined 
             };
             response = await Utils.sendRequest("/room/new", 400, "POST", mixedInvalid);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
-            // invalid name
+            // name: not a string
             response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: 20 });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
-            // invalid chair placement
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, chairPlacement: 1 });
+            // width: not a finite number
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, width: "1" });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
-            // invalid cinema id
+            // depth: not a finite number
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, depth: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
+
+            // row amount: not an integer
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, rowAmount: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
+
+            // column amount: not an integer
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, colAmount: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
+
+            // cinema id: not an integer
             response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: "1" });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
         });
 
         it("should respond with 400 if cinemaId is not valid", async () => {
             response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: 0 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
+
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: -1 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
         });
 
@@ -96,37 +118,259 @@ describe("Room Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: "  " });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
 
-            const invalidRoomDataLongName =  { ...Utils.roomData }
-            invalidRoomDataLongName.name = "Example Example Example Example Example Example Example Example Example"
-            response = await Utils.sendRequest("/room/new", 400, "POST", invalidRoomDataLongName);   
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: "a".repeat(Constants.ROOM_NAME_MAX_LEN + 1) });   
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
         });
 
-        it("should respond with 400 if address does not match RegExp", async () => {
-            // only letters from A-I are allowed, and there can't be more than one next to the number
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, chairPlacement: "AA20, B20." });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_LAYOUT, rooms: [] });
+        it("should respond with 400 if width is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, width: Constants.ROOM_WIDTH_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_WIDTH, rooms: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, width: Constants.ROOM_WIDTH_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_WIDTH, rooms: [] });
+        });
+
+        it("should respond with 400 if depth is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, depth: Constants.ROOM_DEPTH_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_DEPTH, rooms: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, depth: Constants.ROOM_DEPTH_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_DEPTH, rooms: [] });
+        });
+
+        it("should respond with 400 if rowAmount is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, rowAmount: Constants.ROOM_ROWS_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ROWS, rooms: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, rowAmount: Constants.ROOM_ROWS_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ROWS, rooms: [] });
+        });
+
+        it("should respond with 400 if colAmount is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, colAmount: Constants.ROOM_COLS_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_COLS, rooms: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, colAmount: Constants.ROOM_COLS_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_COLS, rooms: [] });
+        });
+    });
+
+    let lastSeatId: number;
+    describe("POST /room/new/default-seats", async () => {
+        it("(MODEL EXAMPLE) should respond with 200 and the created room object", async () => {
+            response = await Utils.sendRequest("/room/new/default-seats", 200, "POST", Utils.roomDataWithStairs);
+
+            
+            expect(response.body).toHaveProperty("rooms");
+            expect(response.body.rooms[0]).toHaveProperty("name", Utils.roomDataWithStairs.name);
+            expect(response.body.rooms[0]).toHaveProperty("width", Utils.roomDataWithStairs.width);
+            expect(response.body.rooms[0]).toHaveProperty("cinemaId", Utils.roomDataWithStairs.cinemaId);
+            expect(response.body).toHaveProperty("seats");
+            expect(response.body.seats[0]).toHaveProperty("row", 1);
+            expect(response.body.seats[0]).toHaveProperty("column", 1);
+            expect(response.body.seats[response.body.seats.length-1]).toHaveProperty("row", Utils.roomDataWithStairs.rowAmount);
+            expect(response.body.seats[response.body.seats.length-1]).toHaveProperty("column", Utils.roomDataWithStairs.colAmount);
+
+            // Creating a room with a non-default size
+            const nonDefaultRoomData = { ...Utils.roomDataWithStairs, width: 1250, depth: 1000, rowAmount: 5, colAmount: 8 }
+            response = await Utils.sendRequest("/room/new/default-seats", 200, "POST", nonDefaultRoomData);
+            expect(response.body).toHaveProperty("rooms");
+            expect(response.body.rooms[0]).toHaveProperty("width", nonDefaultRoomData.width);
+            expect(response.body.rooms[0]).toHaveProperty("depth", nonDefaultRoomData.depth);
+            expect(response.body.rooms[0]).toHaveProperty("rowAmount", nonDefaultRoomData.rowAmount);
+            expect(response.body.rooms[0]).toHaveProperty("colAmount", nonDefaultRoomData.colAmount);
+            expect(response.body).toHaveProperty("seats");
+            expect(response.body.seats[0]).toHaveProperty("row", 1);
+            expect(response.body.seats[0]).toHaveProperty("column", 1);
+            expect(response.body.seats[response.body.seats.length-1]).toHaveProperty("row", nonDefaultRoomData.rowAmount);
+            expect(response.body.seats[response.body.seats.length-1]).toHaveProperty("column", nonDefaultRoomData.colAmount);
+
+            lastSeatId = response.body.seats[response.body.seats.length-1].id;
+        });
+
+        it("should respond with 400 if required fields are missing", async () => {
+            // name: undefined or null
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, name: undefined });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS_EX, rooms: [], seats: [] });
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, name: null });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS_EX, rooms: [], seats: [] });
+
+            // cinemaId: undefined or null
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, cinemaId: undefined });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS_EX, rooms: [], seats: [] });
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, cinemaId: null });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS_EX, rooms: [], seats: [] });
+
+            // stairsPlacements: undefined or null
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, stairsPlacements: undefined });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS_EX, rooms: [], seats: [] });
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, stairsPlacements: null });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS_EX, rooms: [], seats: [] });
+
+            // all are undefined
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", {});
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS_EX, rooms: [], seats: [] });
+
+            // mixed invalid
+            const mixedInvalid = { 
+                name: null, 
+                cinemaId: undefined,
+                stairsPlacements: null
+            };
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", mixedInvalid);
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS_EX, rooms: [], seats: [] });
+        });
+
+        it("should respond with 400 if required types are incorrect", async () => {
+            // name: not a string
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, name: 20 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [], seats: [] });
+
+            // width: not a finite number
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, width: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [], seats: [] });
+
+            // depth: not a finite number
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, depth: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [], seats: [] });
+
+            // row amount: not an integer
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, rowAmount: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [], seats: [] });
+
+            // column amount: not an integer
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, colAmount: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [], seats: [] });
+
+            // cinema id: not an integer
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, cinemaId: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [], seats: [] });
+
+            // stairsPlacements: not an array of Stair objects
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, stairsPlacements: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_STAIRS, rooms: [], seats: [] });
+        });
+
+        it("should respond with 400 if cinemaId is not valid", async () => {
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, cinemaId: 0 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [], seats: [] });
+
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, cinemaId: -1 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [], seats: [] });
+        });
+
+        it("should respond with 404 if specified cinema object is not found in the database", async () => {
+            response = await Utils.sendRequest("/room/new/default-seats", 404, "POST", { ...Utils.roomDataWithStairs, cinemaId: 2 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, rooms: [], seats: [] });
+        });
+
+        it("should respond with 400 if name is too short or too long", async () => {
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, name: "" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [], seats: [] });
+
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, name: "  " });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [], seats: [] });
+
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, name: "a".repeat(Constants.ROOM_NAME_MAX_LEN + 1) });   
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [], seats: [] });
+        });
+
+        it("should respond with 400 if width is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, width: Constants.ROOM_WIDTH_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_WIDTH, rooms: [], seats: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, width: Constants.ROOM_WIDTH_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_WIDTH, rooms: [], seats: [] });
+        });
+
+        it("should respond with 400 if depth is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, depth: Constants.ROOM_DEPTH_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_DEPTH, rooms: [], seats: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, depth: Constants.ROOM_DEPTH_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_DEPTH, rooms: [], seats: [] });
+        });
+
+        it("should respond with 400 if rowAmount is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, rowAmount: Constants.ROOM_ROWS_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ROWS, rooms: [], seats: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, rowAmount: Constants.ROOM_ROWS_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ROWS, rooms: [], seats: [] });
+        });
+
+        it("should respond with 400 if colAmount is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, colAmount: Constants.ROOM_COLS_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_COLS, rooms: [], seats: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, colAmount: Constants.ROOM_COLS_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_COLS, rooms: [], seats: [] });
+        });
+
+        it("should respond with 400 if stairs placements are invalid", async () => {
+            // Too small x
+            const smallXStairsPlacements = { x: -1, width: Constants.ROOM_STAIRS_DEF_VAL }
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, stairsPlacements: [smallXStairsPlacements] });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_STAIRS, rooms: [], seats: [] });
+
+            // Too big x
+            const bigXStairsPlacements = { x: Utils.roomDataWithStairs.width + 1, width: Constants.ROOM_STAIRS_DEF_VAL }
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, stairsPlacements: [bigXStairsPlacements] });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_STAIRS, rooms: [], seats: [] });
+
+            // Too small width
+            const smallWidthStairsPlacements = { x: Utils.roomDataWithStairs.stairsPlacements[0].x, width: Constants.ROOM_STAIRS_MIN_VAL-1 }
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, stairsPlacements: [smallWidthStairsPlacements] });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_STAIRS, rooms: [], seats: [] });
+
+            // Too big width
+            const bigWidthStairsPlacements = { x: Utils.roomDataWithStairs.stairsPlacements[0].x, width: Constants.ROOM_STAIRS_MAX_VAL+1 }
+            response = await Utils.sendRequest("/room/new/default-seats", 400, "POST", { ...Utils.roomDataWithStairs, stairsPlacements: [bigWidthStairsPlacements] });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_STAIRS, rooms: [], seats: [] });
+        });
+
+        it("should respond with 200 when all seats are cleared out", async () => {
+            const getAllResponse = await Utils.sendRequest(`/seat/all`, 200, "GET");
+            const seats = getAllResponse.body.seats;
+
+            for (const seat of seats) {
+                await Utils.sendRequest(`/seat/delete/${seat.id}`, 200, "DELETE");
+            }
+
+            const finalResponse = await Utils.sendRequest(`/seat/all`, 404, "GET");
+            expect(finalResponse.body).toEqual({ 
+                message: Messages.SEAT_ERR_NOT_FOUND_ALL, 
+                seats: [] 
+            });
         });
     });
 
     //---------------------------------
     // Step 2 - GET
     //---------------------------------
-    // 3 further room objects are created and connected with the one cinema object
-    // These rooms get fetched either all at once or individually with varying level of success
+    // 4 rooms get fetched either all at once or individually with varying level of success
     // Then 1 more cinema object is created - no rooms are connected to it, to test fetching rooms in this scenario
     // At the end of the step only 4 room objects and 2 cinema objects are in the database
     //---------------------------------
 
     describe("GET /room/all/:cinemaId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all room objects", async () => {
-            // Adding a few more rooms
-            await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
-            await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
-            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
-            expect(response.body).toHaveProperty("rooms");
-            expect(response.body.rooms[0].id).toEqual(4);
-
             response = await Utils.sendRequest("/room/all/1", 200, "GET");
             expect(response.body).toHaveProperty("rooms");            
             expect(response.body.rooms).toBeInstanceOf(Array);
@@ -230,7 +474,7 @@ describe("Room Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
 
             // mixed invalid
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", {name: null, chairPlacement: undefined, cinemaId: null});
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", {name: null, cinemaId: undefined});
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
 
             // all are null
@@ -239,17 +483,39 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
-            // invalid name
+            // name: not a string
             response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, name: 20 });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
-            // invalid chair placement
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, chairPlacement: 20 });
+            // width: not a finite number
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, width: "1" });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
-            // invalid cinema id
+            // depth: not a finite number
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, depth: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
+
+            // row amount: not an integer
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, rowAmount: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
+
+            // column amount: not an integer
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, colAmount: "1" });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
+
+            // cinema id: not an integer
             response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, cinemaId: "1" });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
+        });
+
+        it("should respond with 400 if cinemaId is not valid", async () => {
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, cinemaId: -1 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
+        });
+
+        it("should respond with 404 if specified cinema object is not found in the database", async () => {
+            response = await Utils.sendRequest("/room/update/1", 404, "PUT", { ...Utils.roomData, cinemaId: 3 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, rooms: [] });
         });
 
         it("should respond with 400 if name is too short or too long", async () => {
@@ -258,22 +524,49 @@ describe("Room Lifecycle Flow", async () => {
 
             response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, name: "  " });
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
-            
-            const invalidRoomDataLongName =  { ...Utils.roomData }
-            invalidRoomDataLongName.name = "Example Example Example Example Example Example Example Example Example"
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", invalidRoomDataLongName);   
+
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, name: "a".repeat(Constants.ROOM_NAME_MAX_LEN + 1) });   
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
         });
 
-        it("should respond with 400 if chair placement does not match RegExp", async () => {
-            // only letters from A-I are allowed, and there can't be more than one next to the number
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, chairPlacement: "AA20, B20." });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_LAYOUT, rooms: [] });
+        it("should respond with 400 if width is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, width: Constants.ROOM_WIDTH_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_WIDTH, rooms: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, width: Constants.ROOM_WIDTH_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_WIDTH, rooms: [] });
         });
 
-        it("should respond with 400 if cinemaId is not valid", async () => {
-            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, cinemaId: -1 });
-            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
+        it("should respond with 400 if depth is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, depth: Constants.ROOM_DEPTH_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_DEPTH, rooms: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, depth: Constants.ROOM_DEPTH_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_DEPTH, rooms: [] });
+        });
+
+        it("should respond with 400 if rowAmount is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, rowAmount: Constants.ROOM_ROWS_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ROWS, rooms: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, rowAmount: Constants.ROOM_ROWS_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ROWS, rooms: [] });
+        });
+
+        it("should respond with 400 if colAmount is invalid", async () => {
+            // Too small
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, colAmount: Constants.ROOM_COLS_MIN_VAL-1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_COLS, rooms: [] });
+
+            // Too big
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, colAmount: Constants.ROOM_COLS_MAX_VAL+1 });
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_COLS, rooms: [] });
         });
     });
 

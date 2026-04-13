@@ -7,6 +7,7 @@ import screeningRouter from "./routes/screening.ts";
 import userRouter from "./routes/user.ts";
 import reservationRouter from "./routes/reservation.ts";
 import productRouter from "./routes/product.ts";
+import seatRouter from "./routes/seat.ts";
 
 const app = express();
 const port = 3000;
@@ -19,6 +20,7 @@ app.get("/", (req: Request, res: Response) => {
 
 app.use("/cinema", cinemaRouter);
 app.use("/room", roomRouter);
+app.use("/seat", seatRouter);
 app.use("/movie", movieRouter);
 app.use("/screening", screeningRouter);
 app.use("/user", userRouter);
