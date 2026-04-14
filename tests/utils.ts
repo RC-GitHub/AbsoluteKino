@@ -26,6 +26,17 @@ export const roomDataWithStairs = {
     ]
 }
 
+export const seatData = {
+    x: 200,
+    y: 300,
+    width: Constants.SEAT_WIDTH_DEF_VAL,
+    depth: Constants.SEAT_DEPTH_DEF_VAL,
+    row: 1,
+    column: 2,
+    type: Constants.SEAT_TYPES[0],
+    roomId: 1,
+};
+
 export const movieData = {
     title: "Test Movie",
     viewingFormat: Constants.MOVIE_STD_VIEWING_FORMATS[0],
@@ -65,8 +76,8 @@ export const userDataUnauthorized = {
 }
 
 export const reservationData = {
-    row: 5,
-    column: 10,
+    type: Constants.RESERVATION_TYPES[0],
+    seatId: 1,
     screeningId: 1,
     userId: 1
 };

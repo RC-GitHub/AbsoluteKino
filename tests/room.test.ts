@@ -3,8 +3,6 @@ import * as Constants from "../src/constants"
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
 
-// TODO: Adjust to new format
-
 beforeAll(async () => {
     await sequelize.sync({ force: true });
 });

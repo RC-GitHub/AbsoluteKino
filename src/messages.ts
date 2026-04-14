@@ -123,6 +123,7 @@ export const RESERVATION_ERR_DATE: string = "Reservation date is an invalid date
 export const RESERVATION_ERR_TYPE: string = `Reservation type should be one of the following: ${Constants.RESERVATION_TYPES.join(", ")}`;
 export const RESERVATION_ERR_BLOCKED: string = "Reservation is temporarily blocked as someone is undergoing a transaction containing one of the chosen seats";
 export const RESERVATION_ERR_RESERVED: string = "Reservation cannot be completed as one of the chosen seats is already reserved";
+export const RESERVATION_ERR_COMPLETED: string = "Reservation completed successfully";
 export const RESERVATION_ERR_NOT_FOUND_ALL: string = "No reservations were found in the database";
 export const RESERVATION_ERR_NOT_FOUND_SEAT: string = "No reservations were found for the specified seat";
 export const RESERVATION_ERR_NOT_FOUND_USER: string = "No reservations were found for the specified user";
