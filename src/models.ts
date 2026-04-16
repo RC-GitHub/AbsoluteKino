@@ -236,7 +236,7 @@ export const Seat = sequelize.define<SeatInstance>("Seat", {
     validate: {
       isNumeric: true,
       min: {
-        args: [0],
+        args: [Constants.SEAT_X_MIN_VAL],
         msg: Messages.SEAT_ERR_X_VAL
       }
     }
@@ -247,7 +247,7 @@ export const Seat = sequelize.define<SeatInstance>("Seat", {
     validate: {
       isNumeric: true,
       min: {
-        args: [0],
+        args: [Constants.SEAT_Y_MIN_VAL],
         msg: Messages.SEAT_ERR_Y_VAL
       }
     }

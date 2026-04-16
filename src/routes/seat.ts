@@ -33,6 +33,10 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ message: Messages.SEAT_ERR_TYPING, seats: [] });
     }
 
+    if (isNaN(roomId) || roomId < Constants.TYPICAL_MIN_ID) {
+      return res.status(400).json({ message: Messages.ROOM_ERR_ID, seats: [] });
+    }
+
     const room: RoomInstance | null = await Room.findByPk(roomId);
     if (!room) {
       return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, seats: [] });
@@ -40,8 +44,8 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
 
     if (room.width == null || x < 0 || x > room.width) return res.status(400).json({ message: Messages.SEAT_ERR_X_INVALID, seats: [] });
     if (room.depth == null || y < 0 || y > room.depth) return res.status(400).json({ message: Messages.SEAT_ERR_Y_INVALID, seats: [] });
-    if (room.rowAmount == null || row < 0 || row > room.rowAmount) return res.status(400).json({ message: Messages.SEAT_ERR_ROW_INVALID, seats: [] });
-    if (room.colAmount == null || column < 0 || column > room.colAmount) return res.status(400).json({ message: Messages.SEAT_ERR_COL_INVALID, seats: [] });
+    if (room.rowAmount == null || row <= 0 || row > room.rowAmount) return res.status(400).json({ message: Messages.SEAT_ERR_ROW_INVALID, seats: [] });
+    if (room.colAmount == null || column <= 0 || column > room.colAmount) return res.status(400).json({ message: Messages.SEAT_ERR_COL_INVALID, seats: [] });
 
     if (width != null && (width < Constants.SEAT_WIDTH_MIN_VAL || width > Constants.SEAT_WIDTH_MAX_VAL)) {
       return res.status(400).json({ message: Messages.SEAT_ERR_WIDTH_VAL, seats: [] });
@@ -53,21 +57,10 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ message: Messages.SEAT_ERR_TYPE, seats: [] });
     }
 
+    // Check if seat falls under one of the positions already occupied by the other chair
+
     const seat = await Seat.create({ x, y, width, depth, row, column, type, roomId });
     res.send({ seats: [seat] });
-  } catch (error: any) {
-    next(error);
-  }
-});
-
-// Sends data about all seats in a specified room
-router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const seats: SeatInstance[] = await Seat.findAll();
-    if (seats.length === 0) {
-      return res.status(404).json({ message: Messages.SEAT_ERR_NOT_FOUND_ALL, seats: [] });
-    }
-    res.send({ seats });
   } catch (error: any) {
     next(error);
   }
@@ -131,6 +124,13 @@ router.put("/update/:seatId", async (req: Request, res: Response, next: NextFunc
     if (!room) return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, seats: [] });
 
     const { x, y, width, depth, row, column, type }: Partial<SeatAttributes> = req.body;
+    if (
+      x == null && y == null && 
+      width == null && depth == null &&
+      row == null && column == null &&
+      type == null) {
+      return res.status(400).json({ message: Messages.SEAT_ERR_EMPTY_ARGS, seats: [] });
+    }
     const updateData: Partial<SeatAttributes> = {};
 
     if (x !== undefined) {
@@ -160,13 +160,13 @@ router.put("/update/:seatId", async (req: Request, res: Response, next: NextFunc
     if (row !== undefined) {
         if (typeof row !== 'number' || !Number.isInteger(row)) return res.status(400).json({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
-        if (room.rowAmount == null || row < 0 || row > room.rowAmount) return res.status(400).json({ message: Messages.SEAT_ERR_ROW_INVALID, seats: [] });
+        if (room.rowAmount == null || row < Constants.ROOM_ROWS_MIN_VAL || row > room.rowAmount) return res.status(400).json({ message: Messages.SEAT_ERR_ROW_INVALID, seats: [] });
         updateData.row = row;
     }
     if (column !== undefined) {
         if (typeof column !== 'number' || !Number.isInteger(column)) return res.status(400).json({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
-        if (room.colAmount == null || column < 0 || column > room.colAmount) return res.status(400).json({ message: Messages.SEAT_ERR_COL_INVALID, seats: [] });
+        if (room.colAmount == null || column < Constants.ROOM_COLS_MIN_VAL || column > room.colAmount) return res.status(400).json({ message: Messages.SEAT_ERR_COL_INVALID, seats: [] });
         updateData.column = column;
     }
     if (type !== undefined) {

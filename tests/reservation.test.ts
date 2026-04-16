@@ -432,22 +432,24 @@ describe("Reservation Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/reservation/delete/5", 200, "DELETE");
             expect(response.body).toEqual({ message: Messages.RESERVATION_MSG_DEL });
 
+            const seatsResponse = await Utils.sendRequest(`/seat/all/2`, 200, "GET");
+            const seats = seatsResponse.body.seats;
+            for (const seat of seats) {
+                await Utils.sendRequest(`/seat/delete/${seat.id}`, 200, "DELETE");
+            }
+            const finalResponse = await Utils.sendRequest(`/seat/all/2`, 404, "GET");
+            expect(finalResponse.body).toEqual({ 
+                message: Messages.SEAT_ERR_NOT_FOUND_ROOM, 
+                seats: [] 
+            });
+
             await Utils.sendRequest("/cinema/delete/1", 200, "DELETE");
             await Utils.sendRequest("/movie/delete/1", 200, "DELETE");
             await Utils.sendRequest("/user/delete/1", 200, "DELETE");
             await Utils.sendRequest("/user/delete/2", 200, "DELETE");
             await Utils.sendRequest("/user/delete/3", 200, "DELETE");
 
-            const seatsResponse = await Utils.sendRequest(`/seat/all`, 200, "GET");
-            const seats = seatsResponse.body.seats;
-            for (const seat of seats) {
-                await Utils.sendRequest(`/seat/delete/${seat.id}`, 200, "DELETE");
-            }
-            const finalResponse = await Utils.sendRequest(`/seat/all`, 404, "GET");
-            expect(finalResponse.body).toEqual({ 
-                message: Messages.SEAT_ERR_NOT_FOUND_ALL, 
-                seats: [] 
-            });
+
         });
 
         it("should respond with 400 if reservationId is not valid", async () => {

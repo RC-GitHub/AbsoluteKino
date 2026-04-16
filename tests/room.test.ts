@@ -344,16 +344,16 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 200 when all seats are cleared out", async () => {
-            const getAllResponse = await Utils.sendRequest(`/seat/all`, 200, "GET");
+            const getAllResponse = await Utils.sendRequest(`/seat/all/3`, 200, "GET");
             const seats = getAllResponse.body.seats;
 
             for (const seat of seats) {
                 await Utils.sendRequest(`/seat/delete/${seat.id}`, 200, "DELETE");
             }
 
-            const finalResponse = await Utils.sendRequest(`/seat/all`, 404, "GET");
+            const finalResponse = await Utils.sendRequest(`/seat/all/3`, 404, "GET");
             expect(finalResponse.body).toEqual({ 
-                message: Messages.SEAT_ERR_NOT_FOUND_ALL, 
+                message: Messages.SEAT_ERR_NOT_FOUND_ROOM, 
                 seats: [] 
             });
         });
@@ -508,6 +508,9 @@ describe("Room Lifecycle Flow", async () => {
 
         it("should respond with 400 if cinemaId is not valid", async () => {
             response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, cinemaId: -1 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
+
+            response = await Utils.sendRequest("/room/update/1", 400, "PUT", { ...Utils.roomData, cinemaId: 0 });
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
         });
 

@@ -3,6 +3,8 @@
 //---------------------------------
 export const TYPICAL_MIN_ID: number = 1;
 
+export const TYPICAL_MIN_COORD_VAL: number = 0;
+
 export const TYPICAL_NAME_MIN_LEN: number = 1;
 export const TYPICAL_NAME_MAX_LEN: number = 64;
 
@@ -70,6 +72,11 @@ export const ROOM_STAIRS_DEF_VAL: number = 60;
 // Seat
 //---------------------------------
 export const SEAT_SIZE_DEF_VAL: number = 30
+
+export const SEAT_X_MIN_VAL: number = TYPICAL_MIN_COORD_VAL;
+export const SEAT_Y_MIN_VAL: number = TYPICAL_MIN_COORD_VAL;
+export const SEAT_ROW_MIN_VAL: number = 1;
+export const SEAT_COL_MIN_VAL: number = 1;
 
 export const SEAT_WIDTH_MIN_VAL: number = 15
 export const SEAT_WIDTH_MAX_VAL: number = 180
