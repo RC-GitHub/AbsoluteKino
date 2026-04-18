@@ -129,7 +129,7 @@ export const SCREENING_BASE_SEAT_PRICE: number = 26.00;
 export const USER_NAME_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
 export const USER_NAME_MAX_LEN: number = TYPICAL_NAME_MAX_LEN;
 
-export const USER_ACC_TYPES = ['Unauthenticated customer', 'Authenticated customer', 'Cinema admin', 'Site admin'] as const;
+export const USER_ACC_TYPES = ['Unauthenticated customer', 'Authenticated customer', 'Cinema admin', 'Site owner'] as const;
 
 export const USER_PASS_MIN_LEN: number = 12;
 export const USER_PASS_MAX_LEN: number = 72;

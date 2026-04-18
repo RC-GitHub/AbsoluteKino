@@ -1,4 +1,30 @@
+import { CONFIG } from './config.ts';
 import * as Constants from './constants.ts';
+
+//---------------------------------
+// App
+//---------------------------------
+export const APP_WELCOME = "Welcome to AbsoluteKino!";
+export const APP_LISTENING = `AbsoluteKino listening on port ${CONFIG.PORT}`;
+export const APP_ERR_OWNER = "Failed to create site owner: ";
+export const APP_ERR_OWNER_LISTENING = "AbsoluteKino could not be started because the owner could not be created";
+
+//---------------------------------
+// Database
+//---------------------------------
+export const DB_CONN = "Connection has been established successfully";
+export const DB_SYNCED = "Database synced successfully";
+
+export const DB_ERR_CONN = "Unable to connect to the database: ";
+export const DB_ERR_SYNCING = "Failed to sync database: ";
+export const DB_ERR_FETCHING = "Fetching error: ";
+export const DB_ERR_500 = "Internal Server Error";
+
+//---------------------------------
+// Authentication
+//---------------------------------
+export const AUTH_REQUIRED = "Authentication required";
+export const AUTH_SESSION = "Invalid session";
 
 //---------------------------------
 // Cinema
@@ -96,6 +122,9 @@ export const MOVIE_MSG_DEL: string = "Movie deleted successfully";
 //---------------------------------
 // User
 //---------------------------------
+export const USER_OWNER: string = "API owner added successfully";
+export const USER_ERR_OWNER: string = "Failed to add the API owner";
+
 export const USER_ERR_EMPTY_ARGS: string = "User arguments are all required";
 export const USER_ERR_ID: string = "User ID should be a positive integer";
 export const USER_ERR_TYPING: string = "User name, account type, password, email and phone number should have correct typings (string, string, string or null, string or null and string or null respectively)";
@@ -103,10 +132,10 @@ export const USER_ERR_NAME_LEN: string = `User name length is incorrect (it shou
 export const USER_ERR_ACC_TYPE: string = `User account type should be one of the following: ${Constants.USER_ACC_TYPES.join(", ")}`;
 export const USER_ERR_UNAUTHORIZED: string = `Unauthenticated user must provide email address and/or phone number`;
 export const USER_ERR_PASS_LEN: string = `User password length is incorrect (it should be between ${Constants.USER_PASS_MIN_LEN} and ${Constants.USER_PASS_MAX_LEN})`;
-export const USER_ERR_EMAIL = `User email should adhere to the standard email format as provided by Sequelize`;
-export const USER_ERR_EMAIL_UNIQUE = `User with this email already exists`;
-export const USER_ERR_PHONE = `User phone number does not match the specified format (look into the documentation)`;
-export const USER_ERR_PHONE_UNIQUE = `User with this phone number already exists`;
+export const USER_ERR_EMAIL: string = `User email should adhere to the standard email format as provided by Sequelize`;
+export const USER_ERR_EMAIL_UNIQUE: string = `User with this email already exists`;
+export const USER_ERR_PHONE: string = `User phone number does not match the specified format (look into the documentation)`;
+export const USER_ERR_PHONE_UNIQUE: string = `User with this phone number already exists`;
 export const USER_ERR_NOT_FOUND_ALL: string = "No users were found in the database";
 export const USER_ERR_NOT_FOUND: string = "User with specified ID was not found in the database";
 export const USER_MSG_DEL: string = "User deleted successfully";

@@ -61,14 +61,15 @@ export const createRoomLogic = async (data: any) => {
     });
 }
 
-// Adds a new room to a specified cinema
-// Requires: name and cinema ID
-// Optional: width, depth, row amount and col amount, all of which have defaults in place if they weren't provided
+/** Adds a new room to a specified cinema
+  * Requires: name and cinema ID
+  * Optional: width, depth, row amount and col amount, all of which have defaults in place if they weren't provided
+  */
 router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const room = await createRoomLogic(req.body);
+    const room: RoomInstance = await createRoomLogic(req.body);
     await room.save();
-    res.send({rooms: [room]});
+    res.send({ rooms: [room] });
   }
   catch (error: any) {
     if (error.status) {

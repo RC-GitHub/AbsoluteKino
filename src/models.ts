@@ -1,20 +1,22 @@
-import { Sequelize, DataTypes, InferAttributes, InferCreationAttributes, Model } from "sequelize";
+import { Sequelize, DataTypes, InferAttributes, InferCreationAttributes, Model, Dialect } from "sequelize";
+
+import { CONFIG } from './config.ts';
 import * as Constants from "./constants.ts";
 import * as Messages from "./messages.ts";
 
 const sequelize: Sequelize = new Sequelize({
-  dialect: "sqlite",
-  storage: "db.sqlite",
-  logging: false,
+  dialect: CONFIG.DB.DIALECT as Dialect,
+  storage: CONFIG.DB.STORAGE,
+  logging: CONFIG.DB.LOGGING,
 });
 
 try {
-  async ()=>{
+  async () => {
     await sequelize.authenticate();
-    console.log("Connection has been established successfully.");
+    console.log(Messages.DB_CONN);
   }
 } catch (error) {
-  console.error("Unable to connect to the database:", error);
+  console.error(Messages.DB_ERR_CONN, error);
 }
 
 const commonAttributes = {
@@ -42,7 +44,7 @@ export interface CinemaAttributes {
   longitude: number;
 }
 
-export interface CinemaInstance extends Model<CinemaAttributes>, CinemaAttributes {}
+export interface CinemaInstance extends Model<CinemaAttributes>, CinemaAttributes { }
 
 export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
   ...commonAttributes,
@@ -60,22 +62,22 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
   },
 
   // Accepts addresses like:
-    // - LOCATION_ABBREVIATION LOCATION_NAME LOCATION_NUMBER, LOCATION_POSTAL_CODE, LOCATION_DETAILING (multiple possible; all after a comma)
+  // - LOCATION_ABBREVIATION LOCATION_NAME LOCATION_NUMBER, LOCATION_POSTAL_CODE, LOCATION_DETAILING (multiple possible; all after a comma)
   // Where:
-    // - LOCATION_ABBREVIATION accepts one of the following: (al.|ul.|pl.|sq.|os.|ryn.|dz.|tr.)
-    // - LOCATION_NAME accepts any character in the Polish alphabet plus digits, spaces and dashes
-    // - LOCATION_NUMBER accepts up to 4 digits and optional lowercase Latin alphabet letter as well as optional addition consisting of a slash character and up to 2 digits
-    // - LOCATION_POSTAL_CODE accepts a sequence of 2 digits followed by a dash, then another 3 digits and a name consisting of Polish characters after a space
-    // - LOCATION_DETAILING accepts any character in the Polish alphabet plus spaces and dashes after a comma and a space
+  // - LOCATION_ABBREVIATION accepts one of the following: (al.|ul.|pl.|sq.|os.|ryn.|dz.|tr.)
+  // - LOCATION_NAME accepts any character in the Polish alphabet plus digits, spaces and dashes
+  // - LOCATION_NUMBER accepts up to 4 digits and optional lowercase Latin alphabet letter as well as optional addition consisting of a slash character and up to 2 digits
+  // - LOCATION_POSTAL_CODE accepts a sequence of 2 digits followed by a dash, then another 3 digits and a name consisting of Polish characters after a space
+  // - LOCATION_DETAILING accepts any character in the Polish alphabet plus spaces and dashes after a comma and a space
   // Examples:
-    // ul. Wielosławska 34b
-    // Michajowice 12/90, Warszawa
+  // ul. Wielosławska 34b
+  // Michajowice 12/90, Warszawa
   address: {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      is: { 
-        args: Constants.CINEMA_POLISH_ADDRESS_REGEX, 
+      is: {
+        args: Constants.CINEMA_POLISH_ADDRESS_REGEX,
         msg: Messages.CINEMA_ERR_ADDRESS
       }
     }
@@ -125,7 +127,7 @@ export interface RoomAttributes {
   cinemaId: number;
 }
 
-export interface RoomInstance extends Model<RoomAttributes>, RoomAttributes {}
+export interface RoomInstance extends Model<RoomAttributes>, RoomAttributes { }
 
 export const Room = sequelize.define<RoomInstance>("Room", {
   ...commonAttributes,
@@ -134,7 +136,7 @@ export const Room = sequelize.define<RoomInstance>("Room", {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: { 
+      len: {
         args: [Constants.ROOM_NAME_MIN_LEN, Constants.ROOM_NAME_MAX_LEN],
         msg: Messages.ROOM_ERR_NAME_LEN
       }
@@ -212,7 +214,7 @@ export interface SeatAttributes {
   roomId: number;
 }
 
-export interface SeatInstance extends Model<SeatAttributes>, SeatAttributes {}
+export interface SeatInstance extends Model<SeatAttributes>, SeatAttributes { }
 
 export interface SeatAttributes {
   id?: number;
@@ -226,7 +228,7 @@ export interface SeatAttributes {
   roomId: number;
 }
 
-export interface SeatInstance extends Model<SeatAttributes>, SeatAttributes {}
+export interface SeatInstance extends Model<SeatAttributes>, SeatAttributes { }
 
 export const Seat = sequelize.define<SeatInstance>("Seat", {
   ...commonAttributes,
@@ -348,7 +350,7 @@ export interface ScreeningAttributes {
   roomId: number;
 }
 
-export interface ScreeningInstance extends Model<ScreeningAttributes>, ScreeningAttributes {}
+export interface ScreeningInstance extends Model<ScreeningAttributes>, ScreeningAttributes { }
 
 export const Screening = sequelize.define<ScreeningInstance>("Screening", {
   ...commonAttributes,
@@ -418,7 +420,7 @@ export interface MovieAttributes {
   director: string;
 }
 
-export interface MovieInstance extends Model<MovieAttributes>, MovieAttributes {}
+export interface MovieInstance extends Model<MovieAttributes>, MovieAttributes { }
 
 export const Movie = sequelize.define<MovieInstance>("Movie", {
   ...commonAttributes,
@@ -442,7 +444,7 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   duration: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    validate: { 
+    validate: {
       len: {
         args: [Constants.MOVIE_DUR_MIN, Constants.MOVIE_DUR_MAX],
         msg: Messages.MOVIE_ERR_DURATION
@@ -452,7 +454,7 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   description: {
     type: DataTypes.STRING,
     allowNull: false,
-    validate: { 
+    validate: {
       len: {
         args: [Constants.MOVIE_DESC_MIN_LEN, Constants.MOVIE_DESC_MAX_LEN],
         msg: Messages.MOVIE_ERR_DESC
@@ -480,11 +482,11 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   language: {
     type: DataTypes.STRING,
     allowNull: false,
-    validate: { 
+    validate: {
       len: {
         args: [Constants.MOVIE_LANG_MIN_LEN, Constants.MOVIE_LANG_MAX_LEN],
         msg: Messages.MOVIE_ERR_LANG_LEN
-      } 
+      }
     }
   },
   premiereDate: {
@@ -500,7 +502,7 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   genre: {
     type: DataTypes.STRING,
     allowNull: false,
-    validate: { 
+    validate: {
       len: {
         args: [Constants.MOVIE_GENRE_MIN_LEN, Constants.MOVIE_GENRE_MAX_LEN],
         msg: Messages.MOVIE_ERR_GENRE_LEN
@@ -517,17 +519,17 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   cast: {
     type: DataTypes.STRING,
     allowNull: false,
-    validate: { 
+    validate: {
       len: {
         args: [Constants.MOVIE_CAST_MIN_LEN, Constants.MOVIE_CAST_MAX_LEN],
         msg: Messages.MOVIE_ERR_CAST_LEN
-      } 
+      }
     }
   },
   director: {
     type: DataTypes.STRING,
     allowNull: false,
-    validate: { 
+    validate: {
       len: {
         args: [Constants.MOVIE_DIR_MIN_LEN, Constants.MOVIE_DIR_MAX_LEN],
         msg: Messages.MOVIE_ERR_DIR_LEN
@@ -549,7 +551,7 @@ export interface ReservationAttributes {
   userId: number;
 }
 
-export interface ReservationInstance extends Model<ReservationAttributes>, ReservationAttributes {}
+export interface ReservationInstance extends Model<ReservationAttributes>, ReservationAttributes { }
 
 export const Reservation = sequelize.define<ReservationInstance>("Reservation", {
   ...commonAttributes,
@@ -629,7 +631,7 @@ export interface UserAttributes {
   phoneNumber: string | number | null;
 }
 
-export interface UserInstance extends Model<UserAttributes>, UserAttributes {}
+export interface UserInstance extends Model<UserAttributes>, UserAttributes { }
 
 export const User = sequelize.define<UserInstance>("User", {
   ...commonAttributes,
@@ -657,7 +659,7 @@ export const User = sequelize.define<UserInstance>("User", {
     allowNull: true,
     unique: {
       name: 'email',
-      msg: Messages.USER_ERR_EMAIL_UNIQUE 
+      msg: Messages.USER_ERR_EMAIL_UNIQUE
     },
     validate: {
       isEmail: {
@@ -674,7 +676,7 @@ export const User = sequelize.define<UserInstance>("User", {
     },
     validate: {
       is: {
-        args: Constants.USER_PHONE_REGEX, 
+        args: Constants.USER_PHONE_REGEX,
         msg: Messages.USER_ERR_PHONE
       }
     },
@@ -694,7 +696,7 @@ export interface ProductAttributes {
   cinemaId: number;
 }
 
-export interface ProductInstance extends Model<ProductAttributes>, ProductAttributes {}
+export interface ProductInstance extends Model<ProductAttributes>, ProductAttributes { }
 
 export const Product = sequelize.define<ProductInstance>("Product", {
   ...commonAttributes,
@@ -717,7 +719,7 @@ export const Product = sequelize.define<ProductInstance>("Product", {
       min: {
         args: [Constants.PRODUCT_PRICE_MIN_VAL],
         msg: Messages.PRODUCT_ERR_PRICE
-      } 
+      }
     }
   },
   size: {

@@ -1,7 +1,10 @@
 import { User, UserAttributes, UserInstance } from "../models.js";
 import { Request, Response, NextFunction, Router } from "express";
+
 import * as Messages from "../messages";
 import * as Constants from "../constants";
+
+import { Op } from 'sequelize';
 import bcrypt from "bcryptjs";
 
 const router = Router();
@@ -16,6 +19,92 @@ const isValidEmail = (email: string): boolean => {
     return regex.test(email);
 };
 
+export const registerUserLogic = async (data: any) => {
+    let { name, accountType, password, email, phoneNumber }: UserAttributes = data;
+
+    if (accountType == null) {
+        throw { status: 400, message: Messages.USER_ERR_EMPTY_ARGS };
+    }
+
+    if (
+        (name !== undefined && name !== null && typeof name !== "string") ||
+        typeof accountType !== "string" ||
+        (password !== undefined && password !== null && typeof password !== "string") ||
+        (email !== undefined && email !== null && typeof email !== "string") ||
+        (phoneNumber !== undefined && phoneNumber !== null && typeof phoneNumber !== "string" && typeof phoneNumber !== "number")
+    ) {
+        throw { status: 400, message: Messages.USER_ERR_TYPING };
+    }
+
+    if (!Constants.USER_ACC_TYPES.includes(accountType as any)) {
+        throw { status: 400, message: Messages.USER_ERR_ACC_TYPE };
+    }
+
+    const isAuthenticated: boolean = accountType === Constants.USER_ACC_TYPES[0] ? false : true;
+    if (!isAuthenticated && email == null && phoneNumber == null) {
+        throw { status: 400,  message: Messages.USER_ERR_UNAUTHORIZED };
+    }
+
+    if (isAuthenticated) {
+        if (name) {
+            name = name.trim();
+            if (name.length < Constants.USER_NAME_MIN_LEN || name.length > Constants.USER_NAME_MAX_LEN) {
+                throw { status: 400, message: Messages.USER_ERR_NAME_LEN };
+            }
+        }
+        else {
+            throw { status: 400,  message: Messages.USER_ERR_NAME_LEN };
+        }
+    }
+    else {
+        name = `Guest_${Date.now()}`;
+    }
+
+    let hashedPassword: string | null = null;
+    if (isAuthenticated) {
+        if (password) {
+            const trimmedPass = password.trim();
+            if (trimmedPass.length < Constants.USER_PASS_MIN_LEN || trimmedPass.length > Constants.USER_PASS_MAX_LEN) {
+                throw { status: 400, message: Messages.USER_ERR_PASS_LEN };
+            }
+            hashedPassword = await bcrypt.hash(trimmedPass, Constants.USER_PASS_SALT_ROUNDS);
+        }
+        else {
+            throw { status: 400, message: Messages.USER_ERR_PASS_LEN };
+        }
+    }
+
+    if (email && !isValidEmail(email)) {
+        throw { status: 400, message: Messages.USER_ERR_EMAIL };
+    }
+
+    let pureDigits: string | null = null;
+    if (phoneNumber !== undefined && phoneNumber !== null) {
+        const rawPhone = phoneNumber.toString().trim();
+        pureDigits = rawPhone.replace(/\D/g, "");
+        if (pureDigits.length === 0 || !isValidPhone(pureDigits)) {
+            throw { status: 400, message: Messages.USER_ERR_PHONE };
+        }
+    }
+
+    if (email) {
+        const existingEmail = await User.findOne({ where: { email } });
+        if (existingEmail) throw { status: 400, message: Messages.USER_ERR_EMAIL_UNIQUE };
+    }
+    if (pureDigits) {
+        const existingPhone = await User.findOne({ where: { phoneNumber: pureDigits } });
+        if (existingPhone) throw { status: 400,  message: Messages.USER_ERR_PHONE_UNIQUE };
+    }
+
+    return User.build({
+        name,
+        accountType,
+        password: hashedPassword,
+        email,
+        phoneNumber: pureDigits,
+    });
+}
+
 /** Adds a new user to the database
  * Requires: name and account type
  * Based on whether the user is authorized or not
@@ -23,107 +112,34 @@ const isValidEmail = (email: string): boolean => {
  */
 router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
-        let { name, accountType, password, email, phoneNumber }: UserAttributes = req.body;
-
-        if (accountType == null) {
-            return res.status(400).json({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+        const user: UserInstance = await registerUserLogic(req.body);
+        await user.save();
+        res.send({ users: [user] });
+    } 
+    catch (error: any) {
+        if (error.status) {
+            return res.status(error.status).json({
+                message: error.message,
+                users: [],
+            });
         }
-
-        if (
-            (name !== undefined && name !== null && typeof name !== "string") ||
-            typeof accountType !== "string" ||
-            (password !== undefined && password !== null && typeof password !== "string") ||
-            (email !== undefined && email !== null && typeof email !== "string") ||
-            (phoneNumber !== undefined && phoneNumber !== null && typeof phoneNumber !== "string" && typeof phoneNumber !== "number")
-        ) {
-            return res.status(400).json({ message: Messages.USER_ERR_TYPING, users: [] });
-        }
-
-        if (!Constants.USER_ACC_TYPES.includes(accountType as any)) {
-            return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
-        }
-
-        const isAuthenticated: boolean = accountType === Constants.USER_ACC_TYPES[0] ? false : true;
-        if (!isAuthenticated && email == null && phoneNumber == null) {
-            return res.status(400).json({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
-        }
-
-        if (isAuthenticated) {
-            if (name) {
-                name = name.trim();
-                if (name.length < Constants.USER_NAME_MIN_LEN || name.length > Constants.USER_NAME_MAX_LEN) {
-                    return res.status(400).json({ message: Messages.USER_ERR_NAME_LEN, users: [] });
-                }
-            }
-            else {
-                return res.status(400).json({ message: Messages.USER_ERR_NAME_LEN, users: [] });
-            }
-        }
-        else {
-            name = `Guest_${Date.now()}`;
-        }
-
-        let hashedPassword: string | null = null;
-        if (isAuthenticated) {
-            if (password) {
-                const trimmedPass = password.trim();
-                if (trimmedPass.length < Constants.USER_PASS_MIN_LEN || trimmedPass.length > Constants.USER_PASS_MAX_LEN) {
-                    return res.status(400).json({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-                }
-                hashedPassword = await bcrypt.hash(trimmedPass, Constants.USER_PASS_SALT_ROUNDS);
-            }
-            else {
-                return res.status(400).json({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-            }
-        }
-
-        if (email && !isValidEmail(email)) {
-            return res.status(400).json({ message: Messages.USER_ERR_EMAIL, users: [] });
-        }
-
-        let pureDigits: string | null = null;
-        if (phoneNumber !== undefined && phoneNumber !== null) {
-            const rawPhone = phoneNumber.toString().trim();
-            pureDigits = rawPhone.replace(/\D/g, "");
-            if (pureDigits.length === 0 || !isValidPhone(pureDigits)) {
-                return res.status(400).json({ message: Messages.USER_ERR_PHONE, users: [] });
-            }
-        }
-
-        if (email) {
-            const existingEmail = await User.findOne({ where: { email } });
-            if (existingEmail) return res.status(400).json({ message: Messages.USER_ERR_EMAIL_UNIQUE, users: [] });
-        }
-        if (pureDigits) {
-            const existingPhone = await User.findOne({ where: { phoneNumber: pureDigits } });
-            if (existingPhone) return res.status(400).json({ message: Messages.USER_ERR_PHONE_UNIQUE, users: [] });
-        }
-
-        const newUser = await User.create({
-            name,
-            accountType,
-            password: hashedPassword,
-            email,
-            phoneNumber: pureDigits,
-        });
-
-        res.send({ users: [newUser] });
-    } catch (error) {
         next(error);
     }
 });
 
 /**
  * Sends data about all users in the database
- */ 
+ */
 router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const users: UserInstance[] = await User.findAll();
+        // Depending on if request was made by site owner or not, it might display all users or all non-site-owner users
+        const users: UserInstance[] = await User.findAll({ where: { accountType: { [Op.ne]: Constants.USER_ACC_TYPES[3] }}});
+        console.log(users);
         if (users.length === 0) {
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND_ALL, users: [] });
         }
         res.send({ users });
-    } catch (error) {
+    } catch (error: any) {
         next(error);
     }
 });
@@ -141,7 +157,7 @@ router.get("/id/:userId", async (req: Request, res: Response, next: NextFunction
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
         }
         res.send({ users: [user] });
-    } catch (error) {
+    } catch (error: any) {
         next(error);
     }
 });
@@ -160,7 +176,7 @@ router.put("/update/:userId", async (req: Request, res: Response, next: NextFunc
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
         }
 
-        const { name, password, email, phoneNumber } : UserAttributes = req.body;
+        const { name, password, email, phoneNumber }: UserAttributes = req.body;
         if (name == null && password == null && email == null && phoneNumber == null) {
             return res.status(400).json({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
         }
@@ -170,8 +186,8 @@ router.put("/update/:userId", async (req: Request, res: Response, next: NextFunc
 
         const isAuthenticated = user.accountType === Constants.USER_ACC_TYPES[0] ? false : true;
         if (!isAuthenticated && email == null && password == null) {
-            return res.status(400).json({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });           
-        } 
+            return res.status(400).json({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
+        }
 
         if (name !== undefined) {
             if (typeof name !== "string") return res.status(400).json({ message: Messages.USER_ERR_TYPING, users: [] });
@@ -227,7 +243,7 @@ router.put("/update/:userId", async (req: Request, res: Response, next: NextFunc
 
         await user.update(updateData);
         res.send({ users: [user] });
-    } catch (error) {
+    } catch (error: any) {
         next(error);
     }
 });
@@ -245,18 +261,17 @@ router.put("/update-type/:userId", async (req: Request, res: Response, next: Nex
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
         }
 
-        const { accountType } : UserAttributes = req.body;
+        const { accountType }: UserAttributes = req.body;
         if (!Constants.USER_ACC_TYPES.includes(accountType as any)) {
             return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         }
 
         await user.update({ accountType });
         res.send({ users: [user] });
-    } catch (error) {
+    } catch (error: any) {
         next(error);
     }
 });
-
 
 // Deletes a user with the specified ID
 router.delete("/delete/:userId", async (req: Request, res: Response, next: NextFunction) => {
@@ -273,7 +288,7 @@ router.delete("/delete/:userId", async (req: Request, res: Response, next: NextF
 
         await user.destroy();
         res.send({ message: Messages.USER_MSG_DEL });
-    } catch (error) {
+    } catch (error: any) {
         next(error);
     }
 });
