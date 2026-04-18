@@ -2,9 +2,14 @@ import sequelize from "../src/models";
 import * as Messages from "../src/messages";
 import * as Constants from "../src/constants";
 import * as Utils from "./utils";
+import { elevateToOwner, registerOwner, revokeSiteAdmin } from "../src/owner";
 
 beforeAll(async () => {
     await sequelize.sync({ force: true });
+    const ownerInfo = await registerOwner();
+    if (ownerInfo.message !== Messages.USER_OWNER) {
+        console.error(Messages.APP_ERR_OWNER_LISTENING);
+    }
 });
 
 describe("User Lifecycle Flow", async () => {
@@ -13,9 +18,10 @@ describe("User Lifecycle Flow", async () => {
     //---------------------------------
     // Step 1 - POST
     //---------------------------------
-    // First user object is created successfully
+    // Site admin is already present in the database
+    // Second user object is created successfully
     // Then tests go over all cases which result in failure
-    // At the end of the step only 1 user object is in the database
+    // At the end of the step 2 user objects are in the database
     //---------------------------------
 
     describe("POST /user/register", async () => {
@@ -27,25 +33,9 @@ describe("User Lifecycle Flow", async () => {
             expect(response.body.users[0]).toHaveProperty("email", Utils.userData.email);
         });
 
-        it("should respond with 400 if required fields are missing", async () => {
-            // accountType: undefined or null
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, accountType: undefined });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, accountType: null });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
-
-            // All undefined
-            response = await Utils.sendRequest("/user/register", 400, "POST", {});
-            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
-        });
-
         it("should respond with 400 if required types are incorrect", async () => {
             // name: not a string
             response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, name: 123 });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
-
-            // accountType: not a string
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, accountType: true });
             expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
 
             // password: not a string
@@ -73,18 +63,18 @@ describe("User Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.USER_ERR_NAME_LEN, users: [] });
         });
 
-        it("should respond with 400 if account type is not in Enum", async () => {
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, accountType: "Hacker" });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
-        });
+        // it("should respond with 400 if account type is not in Enum", async () => {
+        //     response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, accountType: "Hacker" });
+        //     expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
+        // });
 
-        it("should respond with 400 if unauthorized user does not provide email or phone number", async () => {
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userDataUnauthorized, email: null, phoneNumber: null });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
+        // it("should respond with 400 if unauthorized user does not provide email or phone number", async () => {
+        //     response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userDataUnauthorized, email: null, phoneNumber: null });
+        //     expect(response.body).toEqual({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
 
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userDataUnauthorized, email: undefined, phoneNumber: undefined });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
-        });
+        //     response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userDataUnauthorized, email: undefined, phoneNumber: undefined });
+        //     expect(response.body).toEqual({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
+        // });
 
         it("should respond with 400 if password length is invalid", async () => {
             //Too short
@@ -125,21 +115,140 @@ describe("User Lifecycle Flow", async () => {
     });
 
     //---------------------------------
-    // Step 2 - GET
+    // Step 2 - Login / Logout
+    //---------------------------------
+    // Tests authentication using both Email and Phone Number
+    // Verifies cookie settings and failure cases
+    //---------------------------------
+
+    describe("POST /user/login", async () => {
+
+        let firstAuthToken = ""
+
+        it("(MODEL EXAMPLE) should respond with 200 and set cookie when logging in with email", async () => {
+            response = await Utils.sendRequest("/user/login", 200, "POST", { 
+                email: Utils.userData.email, 
+                password: Utils.userData.password 
+            });
+
+            expect(response.body).toHaveProperty("message", Messages.USER_MSG_LOGIN);
+            expect(response.body.users[0]).toHaveProperty("email", Utils.userData.email);
+
+            firstAuthToken = response.headers["set-cookie"][0];
+            expect(response.headers["set-cookie"][0]).toContain("auth_token");
+        });
+
+        it("(MODEL EXAMPLE) should respond with 200 when logging in with phone number", async () => {
+            response = await Utils.sendRequest("/user/login", 200, "POST", { 
+                phoneNumber: Utils.userData.phoneNumber, 
+                password: Utils.userData.password 
+            });
+
+            const expectedPhone = Utils.userData.phoneNumber.toString().replace(/\D/g, "");
+            expect(response.body.users[0]).toHaveProperty("phoneNumber", expectedPhone);
+
+            const secondAuthToken = response.headers["set-cookie"][0];
+            expect(secondAuthToken).not.toEqual(firstAuthToken);
+        });
+
+        it("should respond with 400 if credentials (email/phone) are missing", async () => {
+            // Missing password
+            response = await Utils.sendRequest("/user/login", 400, "POST", { email: Utils.userData.email });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+
+            // Missing both identifiers
+            response = await Utils.sendRequest("/user/login", 400, "POST", { password: Utils.userData.password });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+
+            // All arguments are undefined
+            response = await Utils.sendRequest("/user/login", 400, "POST", {});
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+
+            // All arguments are null
+            response = await Utils.sendRequest("/user/login", 400, "POST", { email: null, phoneNumber: null, password: null });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+
+            // Mixed invalid
+            response = await Utils.sendRequest("/user/login", 400, "POST", { email: null, phoneNumber: undefined, password: null });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+        });
+
+        it("should respond with 400 if email format is invalid", async () => {
+            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, email: "invalid-email" });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMAIL, users: [] });
+        });
+
+        it("should respond with 400 if phone number format is invalid", async () => {
+            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, phoneNumber: "123" }); // Too short
+            expect(response.body).toEqual({ message: Messages.USER_ERR_PHONE, users: [] });
+
+            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, phoneNumber: "00123123123" }); //Starts with 0
+            expect(response.body).toEqual({ message: Messages.USER_ERR_PHONE, users: [] });
+        });
+
+        it("should respond with 400 if password length is invalid", async () => {
+            //Too short
+            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, password: "a".repeat(Constants.USER_PASS_MIN_LEN - 1) });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
+            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, password: "" });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
+            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, password: "  " });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
+
+            //Too long
+            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, password: "a".repeat(Constants.USER_PASS_MAX_LEN + 1) });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
+        });
+
+        it("should respond with 401 if user does not exist", async () => {
+            response = await Utils.sendRequest("/user/login", 401, "POST", { 
+                email: "nonexistent@mail.com", 
+                password: "SomePassword123" 
+            });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_LOGIN, users: [] });
+        });
+
+        it("should respond with 401 if password is incorrect", async () => {
+            response = await Utils.sendRequest("/user/login", 401, "POST", { 
+                email: Utils.userData.email, 
+                password: "WrongPassword" 
+            });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_LOGIN, users: [] });
+        });
+    });
+
+    describe("POST /user/logout", async () => {
+        it("(MODEL EXAMPLE) should respond with 200 and clear the auth cookie", async () => {
+            response = await Utils.sendRequest("/user/logout", 200, "POST");
+            
+            expect(response.body).toHaveProperty("message", Messages.USER_MSG_LOGOUT);
+            expect(response.headers["set-cookie"][0]).toMatch(/auth_token=;|^auth_token=([^;]+);.*Max-Age=0/);
+        });
+    });
+
+    //---------------------------------
+    // Step 3 - GET
     //---------------------------------
     // 2 further user objects are created and then fetched
-    // At the end of the step there are 3 user objects in the database
+    // At the end of the step there are 4 user objects in the database
     //---------------------------------
 
     const unauthorizedPhoneNumber = "222333444";
+    const otherEmail = "other@email.com";
     describe("GET /user/all", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all user objects", async () => {
-            //Emulating Unauthorized users
-            await Utils.sendRequest("/user/register", 200, "POST", { ...Utils.userDataUnauthorized });
-            await Utils.sendRequest("/user/register", 200, "POST", { ...Utils.userDataUnauthorized, phoneNumber: unauthorizedPhoneNumber, email: null });
+            // Adding other users
+            await Utils.sendRequest("/user/register", 200, "POST", Utils.userDataUnauthorized);
+            await Utils.sendRequest("/user/register", 200, "POST",  { ...Utils.userData, email: otherEmail, phoneNumber: unauthorizedPhoneNumber });
 
             response = await Utils.sendRequest("/user/all", 200, "GET");
+            // Three created users 
             expect(response.body.users).toHaveLength(3);
+
+            // Revoking site admin priviledges to show that /user/all only fetches non-site-admin users
+            await revokeSiteAdmin(1);
+            response = await Utils.sendRequest("/user/all", 200, "GET");
+            expect(response.body.users).toHaveLength(4);
         });
     });
 
@@ -167,9 +276,9 @@ describe("User Lifecycle Flow", async () => {
     });
 
     //---------------------------------
-    // Step 3 - PUT
+    // Step 4 - PUT
     //---------------------------------
-    // First user object is modified successfully
+    // Second user object is modified successfully
     // Then tests go over all cases which result in update failure
     //---------------------------------
 
@@ -189,6 +298,12 @@ describe("User Lifecycle Flow", async () => {
 
             response = await Utils.sendRequest("/user/update/-1", 400, "PUT");
             expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
+        });
+
+        it("should respond with 400 if user account type is site admin", async () => {
+            await elevateToOwner(1);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT");
+            expect(response.body).toEqual({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
         });
 
         it("should respond with 400 if update types are incorrect", async () => {
@@ -250,7 +365,7 @@ describe("User Lifecycle Flow", async () => {
 
 
         it("should respond with 400 if email is already in the database", async () => {
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { email: Utils.userDataUnauthorized.email });
+            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { email: otherEmail });
             expect(response.body).toEqual({ message: Messages.USER_ERR_EMAIL_UNIQUE, users: [] });
         });
 
@@ -284,9 +399,9 @@ describe("User Lifecycle Flow", async () => {
     });
 
     //---------------------------------
-    // Step 4 - PUT (Account Type)
+    // Step 5 - PUT (Account Type)
     //---------------------------------
-    // First user account type object is modified successfully
+    // Second user account type object is modified successfully
     // Then tests go over all cases which result in update failure
     //---------------------------------
 
@@ -306,15 +421,122 @@ describe("User Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/user/update-type/-1", 400, "PUT");
             expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
         });
+        
+        it("should respond with 400 if user account type is site admin", async () => {
+            response = await Utils.sendRequest("/user/update-type/1", 400, "PUT");
+            expect(response.body).toEqual({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
+        });
 
-        it("should respond with 400 if updated account type is not in Enum", async () => {
+        it("should respond with 400 if updated account type is not in the Enum", async () => {
             response = await Utils.sendRequest("/user/update-type/2", 400, "PUT", { accountType: "Hacker" });
             expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         });
         
+        it("should respond with 400 if updated account type is site admin", async () => {
+            response = await Utils.sendRequest("/user/update-type/2", 400, "PUT", { accountType: Constants.USER_ACC_TYPES[3] });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
+        });
+
         it("should respond with 404 if user is not in the database", async () => {
             response = await Utils.sendRequest("/user/update-type/5", 404, "PUT");
             expect(response.body).toEqual({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
+        });
+    });
+
+    //---------------------------------
+    // Step 6 - PUT (Assign Cinemas)
+    //---------------------------------
+    // Three cinema objects are created
+    // One of them is assigned to the second user object
+    // The other is unsuccessfully assigned to a non-admin user
+    // The last one is left alone, to test fetching
+    // At the end of the step there are 3 cinemas and 4 users in the database
+    //---------------------------------
+
+    describe("PUT /user/assign-cinema", () => {
+        it("(MODEL EXAMPLE) should respond with 200 and user object with cinema data", async () => {
+            // Create a Cinema
+            const cinemaRes = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
+            const createdCinema = cinemaRes.body.cinemas[0];
+
+            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: 2, cinemaId: 1 });
+            expect(response.body.users[0]).toHaveProperty("id", 2);
+            expect(response.body.users[0].cinemas[0]).toMatchObject({
+                id: createdCinema.id,
+                name: createdCinema.name,
+                address: createdCinema.address
+            });
+        });
+
+        it("should respond with 400 when required fields are missing", async () => {
+            // user id is undefined or null
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { cinemaId: 1 });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: null, cinemaId: 1 });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+
+            // cinema id is undefined or null
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: 2 });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: 2, cinemaId: null });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+
+            // All are undefined
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", {});
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+
+            // All are null
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: null, cinemaId: null });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+        });
+
+        it("should respond with 400 if required types are incorrect", async () => {
+            // userId: not a integer
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: "123", cinemaId: 1 });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
+
+            // cinemaId: not a integer
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { cinemaId: "123", userId: 2 });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
+        });
+
+        it("should respond with 400 if user ID is invalid", async () => {
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: 0, cinemaId: 1 });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
+
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: -1, cinemaId: 1 });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
+        });
+
+        it("should respond with 400 if cinema ID is invalid", async () => {
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { cinemaId: 0, userId: 2 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, users: [] });
+
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { cinemaId: -1, userId: 2 });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, users: [] });
+        });
+
+        it("should respond with 404 for if specified user is not in the database", async () => {
+            response = await Utils.sendRequest("/user/assign-cinema", 404, "PUT", { 
+                userId: 99, 
+                cinemaId: 1 
+            });
+            expect(response.body).toEqual({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
+        });
+
+        it("should respond with 404 for if specified cinema is not in the database", async () => {
+            response = await Utils.sendRequest("/user/assign-cinema", 404, "PUT", { 
+                userId: 2, 
+                cinemaId: 99 
+            });
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, users: [] });
+        });
+
+        it("should verify the many-to-many link in the database state", async () => {
+            await Utils.sendRequest("/user/update-type/3", 200, "PUT", { accountType: Constants.USER_ACC_TYPES[2] })
+            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: 3, cinemaId: 1 });
+
+            expect(response.body.users[0].cinemas[0]).toHaveProperty("id", 1);
         });
     });
 
@@ -331,6 +553,13 @@ describe("User Lifecycle Flow", async () => {
             await Utils.sendRequest("/user/delete/3", 200, "DELETE");
             response = await Utils.sendRequest("/user/delete/4", 200, "DELETE");
             expect(response.body).toEqual({ message: Messages.USER_MSG_DEL });
+
+            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE");
+        });
+
+        it("(MODEL EXAMPLE) should respond with 400 if user is site admin", async () => {
+            response = await Utils.sendRequest("/user/delete/1", 400, "DELETE");
+            expect(response.body).toEqual({ message: Messages.USER_ERR_DEL_SITE });
         });
 
         it("should respond with 400 if userId is invalid", async () => {

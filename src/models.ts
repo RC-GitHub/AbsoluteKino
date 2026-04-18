@@ -33,6 +33,71 @@ const commonAttributes = {
 };
 
 //---------------------------------
+// User
+//---------------------------------
+
+export interface UserAttributes {
+  id?: number;
+  name: string;
+  accountType: string;
+  password: string | null;
+  email: string | null;
+  phoneNumber: string | number | null;
+}
+
+export interface UserInstance extends Model<UserAttributes>, UserAttributes { }
+
+export const User = sequelize.define<UserInstance>("User", {
+  ...commonAttributes,
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      len: {
+        args: [Constants.USER_NAME_MIN_LEN, Constants.USER_NAME_MAX_LEN],
+        msg: Messages.USER_ERR_NAME_LEN
+      },
+    }
+  },
+  accountType: {
+    type: DataTypes.ENUM(...Constants.USER_ACC_TYPES),
+    allowNull: false,
+    defaultValue: Constants.USER_ACC_TYPES[0]
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: {
+      name: 'email',
+      msg: Messages.USER_ERR_EMAIL_UNIQUE
+    },
+    validate: {
+      isEmail: {
+        msg: Messages.USER_ERR_EMAIL
+      }
+    },
+  },
+  phoneNumber: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: {
+      name: 'phoneNumber',
+      msg: Messages.USER_ERR_PHONE_UNIQUE
+    },
+    validate: {
+      is: {
+        args: Constants.USER_PHONE_REGEX,
+        msg: Messages.USER_ERR_PHONE
+      }
+    },
+  },
+});
+
+//---------------------------------
 // Cinema
 //---------------------------------
 
@@ -106,6 +171,10 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
       }
     }
   },
+});
+
+export const UserCinema = sequelize.define('UserCinema', {
+  ...commonAttributes,
 });
 
 //---------------------------------
@@ -619,71 +688,6 @@ export const Reservation = sequelize.define<ReservationInstance>("Reservation", 
 });
 
 //---------------------------------
-// User
-//---------------------------------
-
-export interface UserAttributes {
-  id?: number;
-  name: string;
-  accountType: string;
-  password: string | null;
-  email: string | null;
-  phoneNumber: string | number | null;
-}
-
-export interface UserInstance extends Model<UserAttributes>, UserAttributes { }
-
-export const User = sequelize.define<UserInstance>("User", {
-  ...commonAttributes,
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    validate: {
-      len: {
-        args: [Constants.USER_NAME_MIN_LEN, Constants.USER_NAME_MAX_LEN],
-        msg: Messages.USER_ERR_NAME_LEN
-      },
-    }
-  },
-  accountType: {
-    type: DataTypes.ENUM(...Constants.USER_ACC_TYPES),
-    allowNull: false,
-    defaultValue: Constants.USER_ACC_TYPES[0]
-  },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    unique: {
-      name: 'email',
-      msg: Messages.USER_ERR_EMAIL_UNIQUE
-    },
-    validate: {
-      isEmail: {
-        msg: Messages.USER_ERR_EMAIL
-      }
-    },
-  },
-  phoneNumber: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    unique: {
-      name: 'phoneNumber',
-      msg: Messages.USER_ERR_PHONE_UNIQUE
-    },
-    validate: {
-      is: {
-        args: Constants.USER_PHONE_REGEX,
-        msg: Messages.USER_ERR_PHONE
-      }
-    },
-  },
-});
-
-//---------------------------------
 // Product
 //---------------------------------
 
@@ -749,26 +753,29 @@ export const Product = sequelize.define<ProductInstance>("Product", {
     }
   }
 });
+
 //---------------------------------
 // Associations
 //---------------------------------
-
-Cinema.hasMany(Room, { foreignKey: "cinemaId" });
+Cinema.hasMany(Room, { foreignKey: "cinemaId", onDelete: 'CASCADE', hooks: true });
 Room.belongsTo(Cinema, { foreignKey: "cinemaId" });
 
-Room.hasMany(Screening, { foreignKey: "roomId" });
+Cinema.hasMany(Product, { foreignKey: "cinemaId", onDelete: 'CASCADE', hooks: true });
+Product.belongsTo(Cinema, { foreignKey: "cinemaId" });
+
+User.belongsToMany(Cinema, { through: 'UserCinemas', as: 'cinemas', foreignKey: 'userId', onDelete: 'CASCADE' });
+Cinema.belongsToMany(User, { through: 'UserCinemas', as: 'admins', foreignKey: 'cinemaId', onDelete: 'CASCADE' });
+
+Room.hasMany(Screening, { foreignKey: "roomId", onDelete: 'CASCADE', hooks: true });
 Screening.belongsTo(Room, { foreignKey: "roomId" });
 
-Movie.hasMany(Screening, { foreignKey: "movieId" });
-Screening.belongsTo(Movie, { foreignKey: "movieId" });
-
-Screening.hasMany(Reservation, { foreignKey: "screeningId" });
+Screening.hasMany(Reservation, { foreignKey: "screeningId", onDelete: 'CASCADE', hooks: true });
 Reservation.belongsTo(Screening, { foreignKey: "screeningId" });
 
-User.hasMany(Reservation, { foreignKey: "clientId" });
-Reservation.belongsTo(User, { foreignKey: "clientId" });
+Movie.hasMany(Screening, { foreignKey: "movieId", onDelete: 'RESTRICT' });
+Screening.belongsTo(Movie, { foreignKey: "movieId" });
 
-Cinema.hasMany(Product, { foreignKey: "cinemaId" });
-Product.belongsTo(Cinema, { foreignKey: "cinemaId" });
+User.hasMany(Reservation, { foreignKey: "clientId", onDelete: 'CASCADE', hooks: true });
+Reservation.belongsTo(User, { foreignKey: "clientId" });
 
 export default sequelize;

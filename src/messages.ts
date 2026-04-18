@@ -6,8 +6,13 @@ import * as Constants from './constants.ts';
 //---------------------------------
 export const APP_WELCOME = "Welcome to AbsoluteKino!";
 export const APP_LISTENING = `AbsoluteKino listening on port ${CONFIG.PORT}`;
-export const APP_ERR_OWNER = "Failed to create site owner: ";
+
+export const APP_ERR_OWNER = "CRITICAL: Site Owner registration failed:";
+export const APP_ERR_OWNER_ELEVATE = "ERROR: Failed to elevate user to Site Admin status:";
+export const APP_ERR_REVOKE = "ERROR: Failed to revoke Site Admin privileges:";
+export const APP_ERR_UPDATE = "ERROR: Failed to update Site Admin data:";
 export const APP_ERR_OWNER_LISTENING = "AbsoluteKino could not be started because the owner could not be created";
+export const APP_ERR_INTERNAL = "An internal server error occurred during the administrative operation.";
 
 //---------------------------------
 // Database
@@ -23,8 +28,8 @@ export const DB_ERR_500 = "Internal Server Error";
 //---------------------------------
 // Authentication
 //---------------------------------
-export const AUTH_REQUIRED = "Authentication required";
-export const AUTH_SESSION = "Invalid session";
+export const AUTH_REQUIRED = "Access denied: Authentication is required to complete this request";
+export const AUTH_SESSION = "Session expired or invalid: Please log in again";
 
 //---------------------------------
 // Cinema
@@ -122,20 +127,31 @@ export const MOVIE_MSG_DEL: string = "Movie deleted successfully";
 //---------------------------------
 // User
 //---------------------------------
-export const USER_OWNER: string = "API owner added successfully";
-export const USER_ERR_OWNER: string = "Failed to add the API owner";
+export const USER_OWNER = "Site owner account has been initialized successfully.";
+export const USER_OWNER_ELEVATE = "Account has been elevated to site owner successfully.";
+export const USER_ERR_OWNER = "Failed to initialize site owner account";
+export const USER_ERR_OWNER_MODIFY = "This account cannot be modified";
+export const USER_ERR_OWNER_ELEVATE = "Failed to elevate the user to site owner";
+export const USER_ERR_NOT_SITE_ADMIN = "Access Denied: The target user is not a Site Admin.";
+export const USER_MSG_REVOKE = "Site Admin privileges have been successfully revoked.";
+export const USER_MSG_UPDATE_SUCCESS = "Site Admin profile updated successfully.";
+export const USER_MSG_LOGIN = "User successfully logged in";
+export const USER_MSG_LOGOUT = "User successfully logged out";
 
+export const USER_ERR_LOGIN = "Invalid login/email/phone number or password";
+export const USER_MSG_CINEMA_ASSIGN = "Cinema Admin successfully assigned to cinema.";
 export const USER_ERR_EMPTY_ARGS: string = "User arguments are all required";
 export const USER_ERR_ID: string = "User ID should be a positive integer";
 export const USER_ERR_TYPING: string = "User name, account type, password, email and phone number should have correct typings (string, string, string or null, string or null and string or null respectively)";
 export const USER_ERR_NAME_LEN: string = `User name length is incorrect (it should be between ${Constants.USER_NAME_MIN_LEN} and ${Constants.USER_NAME_MAX_LEN})`;
-export const USER_ERR_ACC_TYPE: string = `User account type should be one of the following: ${Constants.USER_ACC_TYPES.join(", ")}`;
+export const USER_ERR_ACC_TYPE: string = `User account type should be one of the following: ${Constants.USER_ACC_TYPES.slice(0,-1).join(", ")}`;
 export const USER_ERR_UNAUTHORIZED: string = `Unauthenticated user must provide email address and/or phone number`;
 export const USER_ERR_PASS_LEN: string = `User password length is incorrect (it should be between ${Constants.USER_PASS_MIN_LEN} and ${Constants.USER_PASS_MAX_LEN})`;
 export const USER_ERR_EMAIL: string = `User email should adhere to the standard email format as provided by Sequelize`;
 export const USER_ERR_EMAIL_UNIQUE: string = `User with this email already exists`;
 export const USER_ERR_PHONE: string = `User phone number does not match the specified format (look into the documentation)`;
 export const USER_ERR_PHONE_UNIQUE: string = `User with this phone number already exists`;
+export const USER_ERR_DEL_SITE: string = `This user cannot be deleted using this method`
 export const USER_ERR_NOT_FOUND_ALL: string = "No users were found in the database";
 export const USER_ERR_NOT_FOUND: string = "User with specified ID was not found in the database";
 export const USER_MSG_DEL: string = "User deleted successfully";

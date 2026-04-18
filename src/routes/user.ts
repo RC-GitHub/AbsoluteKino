@@ -1,11 +1,15 @@
-import { User, UserAttributes, UserInstance } from "../models.js";
+import jwt from 'jsonwebtoken';
+
+import { Cinema, User, UserAttributes, UserInstance } from "../models.js";
 import { Request, Response, NextFunction, Router } from "express";
 
+import { CONFIG } from '../config';
 import * as Messages from "../messages";
 import * as Constants from "../constants";
 
 import { Op } from 'sequelize';
 import bcrypt from "bcryptjs";
+
 
 const router = Router();
 
@@ -20,102 +24,95 @@ const isValidEmail = (email: string): boolean => {
 };
 
 export const registerUserLogic = async (data: any) => {
-    let { name, accountType, password, email, phoneNumber }: UserAttributes = data;
+    let { name, password, email, phoneNumber }: UserAttributes = data;
 
-    if (accountType == null) {
-        throw { status: 400, message: Messages.USER_ERR_EMPTY_ARGS };
-    }
-
-    if (
-        (name !== undefined && name !== null && typeof name !== "string") ||
-        typeof accountType !== "string" ||
-        (password !== undefined && password !== null && typeof password !== "string") ||
-        (email !== undefined && email !== null && typeof email !== "string") ||
-        (phoneNumber !== undefined && phoneNumber !== null && typeof phoneNumber !== "string" && typeof phoneNumber !== "number")
-    ) {
-        throw { status: 400, message: Messages.USER_ERR_TYPING };
-    }
-
-    if (!Constants.USER_ACC_TYPES.includes(accountType as any)) {
-        throw { status: 400, message: Messages.USER_ERR_ACC_TYPE };
-    }
-
-    const isAuthenticated: boolean = accountType === Constants.USER_ACC_TYPES[0] ? false : true;
-    if (!isAuthenticated && email == null && phoneNumber == null) {
-        throw { status: 400,  message: Messages.USER_ERR_UNAUTHORIZED };
+    let isAuthenticated = true;
+    if (name == null &&
+        password == null &&
+        email == null &&
+        phoneNumber == null) 
+    {
+        isAuthenticated = false;
     }
 
     if (isAuthenticated) {
-        if (name) {
-            name = name.trim();
-            if (name.length < Constants.USER_NAME_MIN_LEN || name.length > Constants.USER_NAME_MAX_LEN) {
-                throw { status: 400, message: Messages.USER_ERR_NAME_LEN };
-            }
+        if (name == null || password == null ||
+           (email == null && phoneNumber == null)) 
+        {
+            throw { status: 400, message: Messages.USER_ERR_EMPTY_ARGS };
         }
-        else {
-            throw { status: 400,  message: Messages.USER_ERR_NAME_LEN };
-        }
-    }
-    else {
-        name = `Guest_${Date.now()}`;
-    }
 
-    let hashedPassword: string | null = null;
-    if (isAuthenticated) {
-        if (password) {
-            const trimmedPass = password.trim();
-            if (trimmedPass.length < Constants.USER_PASS_MIN_LEN || trimmedPass.length > Constants.USER_PASS_MAX_LEN) {
-                throw { status: 400, message: Messages.USER_ERR_PASS_LEN };
-            }
-            hashedPassword = await bcrypt.hash(trimmedPass, Constants.USER_PASS_SALT_ROUNDS);
+        if (
+            (name != null && typeof name !== "string") ||
+            (password != null && typeof password !== "string") ||
+            (email != null && typeof email !== "string") ||
+            (phoneNumber != null && typeof phoneNumber !== "string" && typeof phoneNumber !== "number")
+        ) {
+            throw { status: 400, message: Messages.USER_ERR_TYPING };
         }
-        else {
+
+        const trimmedName = name.trim();
+        if (trimmedName.length < Constants.USER_NAME_MIN_LEN || trimmedName.length > Constants.USER_NAME_MAX_LEN) {
+            throw { status: 400, message: Messages.USER_ERR_NAME_LEN };
+        }
+        
+        let hashedPassword: string | null = null;
+        const trimmedPass = password.trim();
+        if (trimmedPass.length < Constants.USER_PASS_MIN_LEN || trimmedPass.length > Constants.USER_PASS_MAX_LEN) {
             throw { status: 400, message: Messages.USER_ERR_PASS_LEN };
         }
-    }
+        hashedPassword = await bcrypt.hash(trimmedPass, Constants.USER_PASS_SALT_ROUNDS);
+            
+        if (!isValidEmail(email as string)) {
+            throw { status: 400, message: Messages.USER_ERR_EMAIL };
+        }
 
-    if (email && !isValidEmail(email)) {
-        throw { status: 400, message: Messages.USER_ERR_EMAIL };
-    }
-
-    let pureDigits: string | null = null;
-    if (phoneNumber !== undefined && phoneNumber !== null) {
-        const rawPhone = phoneNumber.toString().trim();
+        let pureDigits: string | null = null;
+        const rawPhone = (phoneNumber as any).toString().trim();
         pureDigits = rawPhone.replace(/\D/g, "");
-        if (pureDigits.length === 0 || !isValidPhone(pureDigits)) {
+        if ((pureDigits as string).length === 0 || !isValidPhone((pureDigits as string))) {
             throw { status: 400, message: Messages.USER_ERR_PHONE };
         }
-    }
-
-    if (email) {
+        
         const existingEmail = await User.findOne({ where: { email } });
         if (existingEmail) throw { status: 400, message: Messages.USER_ERR_EMAIL_UNIQUE };
-    }
-    if (pureDigits) {
-        const existingPhone = await User.findOne({ where: { phoneNumber: pureDigits } });
-        if (existingPhone) throw { status: 400,  message: Messages.USER_ERR_PHONE_UNIQUE };
-    }
 
-    return User.build({
-        name,
-        accountType,
-        password: hashedPassword,
-        email,
-        phoneNumber: pureDigits,
-    });
+        const existingPhone = await User.findOne({ where: { phoneNumber: pureDigits } });
+        if (existingPhone) throw { status: 400, message: Messages.USER_ERR_PHONE_UNIQUE };
+
+        return User.build({
+            name: trimmedName,
+            accountType: Constants.USER_ACC_TYPES[1],
+            password: hashedPassword,
+            email,
+            phoneNumber: pureDigits,
+        });
+
+    }
+    else {
+        // Unauthenticated user
+        return User.build({
+            name: `Guest_${Date.now()}`,
+            accountType: Constants.USER_ACC_TYPES[0],
+            password,
+            email,
+            phoneNumber,
+        });
+    }
 }
 
-/** Adds a new user to the database
- * Requires: name and account type
- * Based on whether the user is authorized or not
- * the request can also include the password, email and the phone number
+/** 
+ * Adds a new user to the database
+ * No data is required - then an unauthorized user will be created
+ * To create an authorized user, the request must include the name, password, and email or phone number
+ * There is no way of creating a cinema admin or site owner via this endpoint
  */
 router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user: UserInstance = await registerUserLogic(req.body);
         await user.save();
         res.send({ users: [user] });
-    } 
+    }
     catch (error: any) {
         if (error.status) {
             return res.status(error.status).json({
@@ -128,13 +125,101 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
 });
 
 /**
+ * Logs a user in by verifying credentials and setting an auth cookie
+ */
+router.post("/login", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { email, phoneNumber, password } = req.body;
+        if (password == null ||
+            (email == null && phoneNumber == null)
+        ) {
+            return res.status(400).json({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+        }
+
+        if (typeof password !== "string" ||
+            ((email && typeof email !== "string") ||
+            (phoneNumber && typeof phoneNumber !== "string" && typeof phoneNumber !== "number"))
+        ) {
+            return res.status(400).json({ message: Messages.USER_ERR_TYPING, users: [] });
+        }
+
+        if (email && !isValidEmail(email)) return res.status(400).json({ message: Messages.USER_ERR_EMAIL, users: [] });
+
+        const rawPhone = phoneNumber?.toString().trim() || "";
+        const pureDigits = rawPhone.replace(/\D/g, "");
+
+        if (phoneNumber && !isValidPhone(pureDigits)) {
+            return res.status(400).json({ message: Messages.USER_ERR_PHONE, users: [] });
+        }
+        if (password.length < Constants.USER_PASS_MIN_LEN || password.length > Constants.USER_PASS_MAX_LEN) {
+            return res.status(400).json({ message: Messages.USER_ERR_PASS_LEN, users: [] });
+        }
+        
+        let user = await User.findOne({
+            where: {
+                [Op.or]: [
+                    ...(email ? [{ email }] : []),
+                    ...(phoneNumber ? [{ phoneNumber: pureDigits }] : [])
+                ]
+            }
+        });
+        if (!user) {
+            return res.status(401).json({ message: Messages.USER_ERR_LOGIN, users: [] });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password || "");
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: Messages.USER_ERR_LOGIN, users: [] });
+        }
+     
+        const token = jwt.sign(
+            { 
+                id: user.id, 
+                email: user.email, 
+                phoneNumber: user.phoneNumber, 
+                accountType: user.accountType,
+                loginTime: new Date().getTime() 
+            },
+            CONFIG.JWT_SECRET,
+            { expiresIn: Constants.USER_COOKIE_EXPIRES_IN }
+        );
+
+        res.cookie("auth_token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: 'strict',
+            maxAge: Constants.USER_COOKIE_MAX_AGE
+        });
+
+        res.send({
+            message: Messages.USER_MSG_LOGIN,
+            users: [user]
+        });
+    } catch (error: any) {
+        next(error);
+    }
+});
+
+/**
+ * Logs a user out by clearing the auth cookie
+ */
+router.post("/logout", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        res.clearCookie("auth_token");
+        res.send({ message: Messages.USER_MSG_LOGOUT });
+    } catch (error: any) {
+        next(error);
+    }
+});
+
+/**
  * Sends data about all users in the database
  */
 router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
     try {
         // Depending on if request was made by site owner or not, it might display all users or all non-site-owner users
-        const users: UserInstance[] = await User.findAll({ where: { accountType: { [Op.ne]: Constants.USER_ACC_TYPES[3] }}});
-        console.log(users);
+        const users: UserInstance[] = await User.findAll({ where: { accountType: { [Op.ne]: Constants.USER_ACC_TYPES[3] } } });
+
         if (users.length === 0) {
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND_ALL, users: [] });
         }
@@ -174,6 +259,10 @@ router.put("/update/:userId", async (req: Request, res: Response, next: NextFunc
         const user: UserInstance | null = await User.findByPk(userId);
         if (!user) {
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
+        }
+
+        if (user.accountType === Constants.USER_ACC_TYPES[3]) {
+            return res.status(400).json({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
         }
 
         const { name, password, email, phoneNumber }: UserAttributes = req.body;
@@ -261,13 +350,68 @@ router.put("/update-type/:userId", async (req: Request, res: Response, next: Nex
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
         }
 
+        if (user.accountType === Constants.USER_ACC_TYPES[3]) {
+            return res.status(400).json({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
+        }
+
         const { accountType }: UserAttributes = req.body;
-        if (!Constants.USER_ACC_TYPES.includes(accountType as any)) {
+        if (accountType !== Constants.USER_ACC_TYPES[0] && // Elevating unauthenticated user to an authenticated one
+            accountType !== Constants.USER_ACC_TYPES[1] && // Elevating user to cinema admin
+            accountType !== Constants.USER_ACC_TYPES[2] // Revoking Cinema admin priviledges
+        ) {
             return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         }
 
         await user.update({ accountType });
         res.send({ users: [user] });
+    } catch (error: any) {
+        next(error);
+    }
+});
+
+// Assigns cinemas to the users
+router.put("/assign-cinema", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { userId, cinemaId } = req.body;
+
+        if (userId == null || cinemaId == null) {
+            return res.status(400).json({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+        }
+
+        if (typeof userId !== "number" || typeof cinemaId !== "number") {
+            return res.status(400).json({ message: Messages.USER_ERR_TYPING, users: [] });
+        }
+
+        if (userId < Constants.TYPICAL_MIN_ID) {
+            return res.status(400).json({ message: Messages.USER_ERR_ID, users: [] }); 
+        }
+        if (cinemaId < Constants.TYPICAL_MIN_ID) {
+            return res.status(400).json({ message: Messages.CINEMA_ERR_ID, users: [] }); 
+        }
+
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
+        }
+
+        const cinema = await Cinema.findByPk(cinemaId);
+        if (!cinema) {
+            return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND, users: [] });
+        }
+
+        if (user.accountType !== Constants.USER_ACC_TYPES[2]) {
+            return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
+        }
+
+        await (user as any).addCinema(cinema);
+        const updatedUser = await User.findByPk(userId, {
+            include: [{ model: Cinema, as: 'cinemas' }]
+        });
+
+        res.send({
+            message: Messages.USER_MSG_CINEMA_ASSIGN,
+            users: [updatedUser]
+        });
     } catch (error: any) {
         next(error);
     }
@@ -286,8 +430,16 @@ router.delete("/delete/:userId", async (req: Request, res: Response, next: NextF
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND });
         }
 
-        await user.destroy();
-        res.send({ message: Messages.USER_MSG_DEL });
+        console.log(user)
+
+        if (user.accountType === Constants.USER_ACC_TYPES[3]) {
+            return res.status(400).json({ message: Messages.USER_ERR_DEL_SITE })
+        }
+        else {
+            await user.destroy();
+            res.send({ message: Messages.USER_MSG_DEL });
+        }
+
     } catch (error: any) {
         next(error);
     }
