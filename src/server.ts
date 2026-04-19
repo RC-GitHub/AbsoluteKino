@@ -14,7 +14,7 @@ import reservationRouter from "./routes/reservation.ts";
 import productRouter from "./routes/product.ts";
 import seatRouter from "./routes/seat.ts";
 
-import { registerOwner } from './owner.ts';
+import { registerSiteAdmin } from './owner.ts';
 
 const app = express();
 const port: number = CONFIG.PORT;
@@ -39,7 +39,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   console.error(Messages.DB_ERR_FETCHING, err);
   res.status(500).send({
-    error: err.message || err || Messages.DB_ERR_500,
+    error: err.message || err || Messages.DB_ERR_INTERNAL,
   });
 });
 
@@ -48,7 +48,12 @@ const startServer = async () => {
     await sequelize.sync({force: CONFIG.DB.FORCE_SYNC});
     console.log(Messages.DB_SYNCED);
 
-    const ownerInfo = await registerOwner();
+    const ownerInfo = await registerSiteAdmin({
+      name: CONFIG.INITIAL_OWNER.NAME,
+      password: CONFIG.INITIAL_OWNER.PASSWORD,
+      email: CONFIG.INITIAL_OWNER.EMAIL,
+      phoneNumber: CONFIG.INITIAL_OWNER.PHONE_NUMBER,
+    });
     if (ownerInfo.message !== Messages.USER_OWNER) {
       console.error(Messages.APP_ERR_OWNER_LISTENING);
     }

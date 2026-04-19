@@ -4,32 +4,34 @@ import * as Constants from './constants.ts';
 //---------------------------------
 // App
 //---------------------------------
-export const APP_WELCOME = "Welcome to AbsoluteKino!";
-export const APP_LISTENING = `AbsoluteKino listening on port ${CONFIG.PORT}`;
+export const APP_WELCOME: string = "Welcome to AbsoluteKino!";
+export const APP_LISTENING: string = `AbsoluteKino listening on port ${CONFIG.PORT}`;
 
-export const APP_ERR_OWNER = "CRITICAL: Site Owner registration failed:";
-export const APP_ERR_OWNER_ELEVATE = "ERROR: Failed to elevate user to Site Admin status:";
-export const APP_ERR_REVOKE = "ERROR: Failed to revoke Site Admin privileges:";
-export const APP_ERR_UPDATE = "ERROR: Failed to update Site Admin data:";
-export const APP_ERR_OWNER_LISTENING = "AbsoluteKino could not be started because the owner could not be created";
-export const APP_ERR_INTERNAL = "An internal server error occurred during the administrative operation.";
+export const APP_ERR_OWNER: string = "CRITICAL: Site Owner registration failed: ";
+export const APP_ERR_OWNER_ELEVATE: string = "ERROR: Failed to elevate user to Site Admin status:";
+export const APP_ERR_REVOKE: string = "ERROR: Failed to revoke Site Admin privileges:";
+export const APP_ERR_UPDATE: string = "ERROR: Failed to update Site Admin data: ";
+export const APP_ERR_DELETE: string = "ERROR: Failed to delete Site Admin: ";
+export const APP_ERR_OWNER_LISTENING: string = "AbsoluteKino could not be started because the owner could not be created";
+export const APP_ERR_INTERNAL: string = "An internal server error occurred during the administrative operation.";
 
 //---------------------------------
 // Database
 //---------------------------------
-export const DB_CONN = "Connection has been established successfully";
-export const DB_SYNCED = "Database synced successfully";
+export const DB_CONN: string = "Connection has been established successfully";
+export const DB_SYNCED: string = "Database synced successfully";
 
-export const DB_ERR_CONN = "Unable to connect to the database: ";
-export const DB_ERR_SYNCING = "Failed to sync database: ";
-export const DB_ERR_FETCHING = "Fetching error: ";
-export const DB_ERR_500 = "Internal Server Error";
+export const DB_ERR_CONN: string = "Unable to connect to the database: ";
+export const DB_ERR_SYNCING: string = "Failed to sync database: ";
+export const DB_ERR_FETCHING: string = "Fetching error: ";
+export const DB_ERR_INTERNAL: string = "Internal Server Error";
 
 //---------------------------------
 // Authentication
 //---------------------------------
-export const AUTH_REQUIRED = "Access denied: Authentication is required to complete this request";
-export const AUTH_SESSION = "Session expired or invalid: Please log in again";
+export const AUTH_REQUIRED: string = "Access denied: Authentication is required to complete this request";
+export const AUTH_SESSION: string = "Session expired or invalid: Please log in again";
+export const AUTH_FORBIDDEN: string = "Access denied: You do not have the required permissions for this action";
 
 //---------------------------------
 // Cinema
@@ -135,12 +137,14 @@ export const USER_ERR_OWNER_ELEVATE = "Failed to elevate the user to site owner"
 export const USER_ERR_NOT_SITE_ADMIN = "Access Denied: The target user is not a Site Admin.";
 export const USER_MSG_REVOKE = "Site Admin privileges have been successfully revoked.";
 export const USER_MSG_UPDATE_SUCCESS = "Site Admin profile updated successfully.";
+export const USER_MSG_DEL_SUCCESS = "Site Admin user deleted successfully.";
 export const USER_MSG_LOGIN = "User successfully logged in";
 export const USER_MSG_LOGOUT = "User successfully logged out";
+export const USER_ERR_ALREADY_LOGGED_IN = "You are already logged in. Please log out first to switch accounts.";
 
 export const USER_ERR_LOGIN = "Invalid login/email/phone number or password";
 export const USER_MSG_CINEMA_ASSIGN = "Cinema Admin successfully assigned to cinema.";
-export const USER_ERR_EMPTY_ARGS: string = "User arguments are all required";
+export const USER_ERR_EMPTY_ARGS: string = "Necessary user arguments are all required";
 export const USER_ERR_ID: string = "User ID should be a positive integer";
 export const USER_ERR_TYPING: string = "User name, account type, password, email and phone number should have correct typings (string, string, string or null, string or null and string or null respectively)";
 export const USER_ERR_NAME_LEN: string = `User name length is incorrect (it should be between ${Constants.USER_NAME_MIN_LEN} and ${Constants.USER_NAME_MAX_LEN})`;

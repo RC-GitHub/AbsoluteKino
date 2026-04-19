@@ -1,15 +1,12 @@
-import jwt from 'jsonwebtoken';
+import { Op } from 'sequelize';
+import bcrypt from "bcryptjs";
 
 import { Cinema, User, UserAttributes, UserInstance } from "../models.js";
 import { Request, Response, NextFunction, Router } from "express";
 
-import { CONFIG } from '../config';
 import * as Messages from "../messages";
 import * as Constants from "../constants";
-
-import { Op } from 'sequelize';
-import bcrypt from "bcryptjs";
-
+import * as Auth from "../middleware/auth.ts"
 
 const router = Router();
 
@@ -27,24 +24,26 @@ export const registerUserLogic = async (data: any) => {
     let { name, password, email, phoneNumber }: UserAttributes = data;
 
     let isAuthenticated = true;
-    if (name == null &&
+    if (
+        name == null &&
         password == null &&
         email == null &&
-        phoneNumber == null) 
-    {
+        phoneNumber == null
+    ) {
         isAuthenticated = false;
     }
 
     if (isAuthenticated) {
-        if (name == null || password == null ||
-           (email == null && phoneNumber == null)) 
-        {
+        if (
+            name == null || password == null ||
+            (email == null && phoneNumber == null)
+        ) {
             throw { status: 400, message: Messages.USER_ERR_EMPTY_ARGS };
         }
 
         if (
-            (name != null && typeof name !== "string") ||
-            (password != null && typeof password !== "string") ||
+            (typeof name !== "string") ||
+            (typeof password !== "string") ||
             (email != null && typeof email !== "string") ||
             (phoneNumber != null && typeof phoneNumber !== "string" && typeof phoneNumber !== "number")
         ) {
@@ -55,30 +54,38 @@ export const registerUserLogic = async (data: any) => {
         if (trimmedName.length < Constants.USER_NAME_MIN_LEN || trimmedName.length > Constants.USER_NAME_MAX_LEN) {
             throw { status: 400, message: Messages.USER_ERR_NAME_LEN };
         }
-        
+
         let hashedPassword: string | null = null;
         const trimmedPass = password.trim();
         if (trimmedPass.length < Constants.USER_PASS_MIN_LEN || trimmedPass.length > Constants.USER_PASS_MAX_LEN) {
             throw { status: 400, message: Messages.USER_ERR_PASS_LEN };
         }
         hashedPassword = await bcrypt.hash(trimmedPass, Constants.USER_PASS_SALT_ROUNDS);
-            
-        if (!isValidEmail(email as string)) {
+
+        if (email != null && !isValidEmail(email as string)) {
             throw { status: 400, message: Messages.USER_ERR_EMAIL };
         }
 
         let pureDigits: string | null = null;
-        const rawPhone = (phoneNumber as any).toString().trim();
-        pureDigits = rawPhone.replace(/\D/g, "");
-        if ((pureDigits as string).length === 0 || !isValidPhone((pureDigits as string))) {
-            throw { status: 400, message: Messages.USER_ERR_PHONE };
+        if (phoneNumber != null) {
+            const rawPhone = phoneNumber.toString().trim();
+            if (rawPhone !== "") {
+                pureDigits = rawPhone.replace(/\D/g, "");
+                if (pureDigits.length === 0 || !isValidPhone(pureDigits)) {
+                    throw { status: 400, message: Messages.USER_ERR_PHONE };
+                }
+            }
         }
-        
-        const existingEmail = await User.findOne({ where: { email } });
-        if (existingEmail) throw { status: 400, message: Messages.USER_ERR_EMAIL_UNIQUE };
 
-        const existingPhone = await User.findOne({ where: { phoneNumber: pureDigits } });
-        if (existingPhone) throw { status: 400, message: Messages.USER_ERR_PHONE_UNIQUE };
+        if (email != null) {
+            const existingEmail = await User.findOne({ where: { email } });
+            if (existingEmail) throw { status: 400, message: Messages.USER_ERR_EMAIL_UNIQUE };
+        }
+
+        if (pureDigits) { 
+            const existingPhone = await User.findOne({ where: { phoneNumber: pureDigits } });
+            if (existingPhone) throw { status: 400, message: Messages.USER_ERR_PHONE_UNIQUE };
+        }
 
         return User.build({
             name: trimmedName,
@@ -101,7 +108,10 @@ export const registerUserLogic = async (data: any) => {
     }
 }
 
-/** 
+
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
  * Adds a new user to the database
  * No data is required - then an unauthorized user will be created
  * To create an authorized user, the request must include the name, password, and email or phone number
@@ -111,6 +121,11 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
     try {
         const user: UserInstance = await registerUserLogic(req.body);
         await user.save();
+
+        const token = Auth.createUserToken(user);
+        const tokenOptions = Auth.createUserTokenOptions();
+        res.cookie("auth_token", token, tokenOptions);
+
         res.send({ users: [user] });
     }
     catch (error: any) {
@@ -124,11 +139,31 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
     }
 });
 
-/**
+/** 
+ * Anyone can get to 200 with this endpoint
+ * ===============================
  * Logs a user in by verifying credentials and setting an auth cookie
  */
 router.post("/login", async (req: Request, res: Response, next: NextFunction) => {
     try {
+        const existingToken = req.cookies.auth_token;
+        if (existingToken) {
+            try {
+                const decoded = Auth.verifyToken(existingToken);
+                const user = await User.findByPk(decoded.id);
+
+                if (user) {
+                    return res.status(200).json({
+                        message: Messages.USER_ERR_ALREADY_LOGGED_IN,
+                        users: [user]
+                    });
+                }
+                res.clearCookie("auth_token");
+            } catch (error: any) {
+                res.clearCookie("auth_token");
+            }
+        }
+
         const { email, phoneNumber, password } = req.body;
         if (password == null ||
             (email == null && phoneNumber == null)
@@ -154,7 +189,7 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
         if (password.length < Constants.USER_PASS_MIN_LEN || password.length > Constants.USER_PASS_MAX_LEN) {
             return res.status(400).json({ message: Messages.USER_ERR_PASS_LEN, users: [] });
         }
-        
+
         let user = await User.findOne({
             where: {
                 [Op.or]: [
@@ -171,25 +206,10 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
         if (!isPasswordValid) {
             return res.status(401).json({ message: Messages.USER_ERR_LOGIN, users: [] });
         }
-     
-        const token = jwt.sign(
-            { 
-                id: user.id, 
-                email: user.email, 
-                phoneNumber: user.phoneNumber, 
-                accountType: user.accountType,
-                loginTime: new Date().getTime() 
-            },
-            CONFIG.JWT_SECRET,
-            { expiresIn: Constants.USER_COOKIE_EXPIRES_IN }
-        );
 
-        res.cookie("auth_token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: 'strict',
-            maxAge: Constants.USER_COOKIE_MAX_AGE
-        });
+        const token = Auth.createUserToken(user);
+        const tokenOptions = Auth.createUserTokenOptions();
+        res.cookie("auth_token", token, tokenOptions);
 
         res.send({
             message: Messages.USER_MSG_LOGIN,
@@ -200,7 +220,9 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
     }
 });
 
-/**
+/** 
+ * Anyone can get to 200 with this endpoint
+ * ===============================
  * Logs a user out by clearing the auth cookie
  */
 router.post("/logout", async (req: Request, res: Response, next: NextFunction) => {
@@ -212,14 +234,20 @@ router.post("/logout", async (req: Request, res: Response, next: NextFunction) =
     }
 });
 
-/**
+/**  
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
  * Sends data about all users in the database
  */
-router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
+router.get("/all", 
+    Auth.authorizeAs("users"), 
+    Auth.validatePrivileges("users", 3), 
+    async (req: Request, res: Response, next: NextFunction) => 
+{
     try {
-        // Depending on if request was made by site owner or not, it might display all users or all non-site-owner users
-        const users: UserInstance[] = await User.findAll({ where: { accountType: { [Op.ne]: Constants.USER_ACC_TYPES[3] } } });
+        const users: UserInstance[] = await User.findAll();
 
+        // Impossible endpoint
         if (users.length === 0) {
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND_ALL, users: [] });
         }
@@ -229,8 +257,16 @@ router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
     }
 });
 
-// Sends data about a user with the specified ID
-router.get("/id/:userId", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Sends data about a user with the specified ID
+ */
+router.get("/id/:userId", 
+    Auth.authorizeAs("users"), 
+    Auth.validatePrivileges("users", 3), 
+    async (req: Request, res: Response, next: NextFunction) => 
+{
     try {
         const userId = parseInt(req.params.userId.toString());
         if (isNaN(userId) || userId < Constants.TYPICAL_MIN_ID) {
@@ -247,9 +283,18 @@ router.get("/id/:userId", async (req: Request, res: Response, next: NextFunction
     }
 });
 
-// Updates data for a user with the specified ID
-// Does not allow for changing of the account type
-router.put("/update/:userId", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Updates data for a user with the specified ID
+ * Does not allow for changing of the account type
+ */
+router.put("/update/:userId", 
+    Auth.authorizeAs("users"), 
+    Auth.validatePrivileges("users", 0), 
+    Auth.validateOwnership("users", 3),
+    async (req: Request, res: Response, next: NextFunction) => 
+{
     try {
         const userId: number = parseInt(req.params.userId.toString());
         if (isNaN(userId) || userId < Constants.TYPICAL_MIN_ID) {
@@ -337,8 +382,17 @@ router.put("/update/:userId", async (req: Request, res: Response, next: NextFunc
     }
 });
 
-// Changes account type for a user with the specified ID
-router.put("/update-type/:userId", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Changes account type for a user with the specified ID
+ */
+router.put("/update-type/:userId",
+    Auth.authorizeAs("users"), 
+    Auth.validatePrivileges("users", 0), 
+    Auth.validateOwnership("users", 3),
+    async (req: Request, res: Response, next: NextFunction) => 
+{
     try {
         const userId = parseInt(req.params.userId.toString());
         if (isNaN(userId) || userId < Constants.TYPICAL_MIN_ID) {
@@ -369,8 +423,16 @@ router.put("/update-type/:userId", async (req: Request, res: Response, next: Nex
     }
 });
 
-// Assigns cinemas to the users
-router.put("/assign-cinema", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Assigns cinemas to the users
+ */
+router.put("/assign-cinema", 
+    Auth.authorizeAs("users"), 
+    Auth.validatePrivileges("users", 3), 
+    async (req: Request, res: Response, next: NextFunction) => 
+{
     try {
         const { userId, cinemaId } = req.body;
 
@@ -383,10 +445,10 @@ router.put("/assign-cinema", async (req: Request, res: Response, next: NextFunct
         }
 
         if (userId < Constants.TYPICAL_MIN_ID) {
-            return res.status(400).json({ message: Messages.USER_ERR_ID, users: [] }); 
+            return res.status(400).json({ message: Messages.USER_ERR_ID, users: [] });
         }
         if (cinemaId < Constants.TYPICAL_MIN_ID) {
-            return res.status(400).json({ message: Messages.CINEMA_ERR_ID, users: [] }); 
+            return res.status(400).json({ message: Messages.CINEMA_ERR_ID, users: [] });
         }
 
         const user = await User.findByPk(userId);
@@ -417,8 +479,16 @@ router.put("/assign-cinema", async (req: Request, res: Response, next: NextFunct
     }
 });
 
-// Deletes a user with the specified ID
-router.delete("/delete/:userId", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Deletes a user with the specified ID
+ */
+router.delete("/delete/:userId",
+    Auth.authorizeAs("users"), 
+    Auth.validatePrivileges("users", 3), 
+    async (req: Request, res: Response, next: NextFunction) => 
+{
     try {
         const userId: number = parseInt(req.params.userId.toString());
         if (isNaN(userId) || userId < Constants.TYPICAL_MIN_ID) {

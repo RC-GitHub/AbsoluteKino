@@ -1,6 +1,10 @@
 import request from "supertest";
 import app from "../src/server";
+
 import * as Constants from "../src/constants";
+import * as Messages from "../src/messages";
+
+import { elevateToSiteAdmin, deleteSiteAdmin } from "../src/owner";
 
 export const cinemaData = {
     name: "Test Cinema",
@@ -88,7 +92,13 @@ export const productData = {
     cinemaId: 1
 };
 
-export async function sendRequest(endPoint: string, httpStatus: number, type: string, requestData = {}) {
+export async function sendRequest(
+    endPoint: string, 
+    httpStatus: number, 
+    type: string, 
+    requestData = {}, 
+    cookie: string | string[] | null = null
+) {
     try {
         let req;
         switch (type.toUpperCase()) {
@@ -104,6 +114,10 @@ export async function sendRequest(endPoint: string, httpStatus: number, type: st
             default:
                 req = request(app).post(endPoint).send(requestData);
                 break;
+        }
+
+        if (cookie) {
+            req.set("Cookie", cookie as any);
         }
         return await req.expect("Content-Type", /json/).expect(httpStatus);
 
@@ -126,4 +140,63 @@ export async function sendRequest(endPoint: string, httpStatus: number, type: st
         
         throw error;
     }
+}
+
+export const generateUniqueEmail = () => {
+    return `unique_${Date.now()}@test.com`;
+}
+
+export const deletedAdminCheck = async (
+    arrayName: string, 
+    endPoint: string,
+    method: string,
+    requestData = {}) => 
+{
+    const toBeAdmin = { 
+        name: "To be owner", 
+        email: generateUniqueEmail(), 
+        password: userData.password 
+    };
+
+    let response = await sendRequest("/user/register", 200, "POST", toBeAdmin);
+    
+    const newUserId = response.body.users[0].id; 
+    const newUserCookie = response.get("Set-Cookie");
+
+    await elevateToSiteAdmin(newUserId);
+    await sendRequest("/user/logout", 200, "POST", {}, newUserCookie);
+
+    const loginRes = await sendRequest("/user/login", 200, "POST", { 
+        email: toBeAdmin.email, 
+        password: toBeAdmin.password 
+    });
+    const siteAdminCookie = loginRes.get("Set-Cookie");
+
+    await deleteSiteAdmin(newUserId);
+    response = await sendRequest(endPoint, 401, method, requestData, siteAdminCookie);
+
+    expect(response.body).toEqual({ message: Messages.AUTH_REQUIRED, [arrayName]: [] });
+}
+
+export const tamperedCookieCheck = async (
+    arrayName: string,
+    endPoint: string, 
+    method: string,
+    requestData = {},
+    siteAdminCookie: string[] | undefined) => 
+{
+    const cookies = siteAdminCookie || [];
+    if (cookies.length === 0) throw new Error("No cookies found to tamper with");
+
+    const tamperedCookie = cookies.map(c => c.replace(".", ".tampered"));
+    let response = await sendRequest(endPoint, 401, method, requestData, tamperedCookie);
+
+    expect(response.body).toEqual({ message: Messages.AUTH_SESSION, [arrayName]: [] });
+
+    const setCookieHeader = response.get("Set-Cookie") || []; 
+    const isCookieCleared = setCookieHeader.some(header => 
+        header.includes("Max-Age=0") || header.includes("1970")
+    );
+
+    expect(isCookieCleared).toBe(true);
 }

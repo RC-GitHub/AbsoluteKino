@@ -6,30 +6,30 @@ import * as Messages from './messages';
 
 import { registerUserLogic } from "./routes/user";
 
-export const registerOwner = async (data: any | null = {}) => {
+/**
+ * Adds Site Admin user.
+ */
+export const registerSiteAdmin = async (data: any = {}) => {
     try {
-        const userAttributes = {
-            name: data.name || CONFIG.INITIAL_OWNER.NAME,
-            password: data.password || CONFIG.INITIAL_OWNER.PASSWORD,
-            email: data.email || CONFIG.INITIAL_OWNER.EMAIL,
-            phoneNumber: data.phoneNumber || CONFIG.INITIAL_OWNER.PHONE_NUMBER,
-        }        
+        const name = data.name 
+        const password = data.password 
+        const email = data.email 
+        const phoneNumber = data.phoneNumber 
 
-        const user: UserInstance = await registerUserLogic(userAttributes);
+        const user: UserInstance = await registerUserLogic({ name, password, email, phoneNumber });
         user.accountType = Constants.USER_ACC_TYPES[3];
-
         await user.save();
-        console.log(Messages.USER_OWNER);
 
-        return { owner: user, message: Messages.USER_OWNER }
+        return { owner: user, message: Messages.USER_OWNER };
+    } catch (error: any) {
+        return { owner: null, message: error.message || Messages.USER_ERR_OWNER };
     }
-    catch (error: any) {
-        console.error(Messages.APP_ERR_OWNER, error.message || error);
-        return { owner: null, message: Messages.USER_ERR_OWNER }
-    }
-}
+};
 
-export const elevateToOwner = async (id: number) => {
+/**
+ * Elevates an existing user to Site Admin status.
+ */
+export const elevateToSiteAdmin = async (id: number) => {
     try {
         const user: UserInstance | null = await User.findByPk(id);
         if (!user) {
@@ -100,5 +100,24 @@ export const updateSiteAdminData = async (id: number, updateData: Partial<UserAt
     } catch (error: any) {
         console.error(Messages.APP_ERR_UPDATE, error.message || error);
         return { user: null, message: Messages.APP_ERR_INTERNAL };
+    }
+};
+
+/**
+ * Deletes a site admin
+ * Does not allow for deleting of other users
+ */
+export const deleteSiteAdmin = async (id: number) => {
+    try {
+        const user: UserInstance | null = await User.findByPk(id);
+        if (!user || user.accountType !== Constants.USER_ACC_TYPES[3]) {
+            return { user: null, message: Messages.USER_ERR_NOT_SITE_ADMIN };
+        }
+        
+        await user.destroy();
+        return { message: Messages.USER_MSG_DEL_SUCCESS };
+    } catch (error: any) {
+        console.error(Messages.APP_ERR_UPDATE, error.message || error);
+        return { message: Messages.APP_ERR_INTERNAL };
     }
 };

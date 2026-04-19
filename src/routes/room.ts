@@ -331,7 +331,7 @@ router.delete("/delete/:roomId", async (req: Request, res: Response, next: NextF
     if (deletedRows === 0) {
       return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL });
     }
-    res.status(200).json({ message: Messages.ROOM_MSG_DEL });
+    res.send({ message: Messages.ROOM_MSG_DEL });
   }
   catch (error: any) {
     next(error);

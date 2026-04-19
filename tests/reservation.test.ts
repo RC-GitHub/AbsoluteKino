@@ -1,10 +1,25 @@
 import sequelize from "../src/models";
+
 import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 import * as Utils from "./utils";
 
+import { deleteSiteAdmin, registerSiteAdmin } from "../src/owner";
+
+let siteAdminCookie: string[] | undefined = []
+
 beforeAll(async () => {
     await sequelize.sync({ force: true });
+
+    const adminData = { 
+        name: "New site admin", 
+        password: "Admin password", 
+        email: Utils.generateUniqueEmail() 
+    }
+    await registerSiteAdmin(adminData)
+    const adminRes = await Utils.sendRequest("/user/login", 200, "POST", adminData);
+        
+    siteAdminCookie = adminRes.get("Set-Cookie");
 });
 
 describe("Reservation Lifecycle Flow", async () => {
@@ -231,7 +246,7 @@ describe("Reservation Lifecycle Flow", async () => {
         });
 
         it("should respond with 404 if specified user object is not found in the database", async () => {
-            response = await Utils.sendRequest("/reservation/all/user/3", 404, "GET");
+            response = await Utils.sendRequest("/reservation/all/user/99", 404, "GET");
             expect(response.body).toEqual({ message: Messages.USER_ERR_NOT_FOUND, reservations: [] });
         });
 
@@ -445,10 +460,10 @@ describe("Reservation Lifecycle Flow", async () => {
 
             await Utils.sendRequest("/cinema/delete/1", 200, "DELETE");
             await Utils.sendRequest("/movie/delete/1", 200, "DELETE");
-            await Utils.sendRequest("/user/delete/1", 200, "DELETE");
-            await Utils.sendRequest("/user/delete/2", 200, "DELETE");
-            await Utils.sendRequest("/user/delete/3", 200, "DELETE");
 
+            await deleteSiteAdmin(2);
+            await Utils.sendRequest("/user/delete/3", 200, "DELETE", {}, siteAdminCookie);
+            await Utils.sendRequest("/user/delete/4", 200, "DELETE", {}, siteAdminCookie);
 
         });
 
