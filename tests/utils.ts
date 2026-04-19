@@ -200,3 +200,59 @@ export const tamperedCookieCheck = async (
 
     expect(isCookieCleared).toBe(true);
 }
+
+export const boundsCheck = async (
+    endPoint: string,
+    method: string,
+    requestData = {},
+    lowerBound: number,
+    upperBound: number,
+    errorMsg: string,
+    propertyName: string,
+    arrayName: string,
+    cookie: string[] | undefined = undefined) =>    
+{
+    let response;
+    const expectedResponse = { message: errorMsg, [arrayName]: [] }
+
+    //Too short
+    if (lowerBound === 1) {
+        response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: "" }, cookie);
+        expect(response.body).toEqual(expectedResponse);
+        response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: "  " }, cookie);
+        expect(response.body).toEqual(expectedResponse);
+    }
+    else if (lowerBound > 1) {
+        const lowValue = "a".repeat(lowerBound - 1);
+        response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: lowValue }, cookie);
+        expect(response.body).toEqual(expectedResponse);
+    }
+
+    //Too long
+    const highValue = "a".repeat(upperBound + 1)
+    response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: highValue }, cookie);
+    expect(response.body).toEqual(expectedResponse);
+}
+
+export const invalidIdCheck = async (    
+    endPoint: string,
+    method: string,
+    requestData = {},
+    errorMsg: string,
+    arrayName: string | null,
+    cookie: string[] | undefined = undefined) =>    
+{
+    let response;
+    const expectedResponse = arrayName 
+        ? { message: errorMsg, [arrayName]: [] }
+        : { message: errorMsg }
+
+    response = await sendRequest(`${endPoint}/abc`, 400, method, requestData, cookie);
+    expect(response.body).toEqual(expectedResponse);
+
+    response = await sendRequest(`${endPoint}/0`, 400, method, requestData, cookie);
+    expect(response.body).toEqual(expectedResponse);
+
+    response = await sendRequest(`${endPoint}/-1`, 400, method, requestData, cookie);
+    expect(response.body).toEqual(expectedResponse);
+}

@@ -49,42 +49,29 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if name length is invalid", async () => {
-            //Too short
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, name: "" });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_NAME_LEN, users: [] });
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, name: "  " });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_NAME_LEN, users: [] });
-
-            //Too long
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, name: "a".repeat(Constants.USER_NAME_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_NAME_LEN, users: [] });
+            await Utils.boundsCheck(
+                "/user/register",
+                "POST",
+                Utils.userData,
+                Constants.USER_NAME_MIN_LEN,
+                Constants.USER_NAME_MAX_LEN,
+                Messages.USER_ERR_NAME_LEN,
+                "name",
+                "users"
+            )
         });
 
-        // it("should respond with 400 if account type is not in Enum", async () => {
-        //     response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, accountType: "Hacker" });
-        //     expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
-        // });
-
-        // it("should respond with 400 if unauthorized user does not provide email or phone number", async () => {
-        //     response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userDataUnauthorized, email: null, phoneNumber: null });
-        //     expect(response.body).toEqual({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
-
-        //     response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userDataUnauthorized, email: undefined, phoneNumber: undefined });
-        //     expect(response.body).toEqual({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
-        // });
-
         it("should respond with 400 if password length is invalid", async () => {
-            //Too short
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, password: "a".repeat(Constants.USER_PASS_MIN_LEN - 1) });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, password: "" });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, password: "  " });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-
-            //Too long
-            response = await Utils.sendRequest("/user/register", 400, "POST", { ...Utils.userData, password: "a".repeat(Constants.USER_PASS_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
+            await Utils.boundsCheck(
+                "/user/register",
+                "POST",
+                Utils.userData,
+                Constants.USER_PASS_MIN_LEN,
+                Constants.USER_PASS_MAX_LEN,
+                Messages.USER_ERR_PASS_LEN,
+                "password",
+                "users"
+            )
         });
 
         it("should respond with 400 if email format is invalid", async () => {
@@ -118,7 +105,7 @@ describe("User Lifecycle Flow", async () => {
     // Verifies cookie settings and failure cases
     //---------------------------------
 
-    let firstCookie: string | undefined = ""
+    let firstCookie: string[] | undefined = []
 
     describe("POST /user/login", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and set cookie when logging in with email", async () => {
@@ -131,12 +118,11 @@ describe("User Lifecycle Flow", async () => {
             expect(response.body.users[0]).toHaveProperty("email", Utils.userData.email);
 
             const cookies = response.get("Set-Cookie");
-            const authCookie = (Array.isArray(cookies) ? cookies : [cookies]).find(c => c?.includes("auth_token"));
+            firstCookie = cookies;   
 
+            const authCookie = (Array.isArray(cookies) ? cookies : [cookies]).find(c => c?.includes("auth_token"));
             expect(authCookie).toBeDefined();
             expect(authCookie).toContain("auth_token");
-
-            firstCookie = authCookie;    
         });
 
         it("should respond with 200 when a user is already logged-in", async () => {
@@ -223,17 +209,16 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if password length is invalid", async () => {
-            //Too short
-            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, password: "a".repeat(Constants.USER_PASS_MIN_LEN - 1) });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, password: "" });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, password: "  " });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-
-            //Too long
-            response = await Utils.sendRequest("/user/login", 400, "POST", { ...Utils.userData, password: "a".repeat(Constants.USER_PASS_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
+            await Utils.boundsCheck(
+                "/user/login",
+                "POST",
+                Utils.userData,
+                Constants.USER_PASS_MIN_LEN,
+                Constants.USER_PASS_MAX_LEN,
+                Messages.USER_ERR_PASS_LEN,
+                "password",
+                "users"
+            )
         });
 
         it("should respond with 401 if user does not exist", async () => {
@@ -321,14 +306,14 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if userId is invalid", async () => {
-            response = await Utils.sendRequest("/user/id/abc", 400, "GET", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
-
-            response = await Utils.sendRequest("/user/id/0", 400, "GET", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
-
-            response = await Utils.sendRequest("/user/id/-1", 400, "GET", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
+            await Utils.invalidIdCheck(
+                "/user/id",
+                "GET",
+                {},
+                Messages.USER_ERR_ID,
+                "users",
+                siteAdminCookie
+            )
         });
 
         it("should respond with 401 when no cookies are provided", async () => {
@@ -377,7 +362,6 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if specified user account type is Site Admin", async () => {
-            // await elevateToSiteAdmin(1);
             response = await Utils.sendRequest("/user/update/5", 400, "PUT", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
         });
@@ -401,15 +385,17 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if updated name length is invalid", async () => {
-            // too short
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { name: "" }, firstCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_NAME_LEN, users: [] });
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { name: "  " }, firstCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_NAME_LEN, users: [] });
-
-            // too long
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { name: "a".repeat(Constants.USER_NAME_MAX_LEN + 1) }, firstCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_NAME_LEN, users: [] });
+            await Utils.boundsCheck(
+                "/user/update/2",
+                "PUT",
+                Utils.userData,
+                Constants.USER_NAME_MIN_LEN,
+                Constants.USER_NAME_MAX_LEN,
+                Messages.USER_ERR_NAME_LEN,
+                "name",
+                "users",
+                firstCookie
+            )
         });
 
         it("should respond with 400 if unauthorized user does not provide email or phone number", async () => {
@@ -421,17 +407,17 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if updated password length is invalid", async () => {
-            //Too short
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { password: "short" }, firstCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { password: "" }, firstCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { password: "   " }, firstCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
-
-            //Too long
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { password: "a".repeat(Constants.USER_PASS_MAX_LEN + 1) }, firstCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_PASS_LEN, users: [] });
+            await Utils.boundsCheck(
+                "/user/update/2",
+                "PUT",
+                Utils.userData,
+                Constants.USER_PASS_MIN_LEN,
+                Constants.USER_PASS_MAX_LEN,
+                Messages.USER_ERR_PASS_LEN,
+                "password",
+                "users",
+                firstCookie
+            )
         });
 
         it("should respond with 400 if updated email format is invalid", async () => {
@@ -480,14 +466,14 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if userId is invalid", async () => {
-            response = await Utils.sendRequest("/user/update/abc", 400, "PUT", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
-
-            response = await Utils.sendRequest("/user/update/0", 400, "PUT", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
-
-            response = await Utils.sendRequest("/user/update/-1", 400, "PUT", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
+            await Utils.invalidIdCheck(
+                "/user/update",
+                "PUT",
+                {},
+                Messages.USER_ERR_ID,
+                "users",
+                siteAdminCookie
+            )
         });
 
         it("should respond with 403 if provided cookie of a non-site-admin user does not match the specified user", async () => {
@@ -544,14 +530,14 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if userId is invalid", async () => {
-            response = await Utils.sendRequest("/user/update-type/abc", 400, "PUT", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
-
-            response = await Utils.sendRequest("/user/update-type/0", 400, "PUT", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
-
-            response = await Utils.sendRequest("/user/update-type/-1", 400, "PUT", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
+            await Utils.invalidIdCheck(
+                "/user/update-type",
+                "PUT",
+                {},
+                Messages.USER_ERR_ID,
+                "users",
+                siteAdminCookie
+            )
         });
 
         it("should respond with 403 if provided cookie of a non-site-admin user does not match the specified user", async () => {
@@ -702,14 +688,14 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if userId is invalid", async () => {
-            response = await Utils.sendRequest("/user/delete/abc", 400, "DELETE", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID });
-
-            response = await Utils.sendRequest("/user/delete/0", 400, "DELETE", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID });
-
-            response = await Utils.sendRequest("/user/delete/-1", 400, "DELETE", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID });
+            await Utils.invalidIdCheck(
+                "/user/delete",
+                "DELETE",
+                {},
+                Messages.USER_ERR_ID,
+                null,
+                siteAdminCookie
+            )
         });
 
         it("should respond with 401 when no cookies are provided", async () => {
