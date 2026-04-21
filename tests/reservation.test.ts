@@ -1,25 +1,32 @@
-import sequelize from "../src/models";
+import sequelize, { UserInstance } from "../src/models";
 
 import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 import * as Utils from "./utils";
 
-import { deleteSiteAdmin, registerSiteAdmin } from "../src/owner";
+import { deleteSiteAdmin } from "../src/owner";
 
+let siteAdmin: UserInstance;
+let regularUser: UserInstance;
 let siteAdminCookie: string[] | undefined = []
+let regularCookie: string[] | undefined = []
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: true });  
 
-    const adminData = { 
-        name: "New site admin", 
-        password: "Admin password", 
-        email: Utils.generateUniqueEmail() 
-    }
-    await registerSiteAdmin(adminData)
-    const adminRes = await Utils.sendRequest("/user/login", 200, "POST", adminData);
-        
-    siteAdminCookie = adminRes.get("Set-Cookie");
+    const siteAdminData = await Utils.createSiteAdmin();
+    const regularUserData = await Utils.createRegularUser();
+
+    siteAdmin = siteAdminData.user;
+    regularUser = regularUserData.user;
+
+    siteAdminCookie = siteAdminData.cookie;
+    regularCookie = regularUserData.cookie;
+});
+
+afterAll(async () => {
+    await deleteSiteAdmin(siteAdmin.id!);
+    await Utils.deleteUser(regularUser);
 });
 
 describe("Reservation Lifecycle Flow", async () => {
@@ -41,11 +48,11 @@ describe("Reservation Lifecycle Flow", async () => {
 
     describe("POST /reservation/new", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created reservation object", async () => {
-            await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
+            await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
             await Utils.sendRequest("/room/new/default-seats", 200, "POST", Utils.roomDataWithStairs);
             await Utils.sendRequest("/movie/new", 200, "POST", Utils.movieData);
             await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData);
-            await Utils.sendRequest("/user/register", 200, "POST", Utils.userData);
+            // await Utils.sendRequest("/user/register", 200, "POST", Utils.userData);
 
             response = await Utils.sendRequest("/reservation/new", 200, "POST", Utils.reservationData);
             expect(response.body).toHaveProperty("reservations");
@@ -458,7 +465,7 @@ describe("Reservation Lifecycle Flow", async () => {
                 seats: [] 
             });
 
-            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE");
+            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE", {}, siteAdminCookie);
             await Utils.sendRequest("/movie/delete/1", 200, "DELETE");
 
             await deleteSiteAdmin(2);

@@ -3,8 +3,9 @@ import cookieParser from 'cookie-parser';
 
 import { CONFIG } from './config.ts';
 import * as Messages from './messages';
+import * as Constants from './constants';
 
-import sequelize, { UserInstance } from "./models.ts";
+import sequelize, { User } from "./models.ts";
 import cinemaRouter from "./routes/cinema.ts";
 import roomRouter from "./routes/room.ts";
 import movieRouter from "./routes/movie.ts";
@@ -48,22 +49,27 @@ const startServer = async () => {
     await sequelize.sync({force: CONFIG.DB.FORCE_SYNC});
     console.log(Messages.DB_SYNCED);
 
-    const ownerInfo = await registerSiteAdmin({
-      name: CONFIG.INITIAL_OWNER.NAME,
-      password: CONFIG.INITIAL_OWNER.PASSWORD,
-      email: CONFIG.INITIAL_OWNER.EMAIL,
-      phoneNumber: CONFIG.INITIAL_OWNER.PHONE_NUMBER,
+    if (CONFIG.NODE_ENV !== 'test') {
+      const existingAdmin = await User.findOne({ where: { accountType: Constants.USER_ACC_TYPES[3] } });
+
+      if (!existingAdmin) {
+        await registerSiteAdmin({
+          name: CONFIG.INITIAL_OWNER.NAME,
+          password: CONFIG.INITIAL_OWNER.PASSWORD,
+          email: CONFIG.INITIAL_OWNER.EMAIL,
+          phoneNumber: CONFIG.INITIAL_OWNER.PHONE_NUMBER,
+        });
+        console.log("Initial admin created.");
+      }
+    }
+    
+    app.listen(port, () => {
+      console.log(Messages.APP_LISTENING);
     });
-    if (ownerInfo.message !== Messages.USER_OWNER) {
-      console.error(Messages.APP_ERR_OWNER_LISTENING);
-    }
-    else {
-      app.listen(port, () => {
-        console.log(Messages.APP_LISTENING);
-      });
-    }
-  } catch (err: any) {
-    console.error(Messages.DB_ERR_SYNCING, err);
+
+  } 
+  catch (error: any) {
+    console.error(Messages.DB_ERR_SYNCING, error);
   }
 };
 

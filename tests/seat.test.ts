@@ -1,10 +1,30 @@
-import sequelize from "../src/models";
+import sequelize, { UserInstance } from "../src/models";
 import * as Constants from "../src/constants"
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
+import { deleteSiteAdmin } from "../src/owner";
+
+let siteAdmin: UserInstance;
+let regularUser: UserInstance;
+let siteAdminCookie: string[] | undefined = []
+let regularCookie: string[] | undefined = []
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: true });  
+
+    const siteAdminData = await Utils.createSiteAdmin();
+    const regularUserData = await Utils.createRegularUser();
+
+    siteAdmin = siteAdminData.user;
+    regularUser = regularUserData.user;
+
+    siteAdminCookie = siteAdminData.cookie;
+    regularCookie = regularUserData.cookie;
+});
+
+afterAll(async () => {
+    await deleteSiteAdmin(siteAdmin.id!);
+    await Utils.deleteUser(regularUser);
 });
 
 describe("Room Lifecycle Flow", async () => {
@@ -23,7 +43,7 @@ describe("Room Lifecycle Flow", async () => {
     describe("POST /seat/new", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created room object", async () => {
             // Creating a cinema to connect to a new room
-            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
+            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
             expect(response.body).toHaveProperty("cinemas");
             expect(response.body.cinemas[0].id).toEqual(1);
 
@@ -450,7 +470,7 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.sendRequest("/room/delete/2", 200, "DELETE");
             await Utils.sendRequest("/room/delete/3", 200, "DELETE");
 
-            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE");
+            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE", {}, siteAdminCookie);
         });
 
         it("should respond with 400 if roomId is not valid", async () => {

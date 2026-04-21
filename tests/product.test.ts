@@ -1,10 +1,30 @@
-import sequelize from "../src/models";
+import sequelize, { UserInstance } from "../src/models";
 import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 import * as Utils from "./utils";
+import { deleteSiteAdmin } from "../src/owner";
+
+let siteAdmin: UserInstance;
+let regularUser: UserInstance;
+let siteAdminCookie: string[] | undefined = []
+let regularCookie: string[] | undefined = []
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: true });  
+
+    const siteAdminData = await Utils.createSiteAdmin();
+    const regularUserData = await Utils.createRegularUser();
+
+    siteAdmin = siteAdminData.user;
+    regularUser = regularUserData.user;
+
+    siteAdminCookie = siteAdminData.cookie;
+    regularCookie = regularUserData.cookie;
+});
+
+afterAll(async () => {
+    await deleteSiteAdmin(siteAdmin.id!);
+    await Utils.deleteUser(regularUser);
 });
 
 describe("Product Lifecycle Flow", async () => {
@@ -20,7 +40,7 @@ describe("Product Lifecycle Flow", async () => {
 
     describe("POST /product/new", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created product object", async () => {
-            await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
+            await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
 
             response = await Utils.sendRequest("/product/new", 200, "POST", Utils.productData);
             expect(response.body).toHaveProperty("products");
@@ -160,7 +180,7 @@ describe("Product Lifecycle Flow", async () => {
 
         it("should respond with 404 if cinema has no products", async () => {
             // Create a new cinema (ID 2)
-            await Utils.sendRequest("/cinema/new", 200, "POST", { ...Utils.cinemaData, name: "Empty Cinema" });
+            await Utils.sendRequest("/cinema/new", 200, "POST", { ...Utils.cinemaData, name: "Empty Cinema" }, siteAdminCookie);
             response = await Utils.sendRequest("/product/all/cinema/2", 404, "GET");
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NOT_FOUND_CINEMA, products: [] });
         });
@@ -286,8 +306,8 @@ describe("Product Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.PRODUCT_MSG_DEL });
 
             // Clear cinemas
-            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE");
-            await Utils.sendRequest("/cinema/delete/2", 200, "DELETE");
+            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE", {}, siteAdminCookie);
+            await Utils.sendRequest("/cinema/delete/2", 200, "DELETE", {}, siteAdminCookie);
         });
 
         it("should respond with 400 if productId is not valid", async () => {

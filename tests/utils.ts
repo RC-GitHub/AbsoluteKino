@@ -4,7 +4,9 @@ import app from "../src/server";
 import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 
-import { elevateToSiteAdmin, deleteSiteAdmin } from "../src/owner";
+import { registerSiteAdmin, elevateToSiteAdmin, deleteSiteAdmin } from "../src/owner";
+import { UserInstance } from "../src/models";
+
 
 export const cinemaData = {
     name: "Test Cinema",
@@ -92,6 +94,10 @@ export const productData = {
     cinemaId: 1
 };
 
+export const generateUniqueEmail = () => {
+    return `unique_${Date.now()}@test.com`;
+}
+
 export async function sendRequest(
     endPoint: string, 
     httpStatus: number, 
@@ -142,56 +148,162 @@ export async function sendRequest(
     }
 }
 
-export const generateUniqueEmail = () => {
-    return `unique_${Date.now()}@test.com`;
+// User operations
+
+export async function createRegularUser(
+    regularData = { 
+        name: userData.name,
+        password: userData.password,
+        email: generateUniqueEmail()
+    }
+) {
+    const regularRes = await sendRequest("/user/register", 200, "POST", regularData);
+    const regularCookie = regularRes.get("Set-Cookie");
+    const regularUser = regularRes.body.users[0];
+
+    const adjustedUser = {
+        ...regularUser,
+        password: regularData.password
+    }
+    
+    return { cookie: regularCookie, user: adjustedUser }
+}
+
+export async function createSiteAdmin(
+    adminData = { 
+        name: "New site admin", 
+        password: "Admin password", 
+        email: generateUniqueEmail() 
+    }
+) {
+    await registerSiteAdmin(adminData)
+    const adminRes = await sendRequest("/user/login", 200, "POST", adminData);
+    const siteAdminCookie = adminRes.get("Set-Cookie");
+    const siteAdminUser = adminRes.body.users[0];
+
+    return { cookie: siteAdminCookie, user: siteAdminUser };
+}
+
+export async function getUserFromCookie(
+    cookie: string[] | undefined
+) {
+    const response = await sendRequest("/user/login", 200, "POST", {}, cookie);
+    const user = response.body.users[0]
+
+    if (!user) {
+        throw new Error(response.body.message)
+    } else {
+        return user
+    }
+}
+
+export async function getCookieFromUser(    
+    userData: UserInstance
+) {
+    const response = await sendRequest("/user/login", 200, "POST",  { email: userData.email, password: userData.password }, null);
+    const cookie = response.get("Set-Cookie");
+
+    if (!cookie) {
+        throw new Error(response.body.message)
+    }
+    else {
+        return cookie
+    }
+}
+
+export async function deleteAdminFromCookie(
+    cookie: string[] | undefined
+) {
+    const user = await getUserFromCookie(cookie);
+    const isDeleted = await deleteSiteAdmin(user.id);
+    expect(isDeleted.message).toBe(Messages.USER_MSG_DEL_SUCCESS)
+}
+
+export async function deleteUser(
+    user: UserInstance,
+) {
+    const cookie = await getCookieFromUser(user);
+    const response = await sendRequest(`/user/delete/${user.id}`, 200, "DELETE", {}, cookie);
+    expect(response.body).toEqual({ message: Messages.USER_MSG_DEL })
+}
+
+export async function deleteRegularWithCookie(
+    cookie: string[] | undefined
+) {
+    let regularRes = await sendRequest("/user/login", 200, "POST", {}, cookie);
+    const regularId = regularRes.body.users[0].id;
+
+    regularRes = await sendRequest(`/user/delete/${regularId}`, 200, "DELETE", {}, cookie);
+    expect(regularRes.body.message).toBe(Messages.USER_MSG_DEL)
+}
+
+// Checks
+
+export const noCookieCheck = async (
+    endPoint: string,
+    method: string,
+    requestData = {},
+    arrayName: string) => 
+{
+    const response = await sendRequest(endPoint, 401, method, requestData);
+    const expectedResponse = method !== "DELETE" 
+        ? { message: Messages.AUTH_REQUIRED, [arrayName]: [] }
+        : { message: Messages.AUTH_REQUIRED }
+
+    expect(response.body).toEqual(expectedResponse);  
+}
+
+export const unauthorizedCheck = async (
+    endPoint: string,
+    method: string,
+    requestData = {},
+    arrayName: string,
+    cookie: string[] | undefined) => 
+{
+    const response = await sendRequest(endPoint, 403, method, requestData, cookie);
+    const expectedResponse = method !== "DELETE" 
+        ? { message: Messages.AUTH_FORBIDDEN, [arrayName]: [] }
+        : { message: Messages.AUTH_FORBIDDEN }
+
+    expect(response.body).toEqual(expectedResponse);  
 }
 
 export const deletedAdminCheck = async (
-    arrayName: string, 
     endPoint: string,
     method: string,
-    requestData = {}) => 
+    requestData = {},
+    arrayName: string) => 
 {
-    const toBeAdmin = { 
-        name: "To be owner", 
-        email: generateUniqueEmail(), 
-        password: userData.password 
-    };
+    const siteAdminData = await createSiteAdmin();
+    const siteAdminCookie = siteAdminData.cookie;
+    await deleteAdminFromCookie(siteAdminCookie);
 
-    let response = await sendRequest("/user/register", 200, "POST", toBeAdmin);
-    
-    const newUserId = response.body.users[0].id; 
-    const newUserCookie = response.get("Set-Cookie");
+    const response = await sendRequest(endPoint, 401, method, requestData, siteAdminCookie);
+    const expectedResponse = method !== "DELETE" 
+        ? { message: Messages.AUTH_SESSION, [arrayName]: [] }
+        : { message: Messages.AUTH_SESSION }
 
-    await elevateToSiteAdmin(newUserId);
-    await sendRequest("/user/logout", 200, "POST", {}, newUserCookie);
-
-    const loginRes = await sendRequest("/user/login", 200, "POST", { 
-        email: toBeAdmin.email, 
-        password: toBeAdmin.password 
-    });
-    const siteAdminCookie = loginRes.get("Set-Cookie");
-
-    await deleteSiteAdmin(newUserId);
-    response = await sendRequest(endPoint, 401, method, requestData, siteAdminCookie);
-
-    expect(response.body).toEqual({ message: Messages.AUTH_REQUIRED, [arrayName]: [] });
+    expect(response.body).toEqual(expectedResponse);
 }
 
 export const tamperedCookieCheck = async (
-    arrayName: string,
     endPoint: string, 
     method: string,
     requestData = {},
-    siteAdminCookie: string[] | undefined) => 
+    arrayName: string,
+    cookie: string[] | undefined) => 
 {
-    const cookies = siteAdminCookie || [];
+    const cookies = cookie || [];
     if (cookies.length === 0) throw new Error("No cookies found to tamper with");
 
     const tamperedCookie = cookies.map(c => c.replace(".", ".tampered"));
     let response = await sendRequest(endPoint, 401, method, requestData, tamperedCookie);
 
-    expect(response.body).toEqual({ message: Messages.AUTH_SESSION, [arrayName]: [] });
+    const expectedResponse = method !== "DELETE" 
+        ? { message: Messages.AUTH_SESSION, [arrayName]: [] }
+        : { message: Messages.AUTH_SESSION }
+
+    expect(response.body).toEqual(expectedResponse);
 
     const setCookieHeader = response.get("Set-Cookie") || []; 
     const isCookieCleared = setCookieHeader.some(header => 
@@ -209,29 +321,48 @@ export const boundsCheck = async (
     upperBound: number,
     errorMsg: string,
     propertyName: string,
+    propertyType: ( "string" | "number" ),
     arrayName: string,
     cookie: string[] | undefined = undefined) =>    
 {
     let response;
-    const expectedResponse = { message: errorMsg, [arrayName]: [] }
+    const expectedResponse = method !== "DELETE" 
+        ? { message: errorMsg, [arrayName]: [] }
+        : { message: errorMsg }
 
     //Too short
-    if (lowerBound === 1) {
-        response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: "" }, cookie);
-        expect(response.body).toEqual(expectedResponse);
-        response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: "  " }, cookie);
+    if (propertyType === "string") {
+        if (lowerBound === 1) {
+            response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: "" }, cookie);
+            expect(response.body).toEqual(expectedResponse);
+            response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: "  " }, cookie);
+            expect(response.body).toEqual(expectedResponse);
+        }
+        else if (lowerBound > 1) {
+            const lowValue = "a".repeat(lowerBound - 1);
+            response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: lowValue }, cookie);
+            expect(response.body).toEqual(expectedResponse);
+        }
+
+        //Too long
+        const highValue = "a".repeat(upperBound + 1)
+        response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: highValue }, cookie);
         expect(response.body).toEqual(expectedResponse);
     }
-    else if (lowerBound > 1) {
-        const lowValue = "a".repeat(lowerBound - 1);
+    else if (propertyType === "number") {
+        // Too small
+        const lowValue = lowerBound - 1;
         response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: lowValue }, cookie);
         expect(response.body).toEqual(expectedResponse);
-    }
 
-    //Too long
-    const highValue = "a".repeat(upperBound + 1)
-    response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: highValue }, cookie);
-    expect(response.body).toEqual(expectedResponse);
+        // Too big
+        const highValue = upperBound + 1
+        response = await sendRequest(endPoint, 400, method, { ...requestData, [propertyName]: highValue }, cookie);
+        expect(response.body).toEqual(expectedResponse);
+    }
+    else {
+        throw new Error("Property type is incorrect!");
+    }
 }
 
 export const invalidIdCheck = async (    
@@ -239,11 +370,11 @@ export const invalidIdCheck = async (
     method: string,
     requestData = {},
     errorMsg: string,
-    arrayName: string | null,
+    arrayName: string,
     cookie: string[] | undefined = undefined) =>    
 {
     let response;
-    const expectedResponse = arrayName 
+    const expectedResponse = method !== "DELETE" 
         ? { message: errorMsg, [arrayName]: [] }
         : { message: errorMsg }
 
@@ -256,3 +387,40 @@ export const invalidIdCheck = async (
     response = await sendRequest(`${endPoint}/-1`, 400, method, requestData, cookie);
     expect(response.body).toEqual(expectedResponse);
 }
+
+export const freshTokenCheck = async (
+    endPoint: string,
+    method: string,
+    requestData = {},
+    arrayName: string,
+) => {
+    const userData = await createRegularUser();
+    const userCookie = userData.cookie;
+    const user: UserInstance = userData.user;
+
+    const logoutResponse = await sendRequest("/user/logout", 200, "POST", {}, userCookie);
+    expect(logoutResponse.body.message).toBe(Messages.USER_MSG_LOGOUT);
+
+    const response = await sendRequest(endPoint, 401, method, requestData, userCookie);
+    const expectedResponse = method !== "DELETE" 
+        ? { message: Messages.AUTH_SESSION, [arrayName]: [] }
+        : { message: Messages.AUTH_SESSION };
+    expect(response.body).toEqual(expectedResponse);
+
+    const setCookieHeader = response.get("Set-Cookie") || []; 
+    const isCookieCleared = setCookieHeader.some(header => 
+        header.includes("Max-Age=0") || header.includes("1970")
+    );
+    expect(isCookieCleared).toBe(true);
+
+    const cleanupData = await getCookieFromUser(user);
+    await deleteUser(user);
+};
+
+// export const massDelete = async () => {
+//     const response = await Utils.sendRequest("/user/all", 200, "GET", {}, siteAdminCookie);
+//     const users = response.body.users;
+//     users.forEach(async (user: UserInstance) => {
+//         response = await Utils.sendRequest(`/user/delete/3`, 200, "DELETE", {}, siteAdminCookie);
+//     });
+// }

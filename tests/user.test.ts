@@ -1,4 +1,4 @@
-import sequelize from "../src/models";
+import sequelize, { Cinema, User, UserInstance } from "../src/models";
 
 import * as Utils from "./utils";
 import * as Messages from "../src/messages";
@@ -6,26 +6,43 @@ import * as Constants from "../src/constants";
 
 import { deleteSiteAdmin, registerSiteAdmin } from "../src/owner";
 
+let adminId: number;
+let unauthorizedId: number;
+let cinemaId: number;
+let siteAdmin: Partial<UserInstance>;
+let regularUser: Partial<UserInstance>;
+let siteAdminCookie: string[] | undefined = []
+let regularCookie: string[] | undefined = []
+let unauthorizedCookie: string[] | undefined = []
+
+const unauthorizedPhoneNumber = "222333444";
+const otherEmail = Utils.generateUniqueEmail();
+
 beforeAll(async () => {
     await sequelize.sync({ force: true });
 });
 
-describe("User Lifecycle Flow", async () => {
+afterAll(async () => {
+    await User.destroy({ where: {}, cascade: true })
+    await Cinema.destroy({ where: {}, cascade: true })
+})
+
+describe("User Lifecycle Flow", () => {
     let response;
 
     //---------------------------------
     // Step 1 - POST
     //---------------------------------
-    // Site admin is already present in the database
-    // Second user object is created successfully
+    // First user object is created successfully
     // Then tests go over all cases which result in failure
-    // At the end of the step 2 user objects are in the database
+    // At the end of the step 1 user objects is in the database
     //---------------------------------
 
-    describe("POST /user/register", async () => {
+    describe("POST /user/register", () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created user object", async () => {
             response = await Utils.sendRequest("/user/register", 200, "POST", Utils.userData);
             expect(response.body).toHaveProperty("users");
+            expect(response.body.users[0]).toHaveProperty("id", 1);
             expect(response.body.users[0]).toHaveProperty("name", Utils.userData.name);
             expect(response.body.users[0]).toHaveProperty("email", Utils.userData.email);
         });
@@ -57,6 +74,7 @@ describe("User Lifecycle Flow", async () => {
                 Constants.USER_NAME_MAX_LEN,
                 Messages.USER_ERR_NAME_LEN,
                 "name",
+                "string",
                 "users"
             )
         });
@@ -70,6 +88,7 @@ describe("User Lifecycle Flow", async () => {
                 Constants.USER_PASS_MAX_LEN,
                 Messages.USER_ERR_PASS_LEN,
                 "password",
+                "string",
                 "users"
             )
         });
@@ -105,20 +124,20 @@ describe("User Lifecycle Flow", async () => {
     // Verifies cookie settings and failure cases
     //---------------------------------
 
-    let firstCookie: string[] | undefined = []
-
-    describe("POST /user/login", async () => {
+    describe("POST /user/login", () => {
         it("(MODEL EXAMPLE) should respond with 200 and set cookie when logging in with email", async () => {
-            response = await Utils.sendRequest("/user/login", 200, "POST", { 
+            regularUser = { 
                 email: Utils.userData.email, 
                 password: Utils.userData.password 
-            });
+            }
+            response = await Utils.sendRequest("/user/login", 200, "POST", regularUser);
+            regularUser.id = response.body.users[0].id;
 
             expect(response.body).toHaveProperty("message", Messages.USER_MSG_LOGIN);
             expect(response.body.users[0]).toHaveProperty("email", Utils.userData.email);
 
             const cookies = response.get("Set-Cookie");
-            firstCookie = cookies;   
+            regularCookie = cookies;   
 
             const authCookie = (Array.isArray(cookies) ? cookies : [cookies]).find(c => c?.includes("auth_token"));
             expect(authCookie).toBeDefined();
@@ -129,7 +148,7 @@ describe("User Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/user/login", 200, "POST", { 
                 email: Utils.userData.email, 
                 password: Utils.userData.password 
-            }, firstCookie);
+            }, regularCookie);
 
             expect(response.body).toHaveProperty("message", Messages.USER_ERR_ALREADY_LOGGED_IN);
             expect(response.body.users[0]).toHaveProperty("email", Utils.userData.email);
@@ -154,7 +173,7 @@ describe("User Lifecycle Flow", async () => {
             expect(authCookie).toContain("auth_token");
 
             const secondCookie = authCookie;
-            expect(secondCookie).not.toEqual(firstCookie);
+            expect(secondCookie).not.toEqual(regularCookie);
         });
 
         it("should responde with 200 and ignore an expired/invalid cookie, clear it, and allow normal login", async () => {
@@ -217,6 +236,7 @@ describe("User Lifecycle Flow", async () => {
                 Constants.USER_PASS_MAX_LEN,
                 Messages.USER_ERR_PASS_LEN,
                 "password",
+                "string",
                 "users"
             )
         });
@@ -240,10 +260,27 @@ describe("User Lifecycle Flow", async () => {
 
     describe("POST /user/logout", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and clear the auth cookie", async () => {
-            response = await Utils.sendRequest("/user/logout", 200, "POST");
+            response = await Utils.sendRequest("/user/logout", 200, "POST", {}, regularCookie);
             
             expect(response.body).toHaveProperty("message", Messages.USER_MSG_LOGOUT);
             expect(response.headers["set-cookie"][0]).toMatch(/auth_token=;|^auth_token=([^;]+);.*Max-Age=0/);
+        });
+
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/user/logout", "POST", {}, "users");
+        });
+
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/user/logout", "POST", {}, "users");
+        });
+
+        it("should return 401 when attempting to logout with a tampered cookie", async () => {
+            const tempAdminCookie = (await Utils.createSiteAdmin()).cookie;
+            await Utils.tamperedCookieCheck("/user/logout", "POST", {}, "users", tempAdminCookie);
+        });
+
+        it("should respond with 401 when a deleted user tries to logout", async () => {
+            await Utils.deletedAdminCheck("/user/logout", "POST", {}, "users");
         });
     });
 
@@ -254,55 +291,49 @@ describe("User Lifecycle Flow", async () => {
     // At the end of the step there are 5 user objects in the database
     //---------------------------------
 
-    const unauthorizedPhoneNumber = "222333444";
-    const otherEmail = Utils.generateUniqueEmail();
-
-    let siteAdminCookie: string[] | undefined = []
-    let unauthorizedCookie: string[] | undefined = []
-
-    describe("GET /user/all", async () => {
+    describe("GET /user/all", () => {
         it("(MODEL EXAMPLE) should respond with 200 and all user objects", async () => {
             // Adding other users
             response = await Utils.sendRequest("/user/register", 200, "POST", Utils.userDataUnauthorized);
             unauthorizedCookie = response.get("Set-Cookie");
+            unauthorizedId = response.body.users[0].id;
 
             await Utils.sendRequest("/user/register", 200, "POST",  { ...Utils.userData, email: otherEmail, phoneNumber: unauthorizedPhoneNumber });
 
             // Adding an admin user
-            const adminData = { name: "New site admin", password: "Admin password", email: Utils.generateUniqueEmail() }
-            await registerSiteAdmin(adminData)
-            response = await Utils.sendRequest("/user/login", 200, "POST", adminData)
-             
+            siteAdmin = { name: "New site admin", password: "Admin password", email: Utils.generateUniqueEmail() }
+            await registerSiteAdmin(siteAdmin);
+
+            response = await Utils.sendRequest("/user/login", 200, "POST", siteAdmin)
             siteAdminCookie = response.get("Set-Cookie");
+            adminId = response.body.users[0].id;
 
             response = await Utils.sendRequest("/user/all", 200, "GET", {}, siteAdminCookie);
             expect(response.body.users.length).toBeGreaterThanOrEqual(4);
         });
 
         it("should respond with 401 when no cookies are provided", async () => {
-            response = await Utils.sendRequest("/user/all", 401, "GET", {});
-            expect(response.body).toEqual({ message: Messages.AUTH_REQUIRED, users: [] });   
+            await Utils.noCookieCheck("/user/all", "GET", {}, "users");
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /all", async () => {
-            await Utils.deletedAdminCheck("users", "/user/all", "GET");    
+            await Utils.deletedAdminCheck("/user/all", "GET", {}, "users");    
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
-            await Utils.tamperedCookieCheck("users", "/user/all", "GET", {}, siteAdminCookie)
+            await Utils.tamperedCookieCheck("/user/all", "GET", {}, "users", siteAdminCookie)
         });
 
         it("should respond with 403 when a regular user tries to access /all", async () => {
-            response = await Utils.sendRequest("/user/all", 403, "GET", {}, firstCookie);
-
-            expect(response.body).toEqual({ message: Messages.AUTH_FORBIDDEN, users: [] });
+            regularCookie = await Utils.getCookieFromUser(regularUser as UserInstance);
+            await Utils.unauthorizedCheck("/user/all", "GET", {}, "users", regularCookie);
         });
     });
 
-    describe("GET /user/id/:userId", async () => {
+    describe("GET /user/id/:userId", () => {
         it("(MODEL EXAMPLE) should respond with 200 and the found user", async () => {
-            response = await Utils.sendRequest("/user/id/2", 200, "GET", {}, siteAdminCookie);
-            expect(response.body.users[0]).toHaveProperty("id", 2);
+            response = await Utils.sendRequest("/user/id/1", 200, "GET", {}, siteAdminCookie);
+            expect(response.body.users[0]).toHaveProperty("id", 1);
         });
 
         it("should respond with 400 if userId is invalid", async () => {
@@ -317,22 +348,19 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 401 when no cookies are provided", async () => {
-            response = await Utils.sendRequest("/user/id/2", 401, "GET", {});
-            expect(response.body).toEqual({ message: Messages.AUTH_REQUIRED, users: [] });   
+            await Utils.noCookieCheck("/user/id/1", "GET", {}, "users");
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /id/:userId", async () => {
-            await Utils.deletedAdminCheck("users", "/user/id/2", "GET");
+            await Utils.deletedAdminCheck("/user/id/1", "GET", {}, "users");
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
-            await Utils.tamperedCookieCheck("users", "/user/id/2", "GET", {}, siteAdminCookie);
+            await Utils.tamperedCookieCheck("/user/id/1", "GET", {}, "users", siteAdminCookie);
         });
 
         it("should respond with 403 when a regular user tries to access /id/:userId", async () => {
-            response = await Utils.sendRequest("/user/id/2", 403, "GET", {}, firstCookie);
-
-            expect(response.body).toEqual({ message: Messages.AUTH_FORBIDDEN, users: [] });
+            await Utils.unauthorizedCheck("/user/id/1", "GET", {}, "users", regularCookie);
         });
 
         it("should respond with 404 if user is not found", async () => {
@@ -348,121 +376,122 @@ describe("User Lifecycle Flow", async () => {
     // Then tests go over all cases which result in update failure
     //---------------------------------
 
-    describe("PUT /user/update/:userId", async () => {
+    describe("PUT /user/update/:userId", () => {
         it("(MODEL EXAMPLE) should respond with 200 and modified data", async () => {
             const updatedData = { name: "Updated User Name" };
-            response = await Utils.sendRequest("/user/update/2", 200, "PUT", updatedData, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 200, "PUT", updatedData, regularCookie);
             expect(response.body.users[0]).toHaveProperty("name", updatedData.name);
         });
 
         it("should respond with 200 and modified data when Site Admin is the one making a request", async () => {
             const updatedData = { name: "Updated User Name v2" };
-            response = await Utils.sendRequest("/user/update/2", 200, "PUT", updatedData, siteAdminCookie);
+            response = await Utils.sendRequest("/user/update/1", 200, "PUT", updatedData, siteAdminCookie);
             expect(response.body.users[0]).toHaveProperty("name", updatedData.name);
         });
 
         it("should respond with 400 if specified user account type is Site Admin", async () => {
-            response = await Utils.sendRequest("/user/update/5", 400, "PUT", {}, siteAdminCookie);
+            response = await Utils.sendRequest(`/user/update/${adminId}`, 400, "PUT", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
         });
 
         it("should respond with 400 if update types are incorrect", async () => {
             // name: not a string
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { ...Utils.userData, name: 123 }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { ...Utils.userData, name: 123 }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
 
             // password: not a string
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { ...Utils.userData, password: true }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { ...Utils.userData, password: true }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
 
             // email: not a string
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { ...Utils.userData, email: {}}, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { ...Utils.userData, email: {}}, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
 
             // phoneNumber: not a string or number
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { ...Utils.userData, phoneNumber: ["abc"] }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { ...Utils.userData, phoneNumber: ["abc"] }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
         });
 
         it("should respond with 400 if updated name length is invalid", async () => {
             await Utils.boundsCheck(
-                "/user/update/2",
+                "/user/update/1",
                 "PUT",
                 Utils.userData,
                 Constants.USER_NAME_MIN_LEN,
                 Constants.USER_NAME_MAX_LEN,
                 Messages.USER_ERR_NAME_LEN,
                 "name",
+                "string",
                 "users",
-                firstCookie
+                regularCookie
             )
         });
 
         it("should respond with 400 if unauthorized user does not provide email or phone number", async () => {
-            response = await Utils.sendRequest("/user/update/3", 400, "PUT", { name: `Guest_${Date.now()}`, email: null, phoneNumber: null }, unauthorizedCookie);
+            response = await Utils.sendRequest(`/user/update/${unauthorizedId}`, 400, "PUT", { name: `Guest_${Date.now()}`, email: null, phoneNumber: null }, unauthorizedCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
 
-            response = await Utils.sendRequest("/user/update/3", 400, "PUT", { name: `Guest_${Date.now()}`, email: undefined, phoneNumber: undefined }, unauthorizedCookie);
+            response = await Utils.sendRequest(`/user/update/${unauthorizedId}`, 400, "PUT", { name: `Guest_${Date.now()}`, email: undefined, phoneNumber: undefined }, unauthorizedCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_UNAUTHORIZED, users: [] });
         });
 
         it("should respond with 400 if updated password length is invalid", async () => {
             await Utils.boundsCheck(
-                "/user/update/2",
+                "/user/update/1",
                 "PUT",
                 Utils.userData,
                 Constants.USER_PASS_MIN_LEN,
                 Constants.USER_PASS_MAX_LEN,
                 Messages.USER_ERR_PASS_LEN,
                 "password",
+                "string",
                 "users",
-                firstCookie
+                regularCookie
             )
         });
 
         it("should respond with 400 if updated email format is invalid", async () => {
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { email: "invalid_email" }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { email: "invalid_email" }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_EMAIL, users: [] });
         });
 
         it("should respond with 400 if email is already in the database", async () => {
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { email: otherEmail }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { email: otherEmail }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_EMAIL_UNIQUE, users: [] });
         });
 
         it("should respond with 400 if updated phone format is invalid", async () => {
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { phoneNumber: "abc" }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { phoneNumber: "abc" }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_PHONE, users: [] });
 
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { phoneNumber: "abc".repeat(10) }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { phoneNumber: "abc".repeat(10) }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_PHONE, users: [] });
 
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { ...Utils.userData, phoneNumber: "123" }, firstCookie); // Too short
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { ...Utils.userData, phoneNumber: "123" }, regularCookie); // Too short
             expect(response.body).toEqual({ message: Messages.USER_ERR_PHONE, users: [] });
 
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { ...Utils.userData, phoneNumber: "00123123123" }, firstCookie); //Starts with 0
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { ...Utils.userData, phoneNumber: "00123123123" }, regularCookie); //Starts with 0
             expect(response.body).toEqual({ message: Messages.USER_ERR_PHONE, users: [] });
 
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { phoneNumber: 123 }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { phoneNumber: 123 }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_PHONE, users: [] });
         });
 
         it("should respond with 400 if phone number is already in the database", async () => {
-            response = await Utils.sendRequest("/user/update/2", 400, "PUT", { ...Utils.userData, phoneNumber: unauthorizedPhoneNumber }, firstCookie);
+            response = await Utils.sendRequest("/user/update/1", 400, "PUT", { ...Utils.userData, phoneNumber: unauthorizedPhoneNumber }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_PHONE_UNIQUE, users: [] });
         });
 
         it("should respond with 401 when no cookies are provided", async () => {
-            response = await Utils.sendRequest("/user/update/2", 401, "PUT", {});
-            expect(response.body).toEqual({ message: Messages.AUTH_REQUIRED, users: [] });   
+            await Utils.noCookieCheck("/user/update/1", "PUT", {}, "users");
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /update/:userId", async () => {
-            await Utils.deletedAdminCheck("users", "/user/update/2", "PUT", { name: "Updated User Name v3" });    
+            await Utils.deletedAdminCheck("/user/update/1", "PUT", { name: "Updated User Name v3" }, "users");    
         });
 
         it("should return 401 when accessing the route with a tampered cookie", async () => {
-            await Utils.tamperedCookieCheck("users", "/user/update/2", "PUT", { name: "Updated User Name v3" }, siteAdminCookie)
+            await Utils.tamperedCookieCheck("/user/update/1", "PUT", { name: "Updated User Name v3" }, "users", siteAdminCookie)
         });
 
         it("should respond with 400 if userId is invalid", async () => {
@@ -477,7 +506,7 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 403 if provided cookie of a non-site-admin user does not match the specified user", async () => {
-            response = await Utils.sendRequest("/user/update/3", 403, "PUT", {}, firstCookie);
+            response = await Utils.sendRequest("/user/update/2", 403, "PUT", {}, regularCookie);
             expect(response.body).toEqual({ message: Messages.AUTH_FORBIDDEN, users: [] });
         });
 
@@ -495,38 +524,37 @@ describe("User Lifecycle Flow", async () => {
     // Then tests go over all cases which result in update failure
     //---------------------------------
 
-    describe("PUT /user/update-type/:userId", async () => {
+    describe("PUT /user/update-type/:userId", () => {
         it("(MODEL EXAMPLE) should respond with 200 and user object", async () => {
-            response = await Utils.sendRequest("/user/update-type/2", 200, "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, firstCookie);
+            response = await Utils.sendRequest("/user/update-type/1", 200, "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, regularCookie);
             expect(response.body.users[0]).toHaveProperty("accountType", Constants.USER_ACC_TYPES[2]);
         });
         
         it("should respond with 400 if specified user account type is Site Admin", async () => {
-            response = await Utils.sendRequest("/user/update-type/1", 400, "PUT", {}, siteAdminCookie);
+            response = await Utils.sendRequest(`/user/update-type/${adminId}`, 400, "PUT", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
         });
 
         it("should respond with 400 if updated account type is not in the Enum", async () => {
-            response = await Utils.sendRequest("/user/update-type/2", 400, "PUT", { accountType: "Hacker" }, firstCookie);
+            response = await Utils.sendRequest("/user/update-type/1", 400, "PUT", { accountType: "Hacker" }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         });
         
         it("should respond with 400 if updated account type is site admin", async () => {
-            response = await Utils.sendRequest("/user/update-type/2", 400, "PUT", { accountType: Constants.USER_ACC_TYPES[3] }, firstCookie);
+            response = await Utils.sendRequest("/user/update-type/1", 400, "PUT", { accountType: Constants.USER_ACC_TYPES[3] }, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         });
 
         it("should respond with 401 when no cookies are provided", async () => {
-            response = await Utils.sendRequest("/user/update-type/2", 401, "PUT", {});
-            expect(response.body).toEqual({ message: Messages.AUTH_REQUIRED, users: [] });   
+            await Utils.noCookieCheck("/user/update-type/1", "PUT", {}, "users");
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /update-type/:userId", async () => {
-            await Utils.deletedAdminCheck("users", "/user/update-type/2", "PUT", { accountType: Constants.USER_ACC_TYPES[2] });    
+            await Utils.deletedAdminCheck("/user/update-type/1", "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, "users");    
         });
 
         it("should return 401 when accessing the route with a tampered cookie", async () => {
-            await Utils.tamperedCookieCheck("users", "/user/update-type/2", "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, siteAdminCookie)
+            await Utils.tamperedCookieCheck("/user/update-type/1", "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, "users", siteAdminCookie)
         });
 
         it("should respond with 400 if userId is invalid", async () => {
@@ -541,7 +569,7 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should respond with 403 if provided cookie of a non-site-admin user does not match the specified user", async () => {
-            response = await Utils.sendRequest("/user/update-type/3", 403, "PUT", {}, firstCookie);
+            response = await Utils.sendRequest("/user/update-type/2", 403, "PUT", {}, regularCookie);
             expect(response.body).toEqual({ message: Messages.AUTH_FORBIDDEN, users: [] });
         });
 
@@ -562,13 +590,15 @@ describe("User Lifecycle Flow", async () => {
     //---------------------------------
 
     describe("PUT /user/assign-cinema", () => {
-        it("(MODEL EXAMPLE) should respond with 200 and user object with cinema data", async () => {
+        it("(MODEL EXAMPLE) should respond with 200 and elevated user object with cinema data", async () => {
             // Create a Cinema
-            const cinemaRes = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
+            const cinemaRes = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
             const createdCinema = cinemaRes.body.cinemas[0];
+            cinemaId = createdCinema.id;
 
-            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: 2, cinemaId: 1 }, siteAdminCookie);
-            expect(response.body.users[0]).toHaveProperty("id", 2);
+            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: 1, cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body.users[0]).toHaveProperty("id", 1);
+            expect(response.body.users[0]).toHaveProperty("accountType", Constants.USER_ACC_TYPES[2]);
             expect(response.body.users[0].cinemas[0]).toMatchObject({
                 id: createdCinema.id,
                 name: createdCinema.name,
@@ -577,9 +607,12 @@ describe("User Lifecycle Flow", async () => {
         });
 
         it("should repond with 200 and verify the many-to-many link in the database state", async () => {
-            await Utils.sendRequest("/user/update-type/3", 200, "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, siteAdminCookie)
-            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: 3, cinemaId: 1 }, siteAdminCookie);
+            response = await Utils.sendRequest("/user/register", 200, "POST", {}, siteAdminCookie);
+            const id = response.body.users[0].id;
 
+            await Utils.sendRequest(`/user/update-type/${id}`, 200, "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, siteAdminCookie)
+
+            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: 6, cinemaId: cinemaId }, siteAdminCookie);
             expect(response.body.users[0].cinemas[0]).toHaveProperty("id", 1);
         });
 
@@ -631,31 +664,37 @@ describe("User Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, users: [] });
         });
 
+        it("should respond with 400 if user account type is site-admin or unauthorized", async () => {
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: adminId, cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] })
+
+            response = await Utils.sendRequest("/user/assign-cinema", 400, "PUT", { userId: unauthorizedId, cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] })
+        });
+
         it("should respond with 401 when no cookies are provided", async () => {
-            response = await Utils.sendRequest("/user/assign-cinema", 401, "PUT", {});
-            expect(response.body).toEqual({ message: Messages.AUTH_REQUIRED, users: [] });   
+            await Utils.noCookieCheck("/user/assign-cinema", "PUT", {}, "users");
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /assign-cinema", async () => {
-            await Utils.deletedAdminCheck("users", "/user/assign-cinema", "PUT");    
+            await Utils.deletedAdminCheck("/user/assign-cinema", "PUT", {}, "users");    
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
-            await Utils.tamperedCookieCheck("users", "/user/assign-cinema", "PUT", {}, siteAdminCookie)
+            await Utils.tamperedCookieCheck("/user/assign-cinema", "PUT", {}, "users", siteAdminCookie)
         });
 
         it("should respond with 403 when a regular user tries to access /assign-cinema", async () => {
-            response = await Utils.sendRequest("/user/assign-cinema", 403, "PUT", {}, firstCookie);
-            expect(response.body).toEqual({ message: Messages.AUTH_FORBIDDEN, users: [] });
+            await Utils.unauthorizedCheck("/user/assign-cinema", "PUT", {}, "users", regularCookie);
         });
 
         it("should respond with 404 for if specified user is not in the database", async () => {
-            response = await Utils.sendRequest("/user/assign-cinema", 404, "PUT", { userId: 99, cinemaId: 1 }, siteAdminCookie);
+            response = await Utils.sendRequest("/user/assign-cinema", 404, "PUT", { userId: 99, cinemaId: cinemaId }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
         });
 
         it("should respond with 404 for if specified cinema is not in the database", async () => {
-            response = await Utils.sendRequest("/user/assign-cinema", 404, "PUT", { userId: 2, cinemaId: 99 }, siteAdminCookie);
+            response = await Utils.sendRequest("/user/assign-cinema", 404, "PUT", { userId: unauthorizedId, cinemaId: 99 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, users: [] });
         });
     });
@@ -667,23 +706,14 @@ describe("User Lifecycle Flow", async () => {
     // At the end of this step there are no user objects in the database
     //---------------------------------
 
-    describe("DELETE /user/delete/:userId", async () => {
-        it("should respond with 403 when a regular user tries to access /delete/:userId", async () => {
-            response = await Utils.sendRequest("/user/delete/2", 403, "DELETE", {}, firstCookie);
-            expect(response.body).toEqual({ message: Messages.AUTH_FORBIDDEN, users: [] });
-        });
-
+    describe("DELETE /user/delete/:userId", () => {
         it("(MODEL EXAMPLE) should respond with 200 if user is deleted", async () => {
-            await Utils.sendRequest("/user/delete/2", 200, "DELETE", {}, siteAdminCookie);
-            await Utils.sendRequest("/user/delete/3", 200, "DELETE", {}, siteAdminCookie);
-            response = await Utils.sendRequest("/user/delete/4", 200, "DELETE", {}, siteAdminCookie);
+            response = await Utils.sendRequest(`/user/delete/${regularUser.id}`, 200, "DELETE", {}, regularCookie);
             expect(response.body).toEqual({ message: Messages.USER_MSG_DEL });
-
-            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE");
         });
 
         it("should respond with 400 if specified user account type is Site Admin", async () => {
-            response = await Utils.sendRequest("/user/delete/5", 400, "DELETE", {}, siteAdminCookie);
+            response = await Utils.sendRequest(`/user/delete/${adminId}`, 400, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_DEL_SITE });
         });
 
@@ -693,29 +723,32 @@ describe("User Lifecycle Flow", async () => {
                 "DELETE",
                 {},
                 Messages.USER_ERR_ID,
-                null,
+                "users",
                 siteAdminCookie
             )
         });
 
         it("should respond with 401 when no cookies are provided", async () => {
-            response = await Utils.sendRequest("/user/delete/2", 401, "DELETE", {});
-            expect(response.body).toEqual({ message: Messages.AUTH_REQUIRED, users: [] });   
+            await Utils.noCookieCheck("/user/delete/1", "DELETE", {}, "users");    
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete/:userId", async () => {
-            await Utils.deletedAdminCheck("users", "/user/delete/2", "DELETE");    
+            await Utils.deletedAdminCheck("/user/delete/1", "DELETE", {}, "users");    
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
-            await Utils.tamperedCookieCheck("users", "/user/delete/2", "DELETE", {}, siteAdminCookie)
+            await Utils.tamperedCookieCheck("/user/delete/1", "DELETE", {}, "users", siteAdminCookie)
+        });
+
+        it("should respond with 403 when an unauthorized user tries to access /delete/:userId", async () => {
+            await Utils.unauthorizedCheck(`/user/delete/${unauthorizedId}`, "DELETE", {}, "users", unauthorizedCookie);
         });
 
         it("should respond with 404 if user is already gone", async () => {
-            response = await Utils.sendRequest("/user/delete/2", 404, "DELETE", {}, siteAdminCookie);
+            response = await Utils.sendRequest("/user/delete/1", 404, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_NOT_FOUND });
 
-            await deleteSiteAdmin(5);
+            // await deleteSiteAdmin(5);
         });
     });
 });

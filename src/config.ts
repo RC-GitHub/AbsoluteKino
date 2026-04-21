@@ -2,11 +2,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const CONFIG = {
+  NODE_ENV: process.env.NODE_ENV,
   PORT: parseInt(process.env.APP_PORT || '3000', 10),
   JWT_SECRET: process.env.JWT_SECRET || 'fallback_secret',
+
   DB: {
     DIALECT: process.env.DB_DIALECT || 'sqlite',
     STORAGE: process.env.DB_STORAGE || 'db.sqlite',
+    TEST_STORAGE: process.env.DB_TEST_STORAGE || 'test.sqlite',
     LOGGING: process.env.DB_LOGGING === 'true',
     FORCE_SYNC: process.env.DB_FORCE_SYNC === 'true',
   },

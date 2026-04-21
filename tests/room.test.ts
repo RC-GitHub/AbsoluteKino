@@ -1,10 +1,30 @@
-import sequelize from "../src/models";
+import sequelize, { UserInstance } from "../src/models";
 import * as Constants from "../src/constants"
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
+import { deleteSiteAdmin } from "../src/owner";
+
+let siteAdmin: UserInstance;
+let regularUser: UserInstance;
+let siteAdminCookie: string[] | undefined = []
+let regularCookie: string[] | undefined = []
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: true });  
+
+    const siteAdminData = await Utils.createSiteAdmin();
+    const regularUserData = await Utils.createRegularUser();
+
+    siteAdmin = siteAdminData.user;
+    regularUser = regularUserData.user;
+
+    siteAdminCookie = siteAdminData.cookie;
+    regularCookie = regularUserData.cookie;
+});
+
+afterAll(async () => {
+    await deleteSiteAdmin(siteAdmin.id!);
+    await Utils.deleteUser(regularUser);
 });
 
 describe("Room Lifecycle Flow", async () => {
@@ -24,7 +44,7 @@ describe("Room Lifecycle Flow", async () => {
     describe("POST /room/new", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created room object", async () => {
             // Creating a cinema to connect to a new room
-            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
+            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
             expect(response.body).toHaveProperty("cinemas");
             expect(response.body.cinemas[0].id).toEqual(1);
 
@@ -393,7 +413,7 @@ describe("Room Lifecycle Flow", async () => {
 
         it("should respond with 404 if no room objects are connected to the specified cinema object", async () => {
             // Adding a cinema which has no rooms connected to it
-            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
+            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
             expect(response.body).toHaveProperty("cinemas");
             expect(response.body.cinemas).toBeInstanceOf(Array);
             expect(response.body.cinemas).toHaveLength(1);

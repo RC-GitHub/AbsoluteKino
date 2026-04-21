@@ -142,6 +142,8 @@ export const USER_EMAIL_REGEX: RegExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z
 
 export const USER_PHONE_REGEX: RegExp = /^[1-9]\d{6,14}$/;
 
+export const USER_TOKEN_VER_MIN_VAL: number = 1 
+
 //---------------------------------
 // Reservation
 //---------------------------------

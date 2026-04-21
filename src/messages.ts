@@ -138,12 +138,13 @@ export const USER_ERR_NOT_SITE_ADMIN = "Access Denied: The target user is not a 
 export const USER_MSG_REVOKE = "Site Admin privileges have been successfully revoked.";
 export const USER_MSG_UPDATE_SUCCESS = "Site Admin profile updated successfully.";
 export const USER_MSG_DEL_SUCCESS = "Site Admin user deleted successfully.";
+
 export const USER_MSG_LOGIN = "User successfully logged in";
 export const USER_MSG_LOGOUT = "User successfully logged out";
+export const USER_ERR_TOKEN = "User version should be a positive integer"
 export const USER_ERR_ALREADY_LOGGED_IN = "You are already logged in. Please log out first to switch accounts.";
-
 export const USER_ERR_LOGIN = "Invalid login/email/phone number or password";
-export const USER_MSG_CINEMA_ASSIGN = "Cinema Admin successfully assigned to cinema.";
+
 export const USER_ERR_EMPTY_ARGS: string = "Necessary user arguments are all required";
 export const USER_ERR_ID: string = "User ID should be a positive integer";
 export const USER_ERR_TYPING: string = "User name, account type, password, email and phone number should have correct typings (string, string, string or null, string or null and string or null respectively)";
@@ -155,6 +156,8 @@ export const USER_ERR_EMAIL: string = `User email should adhere to the standard 
 export const USER_ERR_EMAIL_UNIQUE: string = `User with this email already exists`;
 export const USER_ERR_PHONE: string = `User phone number does not match the specified format (look into the documentation)`;
 export const USER_ERR_PHONE_UNIQUE: string = `User with this phone number already exists`;
+export const USER_MSG_CINEMA_ASSIGN = "Cinema Admin successfully assigned to cinema.";
+
 export const USER_ERR_DEL_SITE: string = `This user cannot be deleted using this method`
 export const USER_ERR_NOT_FOUND_ALL: string = "No users were found in the database";
 export const USER_ERR_NOT_FOUND: string = "User with specified ID was not found in the database";

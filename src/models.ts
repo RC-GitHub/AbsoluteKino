@@ -4,10 +4,18 @@ import { CONFIG } from './config.ts';
 import * as Constants from "./constants.ts";
 import * as Messages from "./messages.ts";
 
+const isTest = CONFIG.NODE_ENV === "test";
+
 const sequelize: Sequelize = new Sequelize({
   dialect: CONFIG.DB.DIALECT as Dialect,
-  storage: CONFIG.DB.STORAGE,
+  storage: isTest ? CONFIG.DB.TEST_STORAGE : CONFIG.DB.STORAGE,
   logging: CONFIG.DB.LOGGING,
+  define: {
+    freezeTableName: true
+  },
+  dialectOptions: {
+    foreign_keys: false 
+  }
 });
 
 try {
@@ -43,6 +51,7 @@ export interface UserAttributes {
   password: string | null;
   email: string | null;
   phoneNumber: string | number | null;
+  tokenVersion: number
 }
 
 export interface UserInstance extends Model<UserAttributes>, UserAttributes { }
@@ -95,6 +104,18 @@ export const User = sequelize.define<UserInstance>("User", {
       }
     },
   },
+
+  tokenVersion: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    validate: {
+      min: {
+        args: [Constants.USER_TOKEN_VER_MIN_VAL],
+        msg: Messages.USER_ERR_TOKEN
+      }
+    },
+    defaultValue: Constants.USER_TOKEN_VER_MIN_VAL
+  }
 });
 
 //---------------------------------
@@ -153,10 +174,8 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
     type: DataTypes.DECIMAL(10, 8),
     allowNull: false,
     validate: {
-      len: {
-        args: [Constants.CINEMA_MIN_LATITUDE, Constants.CINEMA_MAX_LATITUDE],
-        msg: Messages.CINEMA_ERR_LATITUDE_VAL
-      }
+        min: { args: [Constants.CINEMA_MIN_LATITUDE], msg: Messages.CINEMA_ERR_LATITUDE_VAL },
+        max: { args: [Constants.CINEMA_MAX_LATITUDE], msg: Messages.CINEMA_ERR_LATITUDE_VAL }
     }
   },
 
@@ -165,10 +184,8 @@ export const Cinema = sequelize.define<CinemaInstance>("Cinema", {
     type: DataTypes.DECIMAL(10, 8),
     allowNull: false,
     validate: {
-      len: {
-        args: [Constants.CINEMA_MIN_LONGITUDE, Constants.CINEMA_MAX_LONGITUDE],
-        msg: Messages.CINEMA_ERR_LONGITUDE_VAL
-      }
+      min: { args: [Constants.CINEMA_MIN_LONGITUDE], msg: Messages.CINEMA_ERR_LONGITUDE_VAL },
+      max: { args: [Constants.CINEMA_MAX_LONGITUDE], msg: Messages.CINEMA_ERR_LONGITUDE_VAL }
     }
   },
 });
@@ -763,8 +780,8 @@ Room.belongsTo(Cinema, { foreignKey: "cinemaId" });
 Cinema.hasMany(Product, { foreignKey: "cinemaId", onDelete: 'CASCADE', hooks: true });
 Product.belongsTo(Cinema, { foreignKey: "cinemaId" });
 
-User.belongsToMany(Cinema, { through: 'UserCinemas', as: 'cinemas', foreignKey: 'userId', onDelete: 'CASCADE' });
-Cinema.belongsToMany(User, { through: 'UserCinemas', as: 'admins', foreignKey: 'cinemaId', onDelete: 'CASCADE' });
+User.belongsToMany(Cinema, { through: 'UserCinema', as: 'cinemas', foreignKey: 'userId', onDelete: 'CASCADE' });
+Cinema.belongsToMany(User, { through: 'UserCinema', as: 'admins', foreignKey: 'cinemaId', onDelete: 'CASCADE' });
 
 Room.hasMany(Screening, { foreignKey: "roomId", onDelete: 'CASCADE', hooks: true });
 Screening.belongsTo(Room, { foreignKey: "roomId" });
@@ -775,7 +792,7 @@ Reservation.belongsTo(Screening, { foreignKey: "screeningId" });
 Movie.hasMany(Screening, { foreignKey: "movieId", onDelete: 'RESTRICT' });
 Screening.belongsTo(Movie, { foreignKey: "movieId" });
 
-User.hasMany(Reservation, { foreignKey: "clientId", onDelete: 'CASCADE', hooks: true });
-Reservation.belongsTo(User, { foreignKey: "clientId" });
+User.hasMany(Reservation, { foreignKey: "userId", onDelete: 'CASCADE', hooks: true });
+Reservation.belongsTo(User, { foreignKey: "userId" });
 
 export default sequelize;

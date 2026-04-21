@@ -1,9 +1,29 @@
-import sequelize from "../src/models";
+import sequelize, { UserInstance } from "../src/models";
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
+import { deleteSiteAdmin } from "../src/owner";
+
+let siteAdmin: UserInstance;
+let regularUser: UserInstance;
+let siteAdminCookie: string[] | undefined = []
+let regularCookie: string[] | undefined = []
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: true });  
+
+    const siteAdminData = await Utils.createSiteAdmin();
+    const regularUserData = await Utils.createRegularUser();
+
+    siteAdmin = siteAdminData.user;
+    regularUser = regularUserData.user;
+
+    siteAdminCookie = siteAdminData.cookie;
+    regularCookie = regularUserData.cookie;
+});
+
+afterAll(async () => {
+    await deleteSiteAdmin(siteAdmin.id!);
+    await Utils.deleteUser(regularUser);
 });
 
 describe("Screening Lifecycle Flow", async () => {
@@ -22,7 +42,7 @@ describe("Screening Lifecycle Flow", async () => {
     describe("POST /screening/new", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created screening object", async () => {
             // Creating a cinema to connect to a new room
-            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData);
+            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
             expect(response.body).toHaveProperty("cinemas");
             expect(response.body.cinemas[0].id).toEqual(1);
 

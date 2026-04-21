@@ -1,13 +1,23 @@
+import { Cinema, CinemaAttributes , CinemaInstance, Room } from "../models.js";
 import express, { Request, Response, NextFunction } from "express";
+
 import * as Constants from "../constants.ts"
 import * as Messages from "../messages.ts"
-import { Cinema, CinemaAttributes , CinemaInstance, Room } from "../models.js";
+import * as Auth from "../middleware/auth.ts"
 
 const router = express.Router();
 
-// Adds a new cinema to the database
-// Requires: name, address, latitude and longitude
-router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Adds a new cinema to the database
+ * Requires: name, address, latitude and longitude
+ */
+router.post("/new",
+  Auth.authorize("cinemas"), 
+  Auth.validatePrivileges("cinemas", 3),  
+  async (req: Request, res: Response, next: NextFunction) => 
+{
   try {
     let { name, address, latitude, longitude } : CinemaAttributes = req.body;
     if (name == null || address == null || latitude == null || longitude == null) {
@@ -38,7 +48,11 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// Sends data about all cinemas in the database
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all cinemas in the database
+ */
 router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cinemas: CinemaInstance[] = await Cinema.findAll();
@@ -52,7 +66,11 @@ router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// Sends data about a cinema with the specified ID
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about a cinema with the specified ID
+ */
 router.get("/id/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
@@ -70,8 +88,16 @@ router.get("/id/:cinemaId", async (req: Request, res: Response, next: NextFuncti
   }
 });
 
-// Updates data for a cinema with the specified ID
-router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Updates data for a cinema with the specified ID
+ */
+router.put("/update/:cinemaId", 
+  Auth.authorize("cinemas"), 
+  Auth.validatePrivileges("cinemas", 3),  
+  async (req: Request, res: Response, next: NextFunction) =>
+{
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
     if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
@@ -124,8 +150,16 @@ router.put("/update/:cinemaId", async (req: Request, res: Response, next: NextFu
   }
 });
 
-// Deletes a cinema with the specified ID
-router.delete("/delete/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Deletes a cinema with the specified ID
+ */
+router.delete("/delete/:cinemaId", 
+  Auth.authorize("cinemas"), 
+  Auth.validatePrivileges("cinemas", 3), 
+  async (req: Request, res: Response, next: NextFunction) =>
+{
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
     if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
@@ -137,42 +171,11 @@ router.delete("/delete/:cinemaId", async (req: Request, res: Response, next: Nex
     if (deletedRows < 1) {
       return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
     }
-    res.status(200).json({ message: Messages.CINEMA_MSG_DEL });
+    res.send({ message: Messages.CINEMA_MSG_DEL });
   }
   catch (error: any) {
     next(error);
   }
 });
-
-// TODO:
-// Deletes a cinema with the specified ID and everything connected with it
-/*router.delete("/delete/force/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const cinemaId: number = parseInt(req.params.cinemaId.toString());
-    if (!cinemaId) {
-      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
-    }
-    if (cinemaId < Constants.TYPICAL_MIN_ID) {
-      return res.status(400).json({ message: Messages.CINEMA_ERR_ID });
-    }
-    const deletedCinemaRows: number = await Cinema.destroy({
-      where: { id: cinemaId }
-    });
-    if (deletedCinemaRows < 1) {
-      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
-    }
-
-    const deletedRoomRows: number = await Room.destroy({
-      where: { cinemaId: cinemaId }
-    });
-    if (deletedRoomRows < 1) {
-      return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND });
-    }
-    res.status(200).json({ message: Messages.CINEMA_MSG_DEL });
-  }
-  catch (error: any) {
-    next(error);
-  }
-});*/
 
 export default router;

@@ -93,6 +93,7 @@ export const registerUserLogic = async (data: any) => {
             password: hashedPassword,
             email,
             phoneNumber: pureDigits,
+            tokenVersion: Constants.USER_TOKEN_VER_MIN_VAL
         });
 
     }
@@ -104,6 +105,7 @@ export const registerUserLogic = async (data: any) => {
             password,
             email,
             phoneNumber,
+            tokenVersion: Constants.USER_TOKEN_VER_MIN_VAL
         });
     }
 }
@@ -153,7 +155,7 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
                 const user = await User.findByPk(decoded.id);
 
                 if (user) {
-                    return res.status(200).json({
+                    return res.send({
                         message: Messages.USER_ERR_ALREADY_LOGGED_IN,
                         users: [user]
                     });
@@ -213,7 +215,7 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
 
         res.send({
             message: Messages.USER_MSG_LOGIN,
-            users: [user]
+            users: [user] // Preserve this in the browser, because /id/:userId cannot be accessed by non-site-admin users!!!
         });
     } catch (error: any) {
         next(error);
@@ -221,12 +223,22 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
 });
 
 /** 
- * Anyone can get to 200 with this endpoint
+ * Only authenticated users can get to 200 with this endpoint
  * ===============================
  * Logs a user out by clearing the auth cookie
  */
-router.post("/logout", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/logout", 
+    Auth.authorize("users"),
+    Auth.validatePrivileges("users", 1),
+    async (req: Request, res: Response, next: NextFunction) => 
+{
     try {
+        const decoded = (req as any).user;
+        const user = await User.findByPk(decoded.id);
+        if (user) {
+            await user.increment('tokenVersion');
+        }
+
         res.clearCookie("auth_token");
         res.send({ message: Messages.USER_MSG_LOGOUT });
     } catch (error: any) {
@@ -240,7 +252,7 @@ router.post("/logout", async (req: Request, res: Response, next: NextFunction) =
  * Sends data about all users in the database
  */
 router.get("/all", 
-    Auth.authorizeAs("users"), 
+    Auth.authorize("users"), 
     Auth.validatePrivileges("users", 3), 
     async (req: Request, res: Response, next: NextFunction) => 
 {
@@ -263,7 +275,7 @@ router.get("/all",
  * Sends data about a user with the specified ID
  */
 router.get("/id/:userId", 
-    Auth.authorizeAs("users"), 
+    Auth.authorize("users"), 
     Auth.validatePrivileges("users", 3), 
     async (req: Request, res: Response, next: NextFunction) => 
 {
@@ -284,13 +296,13 @@ router.get("/id/:userId",
 });
 
 /**  
- * Anyone can get to 200 with this endpoint
+ * Only unauthorized users and higher can get to 200 with this endpoint
  * ===============================
  * Updates data for a user with the specified ID
  * Does not allow for changing of the account type
  */
 router.put("/update/:userId", 
-    Auth.authorizeAs("users"), 
+    Auth.authorize("users"), 
     Auth.validatePrivileges("users", 0), 
     Auth.validateOwnership("users", 3),
     async (req: Request, res: Response, next: NextFunction) => 
@@ -383,12 +395,12 @@ router.put("/update/:userId",
 });
 
 /**  
- * Anyone can get to 200 with this endpoint
+ * Only unauthorized users and higher can get to 200 with this endpoint
  * ===============================
  * Changes account type for a user with the specified ID
  */
 router.put("/update-type/:userId",
-    Auth.authorizeAs("users"), 
+    Auth.authorize("users"), 
     Auth.validatePrivileges("users", 0), 
     Auth.validateOwnership("users", 3),
     async (req: Request, res: Response, next: NextFunction) => 
@@ -429,7 +441,7 @@ router.put("/update-type/:userId",
  * Assigns cinemas to the users
  */
 router.put("/assign-cinema", 
-    Auth.authorizeAs("users"), 
+    Auth.authorize("users"), 
     Auth.validatePrivileges("users", 3), 
     async (req: Request, res: Response, next: NextFunction) => 
 {
@@ -452,6 +464,7 @@ router.put("/assign-cinema",
         }
 
         const user = await User.findByPk(userId);
+
         if (!user) {
             return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
         }
@@ -461,10 +474,16 @@ router.put("/assign-cinema",
             return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND, users: [] });
         }
 
-        if (user.accountType !== Constants.USER_ACC_TYPES[2]) {
+        if (user.accountType === Constants.USER_ACC_TYPES[3] ||
+            user.accountType === Constants.USER_ACC_TYPES[0]
+        ) {
             return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         }
 
+        if (user.accountType === Constants.USER_ACC_TYPES[1]) {
+            await user.update({ accountType: Constants.USER_ACC_TYPES[2] });
+        }
+        
         await (user as any).addCinema(cinema);
         const updatedUser = await User.findByPk(userId, {
             include: [{ model: Cinema, as: 'cinemas' }]
@@ -485,8 +504,9 @@ router.put("/assign-cinema",
  * Deletes a user with the specified ID
  */
 router.delete("/delete/:userId",
-    Auth.authorizeAs("users"), 
-    Auth.validatePrivileges("users", 3), 
+    Auth.authorize("users"), 
+    Auth.validatePrivileges("users", 1), 
+    Auth.validateOwnership("users", 3),
     async (req: Request, res: Response, next: NextFunction) => 
 {
     try {

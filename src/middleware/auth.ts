@@ -16,6 +16,7 @@ export const createUserToken = (user: UserInstance) => {
             email: user.email,
             phoneNumber: user.phoneNumber,
             accountType: user.accountType,
+            tokenVersion: user.tokenVersion,
             loginTime: new Date().getTime()
         },
         CONFIG.JWT_SECRET,
@@ -41,85 +42,91 @@ export const verifyToken = (token: string) => {
     return jwt.verify(token, JWT_SECRET) as any;
 };
 
-export const authorizeAs = (arrayName: string) => {
-    return (req: Request, res: Response, next: NextFunction) => {
+export const authorize = (arrayName: string) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
         const token = req.cookies.auth_token;
-        if (!token) return res.status(401).json({ message: Messages.AUTH_REQUIRED, [arrayName]: [] });
+        const errorResponse: any = { message: Messages.AUTH_REQUIRED };
+
+        if (req.method !== "DELETE") errorResponse[arrayName] = [];
+        
+        if (!token) return res.status(401).json(errorResponse);
 
         try {
             const decoded = verifyToken(token); 
-            (req as any).user = decoded;
+            const user = await User.findByPk(decoded.id);
+
+            console.log(`Checking User ${decoded.id}: DB Version ${user?.tokenVersion} vs JWT Version ${decoded.tokenVersion}`);
+
+            if (!user || user.tokenVersion !== decoded.tokenVersion) {
+                console.log("!!! TOKEN INVALIDATED !!!");
+
+                res.clearCookie("auth_token");
+                errorResponse.message = Messages.AUTH_SESSION;
+                return res.status(401).json(errorResponse);
+            }
+
+            (req as any).user = user;
             next();
-        } catch (error) {
+        } 
+        catch (error: any) {
+            console.error(error);
             res.clearCookie("auth_token");
-            return res.status(401).json({ message: Messages.AUTH_SESSION, [arrayName]: [] });
+            errorResponse.message = Messages.AUTH_SESSION;
+            
+            return res.status(401).json(errorResponse);
         }
     };
 };
 
 export const validatePrivileges = (arrayName: string, minRequiredLevel: number) => {
     return async (req: Request, res: Response, next: NextFunction) => {
-        try {
-            const decoded = (req as any).user;
+        const user = (req as any).user; 
 
-            if (!decoded || !decoded.id) {
-                return res.status(401).json({ 
-                    message: Messages.AUTH_REQUIRED, 
-                    [arrayName]: [] 
-                });
-            }
-
-            const requestingUser = await User.findByPk(decoded.id);
-
-            if (!requestingUser) {
-                res.clearCookie("auth_token");
-                return res.status(401).json({ 
-                    message: Messages.AUTH_REQUIRED, 
-                    [arrayName]: [] 
-                });
-            }
-
-            const userLevel = Constants.USER_ACC_TYPES.indexOf(requestingUser.accountType as any);
-
-            if (userLevel < minRequiredLevel) {
-                return res.status(403).json({ 
-                    message: Messages.AUTH_FORBIDDEN, 
-                    [arrayName]: [] 
-                });
-            }
-
-            (req as any).fullUser = requestingUser;
-            next();
-        } catch (error: any) {
-            next(error);
+        if (!user) {
+            return res.status(401).json({ message: Messages.AUTH_REQUIRED });
         }
+
+        const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType);
+
+        if (userLevel < minRequiredLevel) {
+            const response: any = { message: Messages.AUTH_FORBIDDEN };
+            if (req.method !== "DELETE") response[arrayName] = [];
+            return res.status(403).json(response);
+        }
+
+        next();
     };
 };
 
 export const validateOwnership = (arrayName: string, bypassLevel: number = 3) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const decoded = (req as any).user;
+            const user = (req as any).user;
             const paramId = parseInt(req.params.userId || req.body.userId);
 
-            if (!decoded || !decoded.id) {
-                return res.status(401).json({ message: Messages.AUTH_REQUIRED, [arrayName]: [] });
+            const sendAuthError = (status: number, message: string) => {
+                const response: any = { message };
+                if (req.method !== "DELETE") {
+                    response[arrayName] = [];
+                }
+                return res.status(status).json(response);
+            };
+
+            if (!user || !user.id) {
+                return sendAuthError(401, Messages.AUTH_REQUIRED);
             }
 
-            const isOwner = decoded.id === paramId;
-
-            const userLevel = Constants.USER_ACC_TYPES.indexOf((req as any).fullUser?.accountType || "");
+            const isOwner = user.id === paramId;
+            
+            const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
             const hasBypass = userLevel >= bypassLevel;
 
             if (!isOwner && !hasBypass) {
-                return res.status(403).json({ 
-                    message: Messages.AUTH_FORBIDDEN, 
-                    [arrayName]: [] 
-                });
+                return sendAuthError(403, Messages.AUTH_FORBIDDEN);
             }
-
             next();
-        } catch (error: any) {
+        } 
+        catch (error: any) {
             next(error);
         }
     };

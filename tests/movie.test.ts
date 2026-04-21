@@ -1,10 +1,30 @@
-import sequelize from "../src/models";
+import sequelize, { UserInstance } from "../src/models";
 import * as Messages from "../src/messages";
 import * as Constants from "../src/constants";
 import * as Utils from "./utils";
+import { deleteSiteAdmin } from "../src/owner";
+
+let siteAdmin: UserInstance;
+let regularUser: UserInstance;
+let siteAdminCookie: string[] | undefined = []
+let regularCookie: string[] | undefined = []
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });
+    await sequelize.sync({ force: true });  
+
+    const siteAdminData = await Utils.createSiteAdmin();
+    const regularUserData = await Utils.createRegularUser();
+
+    siteAdmin = siteAdminData.user;
+    regularUser = regularUserData.user;
+
+    siteAdminCookie = siteAdminData.cookie;
+    regularCookie = regularUserData.cookie;
+});
+
+afterAll(async () => {
+    await deleteSiteAdmin(siteAdmin.id!);
+    await Utils.deleteUser(regularUser);
 });
 
 describe("Movie Lifecycle Flow", async () => {
