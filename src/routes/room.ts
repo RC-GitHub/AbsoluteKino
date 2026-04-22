@@ -350,8 +350,17 @@ router.put("/update/:roomId",
   }
 });
 
-// Deletes a room with the specified ID
-router.delete("/delete/:roomId", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Only cinema admin or higher can get to 200 with this endpoint
+ * ===============================
+ * Deletes a room with the specified ID
+ */
+router.delete("/delete/:roomId", 
+  Auth.authorize("rooms"), 
+  Auth.validatePrivileges("rooms", 2), 
+  Auth.validateRoomAccess("rooms", 3),
+  async (req: Request, res: Response, next: NextFunction) =>
+{
   try {
     const roomId: number = parseInt(req.params.roomId.toString());
     if (!roomId) {
@@ -372,7 +381,5 @@ router.delete("/delete/:roomId", async (req: Request, res: Response, next: NextF
     next(error);
   }
 });
-
-// TODO: /delete/force
 
 export default router;

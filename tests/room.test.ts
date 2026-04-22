@@ -4,10 +4,7 @@ import * as Constants from "../src/constants"
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
 
-let siteAdmin: UserInstance;
-let regularUser: UserInstance;
 let cinemaAdmin: UserInstance;
-let unauthorizedCinemaAdmin: UserInstance;
 
 let siteAdminCookie: string[] | undefined = [];
 let regularCookie: string[] | undefined = [];
@@ -21,9 +18,6 @@ beforeAll(async () => {
 
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
-
-    siteAdmin = siteAdminData.user;
-    regularUser = regularUserData.user;
 
     siteAdminCookie = siteAdminData.cookie;
     regularCookie = regularUserData.cookie;
@@ -238,8 +232,6 @@ describe("Room Lifecycle Flow", async () => {
         it("should respond with 403 when a cinema admin without necessary privileges tries to access /new", async () => {
             let unauthorizedCinemaAdminData = await Utils.createRegularUser();
             unauthorizedCinemaAdminData = await Utils.levelUserTo(unauthorizedCinemaAdminData.user, 2, unauthorizedCinemaAdminData.cookie);
-
-            unauthorizedCinemaAdmin = unauthorizedCinemaAdminData.user;
             unauthorizedCinemaAdminCookie = unauthorizedCinemaAdminData.cookie;
 
             await Utils.unauthorizedCheck("/room/new", "POST", { cinemaId: cinemaId }, "rooms", unauthorizedCinemaAdminCookie)
@@ -459,7 +451,7 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.freshTokenCheck("/room/new/default-seats", "POST", {}, ["rooms", "seats"]);
         });
 
-        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new/default-seats", async () => {
             await Utils.deletedAdminCheck("/room/new/default-seats", "POST", {}, ["rooms", "seats"]);    
         });
 
@@ -467,11 +459,11 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.tamperedCookieCheck("/room/new/default-seats", "POST", {}, ["rooms", "seats"], siteAdminCookie)
         });
 
-        it("should respond with 403 when a regular user tries to access /new", async () => {
+        it("should respond with 403 when a regular user tries to access /new/default-seats", async () => {
             await Utils.unauthorizedCheck("/room/new/default-seats", "POST", {}, ["rooms", "seats"], regularCookie)
         });
 
-        it("should respond with 403 when a cinema admin without necessary privileges tries to access /new", async () => {
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /new/default-seats", async () => {
             await Utils.unauthorizedCheck("/room/new/default-seats", "POST", { cinemaId: cinemaId }, ["rooms", "seats"], unauthorizedCinemaAdminCookie)
         });
 
@@ -693,7 +685,7 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.freshTokenCheck("/room/update/1", "PUT", {}, "rooms");
         });
 
-        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /update", async () => {
             await Utils.deletedAdminCheck("/room/update/1", "PUT", {}, "rooms");    
         });
 
@@ -701,11 +693,11 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.tamperedCookieCheck("/room/update/1", "PUT", {}, "rooms", siteAdminCookie)
         });
 
-        it("should respond with 403 when a regular user tries to access /new", async () => {
+        it("should respond with 403 when a regular user tries to access /update", async () => {
             await Utils.unauthorizedCheck("/room/update/1", "PUT", {}, "rooms", regularCookie)
         });
 
-        it("should respond with 403 when a cinema admin without necessary privileges tries to access /new", async () => {
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /update", async () => {
             await Utils.unauthorizedCheck("/room/update/1", "PUT", { cinemaId: cinemaId }, "rooms", unauthorizedCinemaAdminCookie)
         });
 
@@ -730,26 +722,40 @@ describe("Room Lifecycle Flow", async () => {
 
     describe("DELETE /room/delete/:roomId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 if room object is successfully deleted", async () => {
-            await Utils.sendRequest("/room/delete/1", 200, "DELETE");
-            await Utils.sendRequest("/room/delete/2", 200, "DELETE");
-            await Utils.sendRequest("/room/delete/3", 200, "DELETE");
-            response = await Utils.sendRequest("/room/delete/4", 200, "DELETE");
+            response = await Utils.sendRequest("/room/delete/2", 200, "DELETE", {}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_MSG_DEL});
         });
 
         it("should respond with 400 if roomId is not valid", async () => {
-            response = await Utils.sendRequest("/room/delete/abc", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID });
+            await Utils.invalidIdCheck("/room/delete", "DELETE", {}, Messages.ROOM_ERR_ID, "rooms", cinemaAdminCookie)
+        });
 
-            response = await Utils.sendRequest("/room/delete/0", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID });
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/room/delete/1", "DELETE", {}, "rooms");
+        });
 
-            response = await Utils.sendRequest("/room/delete/-1", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID });
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/room/delete/1", "DELETE", {}, "rooms");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete", async () => {
+            await Utils.deletedAdminCheck("/room/delete/1", "DELETE", {}, "rooms");    
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/room/delete/1", "DELETE", {}, "rooms", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/room/delete/1", "DELETE", {}, "rooms", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/room/delete/1", "DELETE", { cinemaId: cinemaId }, "rooms", unauthorizedCinemaAdminCookie)
         });
 
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/room/delete/5", 404, "DELETE"); 
+            response = await Utils.sendRequest("/room/delete/99", 404, "DELETE", {}, siteAdminCookie); 
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL });
         });
     });
