@@ -89,6 +89,13 @@ router.post("/new",
   }
 });
 
+/** 
+ * Only cinema admin and higher can get to 200 with this endpoint
+ * ===============================
+ * Adds a new room to a specified cinema alongside some seats
+ * Requires: name, cinema ID and stairsPlacements
+ * Optional: width, depth, row amount and col amount, all of which have defaults in place if they weren't provided
+ */
 router.post("/new/default-seats", 
   Auth.authorize(["rooms", "seats"]), 
   Auth.validatePrivileges(["rooms", "seats"], 2), 
@@ -203,7 +210,11 @@ router.post("/new/default-seats",
   }
 });
 
-// Sends data about all rooms in a specified cinema
+/** 
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all rooms in a specified cinema
+ */
 router.get("/all/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const cinemaId: number = parseInt(req.params.cinemaId.toString());
@@ -229,7 +240,11 @@ router.get("/all/:cinemaId", async (req: Request, res: Response, next: NextFunct
   }
 });
 
-// Sends data about a room with the specified id
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about a room with the specified id
+ */
 router.get("/id/:roomId", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const roomId: number = parseInt(req.params.roomId.toString());
@@ -250,9 +265,17 @@ router.get("/id/:roomId", async (req: Request, res: Response, next: NextFunction
   }
 });
 
-
-// Updates data for a cinema with the specified ID
-router.put("/update/:roomId", async (req: Request, res: Response, next: NextFunction) => {
+/**  
+ * Only cinema admin or higher can get to 200 with this endpoint
+ * ===============================
+ * Updates data for a room with the specified ID
+ */
+router.put("/update/:roomId", 
+  Auth.authorize("rooms"), 
+  Auth.validatePrivileges("rooms", 2), 
+  Auth.validateRoomAccess("rooms", 3),
+  async (req: Request, res: Response, next: NextFunction) => 
+{ 
   try {
     const roomId: number = parseInt(req.params.roomId.toString());
     if (!roomId) {

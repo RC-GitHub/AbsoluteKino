@@ -103,7 +103,7 @@ export const validateOwnership = (arrayName: string | string[], bypassLevel: num
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
             const user = (req as any).user;
-            const paramId = parseInt(req.params.userId || req.body.userId);
+            const userId = parseInt(req.params.userId || req.body.userId);
 
             const sendAuthError = (status: number, message: string) => {
                 const response: any = { message };
@@ -114,11 +114,15 @@ export const validateOwnership = (arrayName: string | string[], bypassLevel: num
                 return res.status(status).json(response);
             };
 
+            if (isNaN(userId) || userId < Constants.TYPICAL_MIN_ID) {
+                return sendAuthError(400, Messages.USER_ERR_ID);
+            }
+
             if (!user || !user.id) {
                 return sendAuthError(401, Messages.AUTH_REQUIRED);
             }
 
-            const isOwner = user.id === paramId;
+            const isOwner = user.id === userId;
             const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
             const hasBypass = userLevel >= bypassLevel;
 
@@ -146,6 +150,11 @@ export const validateCinemaMembership = (arrayName: string | string[], bypassLev
             const names = Array.isArray(arrayName) ? arrayName : [arrayName];
             if (req.method !== "DELETE") names.forEach(name => errorResponse[name] = []);
 
+            if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
+                errorResponse.message = Messages.CINEMA_ERR_ID;
+                return res.status(400).json(errorResponse);
+            }
+
             if (!user) {
                 errorResponse.message = Messages.AUTH_REQUIRED;
                 return res.status(401).json(errorResponse);
@@ -153,11 +162,6 @@ export const validateCinemaMembership = (arrayName: string | string[], bypassLev
 
             const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
             if (userLevel >= bypassLevel) return next();
-
-            if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
-                errorResponse.message = Messages.CINEMA_ERR_ID;
-                return res.status(400).json(errorResponse);
-            }
 
             const hasAccess = await (user as any).hasCinema(cinemaId);
             if (!hasAccess) {
@@ -172,7 +176,7 @@ export const validateCinemaMembership = (arrayName: string | string[], bypassLev
     };
 };
 
-export const validateRoomAccess = (arrayName: string | string[]) => {
+export const validateRoomAccess = (arrayName: string | string[], bypassLevel: number) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         const user = (req as any).user;
         const roomId = parseInt(req.params.roomId || req.body.roomId || req.query.roomId);
@@ -181,11 +185,24 @@ export const validateRoomAccess = (arrayName: string | string[]) => {
         const names = Array.isArray(arrayName) ? arrayName : [arrayName];
         if (req.method !== "DELETE") names.forEach(name => errorResponse[name] = []);
 
+        if (isNaN(roomId) || roomId < Constants.TYPICAL_MIN_ID) {
+            errorResponse.message = Messages.ROOM_ERR_ID; 
+            return res.status(400).json(errorResponse);
+        }
+
+        if (!user) {
+            errorResponse.message = Messages.AUTH_REQUIRED;
+            return res.status(401).json(errorResponse);
+        }
+
         const room = await Room.findByPk(roomId);
         if (!room) {
             errorResponse.message = Messages.ROOM_ERR_NOT_FOUND_GLOBAL;
             return res.status(404).json(errorResponse);
         }
+
+        const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
+        if (userLevel >= bypassLevel) return next();
 
         const hasAccess = await (user as any).hasCinema(room.cinemaId);
         if (!hasAccess) {
