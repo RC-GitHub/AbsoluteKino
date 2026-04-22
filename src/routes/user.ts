@@ -423,7 +423,7 @@ router.put("/update-type/:userId",
         const { accountType }: UserAttributes = req.body;
         if (accountType !== Constants.USER_ACC_TYPES[0] && // Elevating unauthenticated user to an authenticated one
             accountType !== Constants.USER_ACC_TYPES[1] && // Elevating user to cinema admin
-            accountType !== Constants.USER_ACC_TYPES[2] // Revoking Cinema admin priviledges
+            accountType !== Constants.USER_ACC_TYPES[2] // Revoking Cinema admin privileges
         ) {
             return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         }

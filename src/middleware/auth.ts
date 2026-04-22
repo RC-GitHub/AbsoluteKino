@@ -5,7 +5,7 @@ import { CONFIG } from '../config';
 import * as Messages from '../messages'
 import * as Constants from '../constants'
 
-import { User, UserInstance } from '../models'
+import { Room, User, UserInstance } from '../models'
 
 const JWT_SECRET: string = CONFIG.JWT_SECRET;
 
@@ -129,5 +129,60 @@ export const validateOwnership = (arrayName: string, bypassLevel: number = 3) =>
         catch (error: any) {
             next(error);
         }
+    };
+};
+
+/**
+ * Verifies if the authenticated user has administrative rights over a specific cinema.
+ * Can take cinemaId from params or body.
+ */
+export const validateCinemaMembership = (arrayName: string, bypassLevel: number = 3) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const user = (req as any).user;
+            const cinemaId = parseInt(req.params.cinemaId || req.body.cinemaId || req.query.cinemaId);
+
+            if (!user) return res.status(401).json({ message: Messages.AUTH_REQUIRED, [arrayName]: [] });
+
+            const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
+            if (userLevel >= bypassLevel) return next();
+
+            if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
+                return res.status(400).json({ message: Messages.CINEMA_ERR_ID, [arrayName]: [] });
+            }
+
+            const hasAccess = await (user as any).hasCinema(cinemaId);
+
+            if (!hasAccess) {
+                const response: any = { message: Messages.AUTH_FORBIDDEN };
+                if (req.method !== "DELETE") response[arrayName] = [];
+                return res.status(403).json(response);
+            }
+
+            next();
+        } catch (error) {
+            next(error);
+        }
+    };
+};
+
+export const validateRoomAccess = (arrayName: string) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
+        const user = (req as any).user;
+        const roomId = parseInt(req.params.roomId || req.body.roomId || req.query.roomId);
+
+        const room = await Room.findByPk(roomId);
+        if (!room) {
+            if (req.method !== "DELETE") res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, [arrayName]: [] });
+            return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL });
+        } 
+
+        const hasAccess = await (user as any).hasCinema(room.cinemaId);
+        if (!hasAccess) {
+            if (req.method !== "DELETE") res.status(404).json({ message: Messages.AUTH_FORBIDDEN, [arrayName]: [] });
+            return res.status(403).json({ message: Messages.AUTH_FORBIDDEN });
+        }
+
+        next();
     };
 };

@@ -1,14 +1,14 @@
-import sequelize, { UserInstance } from "../src/models";
+import sequelize, { Cinema, User, UserInstance } from "../src/models";
 
-import * as Constants from "../src/constants"
-import * as Messages from "../src/messages"
-import * as Utils from "./utils"
-import { deleteSiteAdmin } from "../src/owner";
+import * as Constants from "../src/constants";
+import * as Messages from "../src/messages";
+import * as Utils from "./utils";
 
 let siteAdmin: UserInstance;
 let regularUser: UserInstance;
-let siteAdminCookie: string[] | undefined = []
-let regularCookie: string[] | undefined = []
+
+let siteAdminCookie: string[] | undefined = [];
+let regularCookie: string[] | undefined = [];
 
 beforeAll(async () => {
     await sequelize.sync({ force: true });  
@@ -24,8 +24,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    await deleteSiteAdmin(siteAdmin.id!);
-    await Utils.deleteUser(regularUser);
+    await User.destroy({ where: {}, cascade: true })
+    await Cinema.destroy({ where: {}, cascade: true })
 });
 
 describe("Cinema Lifecycle Flow", async () => {
@@ -169,7 +169,7 @@ describe("Cinema Lifecycle Flow", async () => {
             await Utils.freshTokenCheck("/cinema/new", "POST", {}, "cinemas");
         });
 
-        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /all", async () => {
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
             await Utils.deletedAdminCheck("/cinema/new", "POST", {}, "cinemas");    
         });
 

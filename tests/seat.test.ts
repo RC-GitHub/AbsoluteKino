@@ -48,7 +48,7 @@ describe("Room Lifecycle Flow", async () => {
             expect(response.body.cinemas[0].id).toEqual(1);
 
             // Creating a new room
-            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
+            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData, siteAdminCookie);
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms[0]).toHaveProperty("name", Utils.roomData.name);
             expect(response.body.rooms[0]).toHaveProperty("width", Utils.roomData.width);
@@ -241,7 +241,7 @@ describe("Room Lifecycle Flow", async () => {
     describe("GET /seat/all/:roomId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all seat objects in specified room", async () => {
             // Creating a new room to check the functionality
-            await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
+            await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData, siteAdminCookie);
             await Utils.sendRequest("/seat/new", 200, "POST", { ...Utils.seatData, roomId: 2 });
 
             response = await Utils.sendRequest("/seat/all/1", 200, "GET");
@@ -268,7 +268,7 @@ describe("Room Lifecycle Flow", async () => {
 
         it("should respond with 404 if no seat objects are connected to the specified room object", async () => {
             // Adding a room which has no seats connected to it
-            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
+            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData, siteAdminCookie);
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms).toBeInstanceOf(Array);
             expect(response.body.rooms).toHaveLength(1);
@@ -466,9 +466,9 @@ describe("Room Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/seat/delete/2", 200, "DELETE");
             expect(response.body).toEqual({ message: Messages.SEAT_MSG_DEL});
 
-            await Utils.sendRequest("/room/delete/1", 200, "DELETE");
-            await Utils.sendRequest("/room/delete/2", 200, "DELETE");
-            await Utils.sendRequest("/room/delete/3", 200, "DELETE");
+            await Utils.sendRequest("/room/delete/1", 200, "DELETE", {}, siteAdminCookie);
+            await Utils.sendRequest("/room/delete/2", 200, "DELETE", {}, siteAdminCookie);
+            await Utils.sendRequest("/room/delete/3", 200, "DELETE", {}, siteAdminCookie);
 
             await Utils.sendRequest("/cinema/delete/1", 200, "DELETE", {}, siteAdminCookie);
         });

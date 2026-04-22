@@ -1,10 +1,9 @@
-import { 
-  Cinema, CinemaInstance, CinemaAttributes, 
-  Room, RoomAttributes , RoomInstance, Seat, SeatInstance, Stairs } from "../models.js";
+import sequelize, { Cinema, CinemaInstance, Room, RoomAttributes , RoomInstance, Seat } from "../models.js";
 import express, { Request, Response, NextFunction } from "express";
-import * as Constants from "../constants.ts"
-import * as Messages from "../messages.ts"
-import sequelize from "../models.js";
+
+import * as Constants from "../constants.ts";
+import * as Messages from "../messages.ts";
+import * as Auth from "../middleware/auth.ts";
 
 const router = express.Router();
 
@@ -61,11 +60,19 @@ export const createRoomLogic = async (data: any) => {
     });
 }
 
-/** Adds a new room to a specified cinema
-  * Requires: name and cinema ID
-  * Optional: width, depth, row amount and col amount, all of which have defaults in place if they weren't provided
-  */
-router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
+/** 
+ * Only cinema admin and higher can get to 200 with this endpoint
+ * ===============================
+ * Adds a new room to a specified cinema
+ * Requires: name and cinema ID
+ * Optional: width, depth, row amount and col amount, all of which have defaults in place if they weren't provided
+ */
+router.post("/new", 
+  Auth.authorize("rooms"), 
+  Auth.validatePrivileges("rooms", 2), 
+  Auth.validateCinemaMembership("rooms", 3),
+  async (req: Request, res: Response, next: NextFunction) => 
+{
   try {
     const room: RoomInstance = await createRoomLogic(req.body);
     await room.save();

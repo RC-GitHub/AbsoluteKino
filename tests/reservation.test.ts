@@ -49,9 +49,9 @@ describe("Reservation Lifecycle Flow", async () => {
     describe("POST /reservation/new", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created reservation object", async () => {
             await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
-            await Utils.sendRequest("/room/new/default-seats", 200, "POST", Utils.roomDataWithStairs);
-            await Utils.sendRequest("/movie/new", 200, "POST", Utils.movieData);
-            await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData);
+            await Utils.sendRequest("/room/new/default-seats", 200, "POST", Utils.roomDataWithStairs, siteAdminCookie);
+            await Utils.sendRequest("/movie/new", 200, "POST", Utils.movieData, siteAdminCookie);
+            await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, siteAdminCookie);
             // await Utils.sendRequest("/user/register", 200, "POST", Utils.userData);
 
             response = await Utils.sendRequest("/reservation/new", 200, "POST", Utils.reservationData);
@@ -292,8 +292,8 @@ describe("Reservation Lifecycle Flow", async () => {
 
         it("should respond with 404 if no seat objects are connected to the specified reservation object", async () => {
             // Create a new user (ID 2) with no bookings
-            await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
-            await Utils.sendRequest("/seat/new", 200, "POST", { ...Utils.seatData, roomId: 2 });
+            await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData, siteAdminCookie);
+            await Utils.sendRequest("/seat/new", 200, "POST", { ...Utils.seatData, roomId: 2 }, siteAdminCookie);
             response = await Utils.sendRequest("/reservation/all/seat/2", 404, "GET");
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_NOT_FOUND_SEAT, reservations: [] });
         });
@@ -466,7 +466,7 @@ describe("Reservation Lifecycle Flow", async () => {
             });
 
             await Utils.sendRequest("/cinema/delete/1", 200, "DELETE", {}, siteAdminCookie);
-            await Utils.sendRequest("/movie/delete/1", 200, "DELETE");
+            await Utils.sendRequest("/movie/delete/1", 200, "DELETE", {}, siteAdminCookie);
 
             await deleteSiteAdmin(2);
             await Utils.sendRequest("/user/delete/3", 200, "DELETE", {}, siteAdminCookie);

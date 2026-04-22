@@ -184,6 +184,21 @@ export async function createSiteAdmin(
     return { cookie: siteAdminCookie, user: siteAdminUser };
 }
 
+export async function levelUserTo(
+    user: UserInstance,
+    level: number,
+    cookie: string[] | undefined
+) {
+    if (!cookie) cookie = await getCookieFromUser(user);
+
+    const response = await sendRequest(`/user/update-type/${user.id}`, 200, "PUT", { accountType: Constants.USER_ACC_TYPES[level] }, cookie);
+
+    const updatedUser = response.body.users[0];
+    const updatedCookie = await getCookieFromUser(user);
+
+    return { cookie: updatedCookie, user: updatedUser };
+}
+
 export async function getUserFromCookie(
     cookie: string[] | undefined
 ) {

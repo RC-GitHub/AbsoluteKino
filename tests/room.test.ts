@@ -1,13 +1,20 @@
-import sequelize, { UserInstance } from "../src/models";
+import sequelize, { Cinema, Room, Seat, User, UserInstance } from "../src/models";
+
 import * as Constants from "../src/constants"
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
-import { deleteSiteAdmin } from "../src/owner";
 
 let siteAdmin: UserInstance;
 let regularUser: UserInstance;
-let siteAdminCookie: string[] | undefined = []
-let regularCookie: string[] | undefined = []
+let cinemaAdmin: UserInstance;
+let unauthorizedCinemaAdmin: UserInstance;
+
+let siteAdminCookie: string[] | undefined = [];
+let regularCookie: string[] | undefined = [];
+let cinemaAdminCookie: string [] | undefined = [];
+let unauthorizedCinemaAdminCookie: string [] | undefined = [];
+
+let cinemaId: number;
 
 beforeAll(async () => {
     await sequelize.sync({ force: true });  
@@ -23,8 +30,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    await deleteSiteAdmin(siteAdmin.id!);
-    await Utils.deleteUser(regularUser);
+    await User.destroy({ where: {}, cascade: true })
+    await Cinema.destroy({ where: {}, cascade: true })
+    await Room.destroy({ where: {}, cascade: true })
+    await Seat.destroy({ where: {}, cascade: true })
 });
 
 describe("Room Lifecycle Flow", async () => {
@@ -45,10 +54,17 @@ describe("Room Lifecycle Flow", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created room object", async () => {
             // Creating a cinema to connect to a new room
             response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
+            cinemaId = response.body.cinemas[0].id;
             expect(response.body).toHaveProperty("cinemas");
             expect(response.body.cinemas[0].id).toEqual(1);
 
-            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
+            // Creating a user with privileges connected with that room
+            let cinemaAdminData = await Utils.createRegularUser();
+            cinemaAdmin = cinemaAdminData.user;
+            cinemaAdminCookie = cinemaAdminData.cookie;
+            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: cinemaAdmin.id, cinemaId: cinemaId }, siteAdminCookie);
+
+            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData, cinemaAdminCookie);
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms[0]).toHaveProperty("name", Utils.roomData.name);
             expect(response.body.rooms[0]).toHaveProperty("width", Utils.roomData.width);
@@ -56,7 +72,7 @@ describe("Room Lifecycle Flow", async () => {
 
             // Creating a room with a non-default size
             const nonDefaultRoomData = { ...Utils.roomData, width: 1250, depth: 1000, rowAmount: 17, colAmount: 22 }
-            response = await Utils.sendRequest("/room/new", 200, "POST", nonDefaultRoomData);
+            response = await Utils.sendRequest("/room/new", 200, "POST", nonDefaultRoomData, cinemaAdminCookie);
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms[0]).toHaveProperty("width", nonDefaultRoomData.width);
             expect(response.body.rooms[0]).toHaveProperty("depth", nonDefaultRoomData.depth);
@@ -66,118 +82,172 @@ describe("Room Lifecycle Flow", async () => {
 
         it("should respond with 400 if required fields are missing", async () => {
             // name: undefined or null
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: undefined });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: undefined }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: null });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: null }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
 
-            // cinemaId: undefined or null
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: undefined });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: null });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+            // cinemaId: undefined or null (this gets intercepted by authorization functions first)
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: undefined }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: null }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
 
             // all are undefined
-            response = await Utils.sendRequest("/room/new", 400, "POST", {});
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+            response = await Utils.sendRequest("/room/new", 400, "POST", {}, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
 
             // mixed invalid
             const mixedInvalid = { 
                 name: null, 
                 cinemaId: undefined 
             };
-            response = await Utils.sendRequest("/room/new", 400, "POST", mixedInvalid);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_EMPTY_ARGS, rooms: [] });
+            response = await Utils.sendRequest("/room/new", 400, "POST", mixedInvalid, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
             // name: not a string
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: 20 });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: 20 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
             // width: not a finite number
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, width: "1" });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, width: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
             // depth: not a finite number
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, depth: "1" });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, depth: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
             // row amount: not an integer
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, rowAmount: "1" });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, rowAmount: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
             // column amount: not an integer
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, colAmount: "1" });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, colAmount: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
 
             // cinema id: not an integer
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: "1" });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, rooms: [] });
         });
 
         it("should respond with 400 if cinemaId is not valid", async () => {
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: 0 });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: 0 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
 
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: -1 });
+            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, cinemaId: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
-        });
-
-        it("should respond with 404 if specified cinema object is not found in the database", async () => {
-            response = await Utils.sendRequest("/room/new", 404, "POST", { ...Utils.roomData, cinemaId: 2 });
-            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, rooms: [] });
         });
 
         it("should respond with 400 if name is too short or too long", async () => {
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: "" });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
-
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: "  " });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
-
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, name: "a".repeat(Constants.ROOM_NAME_MAX_LEN + 1) });   
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_NAME_LEN, rooms: [] });
+            await Utils.boundsCheck(
+                "/room/new",
+                "POST",
+                Utils.roomData,
+                Constants.ROOM_NAME_MIN_LEN,
+                Constants.ROOM_NAME_MAX_LEN,
+                Messages.ROOM_ERR_NAME_LEN,
+                "name",
+                "string",
+                "rooms",
+                cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if width is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, width: Constants.ROOM_WIDTH_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_WIDTH, rooms: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, width: Constants.ROOM_WIDTH_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_WIDTH, rooms: [] });
+            await Utils.boundsCheck(
+                "/room/new",
+                "POST",
+                Utils.roomData,
+                Constants.ROOM_WIDTH_MIN_VAL,
+                Constants.ROOM_WIDTH_MAX_VAL,
+                Messages.ROOM_ERR_WIDTH,
+                "width",
+                "number",
+                "rooms",
+                cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if depth is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, depth: Constants.ROOM_DEPTH_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_DEPTH, rooms: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, depth: Constants.ROOM_DEPTH_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_DEPTH, rooms: [] });
+            await Utils.boundsCheck(
+                "/room/new",
+                "POST",
+                Utils.roomData,
+                Constants.ROOM_DEPTH_MIN_VAL,
+                Constants.ROOM_DEPTH_MAX_VAL,
+                Messages.ROOM_ERR_DEPTH,
+                "depth",
+                "number",
+                "rooms",
+                cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if rowAmount is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, rowAmount: Constants.ROOM_ROWS_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ROWS, rooms: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, rowAmount: Constants.ROOM_ROWS_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ROWS, rooms: [] });
+            await Utils.boundsCheck(
+                "/room/new",
+                "POST",
+                Utils.roomData,
+                Constants.ROOM_ROWS_MIN_VAL,
+                Constants.ROOM_ROWS_MAX_VAL,
+                Messages.ROOM_ERR_ROWS,
+                "rowAmount",
+                "number",
+                "rooms",
+                cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if colAmount is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, colAmount: Constants.ROOM_COLS_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_COLS, rooms: [] });
+            await Utils.boundsCheck(
+                "/room/new",
+                "POST",
+                Utils.roomData,
+                Constants.ROOM_COLS_MIN_VAL,
+                Constants.ROOM_COLS_MAX_VAL,
+                Messages.ROOM_ERR_COLS,
+                "colAmount",
+                "number",
+                "rooms",
+                cinemaAdminCookie
+            );
+        });
 
-            // Too big
-            response = await Utils.sendRequest("/room/new", 400, "POST", { ...Utils.roomData, colAmount: Constants.ROOM_COLS_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_COLS, rooms: [] });
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/room/new", "POST", {}, "rooms");
+        });
+
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/room/new", "POST", {}, "rooms");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
+            await Utils.deletedAdminCheck("/room/new", "POST", {}, "rooms");    
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/room/new", "POST", {}, "rooms", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /new", async () => {
+            await Utils.unauthorizedCheck("/room/new", "POST", {}, "rooms", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges user tries to access /new", async () => {
+            let unauthorizedCinemaAdminData = await Utils.createRegularUser();
+            unauthorizedCinemaAdminData = await Utils.levelUserTo(unauthorizedCinemaAdminData.user, 2, unauthorizedCinemaAdminData.cookie);
+
+            unauthorizedCinemaAdmin = unauthorizedCinemaAdminData.user;
+            unauthorizedCinemaAdminCookie = unauthorizedCinemaAdminData.cookie;
+
+            await Utils.unauthorizedCheck("/room/new", "POST", { cinemaId: cinemaId }, "rooms", unauthorizedCinemaAdminCookie)
+        });
+
+        it("should respond with 404 if specified cinema object is not found in the database", async () => {
+            response = await Utils.sendRequest("/room/new", 404, "POST", { ...Utils.roomData, cinemaId: 99 }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, rooms: [] });
         });
     });
 

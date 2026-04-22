@@ -1,9 +1,9 @@
 import { Cinema, CinemaAttributes , CinemaInstance, Room } from "../models.js";
 import express, { Request, Response, NextFunction } from "express";
 
-import * as Constants from "../constants.ts"
-import * as Messages from "../messages.ts"
-import * as Auth from "../middleware/auth.ts"
+import * as Constants from "../constants.ts";
+import * as Messages from "../messages.ts";
+import * as Auth from "../middleware/auth.ts";
 
 const router = express.Router();
 

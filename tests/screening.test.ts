@@ -46,17 +46,17 @@ describe("Screening Lifecycle Flow", async () => {
             expect(response.body).toHaveProperty("cinemas");
             expect(response.body.cinemas[0].id).toEqual(1);
 
-            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
+            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData, siteAdminCookie);
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms[0].id).toEqual(1);
             expect(response.body.rooms[0]).toHaveProperty("cinemaId", Utils.roomData.cinemaId);
 
-            response = await Utils.sendRequest("/movie/new", 200, "POST", Utils.movieData);
+            response = await Utils.sendRequest("/movie/new", 200, "POST", Utils.movieData, siteAdminCookie);
             expect(response.body).toHaveProperty("movies");
             expect(response.body.movies[0].id).toEqual(1);
             expect(response.body.movies[0]).toHaveProperty("title", Utils.movieData.title);
 
-            response = await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData);
+            response = await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, siteAdminCookie);
             expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings[0]).toHaveProperty("startDate", Utils.screeningData.startDate.toISOString());
             expect(response.body.screenings[0]).toHaveProperty("basePrice", Utils.screeningData.basePrice);
@@ -205,7 +205,7 @@ describe("Screening Lifecycle Flow", async () => {
 
         it("should respond with 404 if no screening objects are connected to the specified room object", async () => {
             // Adding a cinema which has no rooms connected to it
-            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData);
+            response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData, siteAdminCookie);
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms).toBeInstanceOf(Array);
             expect(response.body.rooms).toHaveLength(1);
@@ -380,7 +380,7 @@ describe("Screening Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/screening/delete/4", 200, "DELETE");
             expect(response.body).toEqual({ message: Messages.SCREENING_MSG_DEL});
 
-            response = await Utils.sendRequest("/room/delete/1", 200, "DELETE");
+            response = await Utils.sendRequest("/room/delete/1", 200, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_MSG_DEL});
 
             response = await Utils.sendRequest("/movie/delete/1", 200, "DELETE");
