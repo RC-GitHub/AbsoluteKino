@@ -42,12 +42,15 @@ export const verifyToken = (token: string) => {
     return jwt.verify(token, JWT_SECRET) as any;
 };
 
-export const authorize = (arrayName: string) => {
+export const authorize = (arrayName: string | string[]) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         const token = req.cookies.auth_token;
         const errorResponse: any = { message: Messages.AUTH_REQUIRED };
 
-        if (req.method !== "DELETE") errorResponse[arrayName] = [];
+        if (req.method !== "DELETE") {
+            const names = Array.isArray(arrayName) ? arrayName : [arrayName];
+            names.forEach(name => errorResponse[name] = []);
+        }
         
         if (!token) return res.status(401).json(errorResponse);
 
@@ -55,11 +58,7 @@ export const authorize = (arrayName: string) => {
             const decoded = verifyToken(token); 
             const user = await User.findByPk(decoded.id);
 
-            console.log(`Checking User ${decoded.id}: DB Version ${user?.tokenVersion} vs JWT Version ${decoded.tokenVersion}`);
-
             if (!user || user.tokenVersion !== decoded.tokenVersion) {
-                console.log("!!! TOKEN INVALIDATED !!!");
-
                 res.clearCookie("auth_token");
                 errorResponse.message = Messages.AUTH_SESSION;
                 return res.status(401).json(errorResponse);
@@ -69,16 +68,15 @@ export const authorize = (arrayName: string) => {
             next();
         } 
         catch (error: any) {
-            console.error(error);
             res.clearCookie("auth_token");
             errorResponse.message = Messages.AUTH_SESSION;
-            
+
             return res.status(401).json(errorResponse);
         }
     };
 };
 
-export const validatePrivileges = (arrayName: string, minRequiredLevel: number) => {
+export const validatePrivileges = (arrayName: string | string[], minRequiredLevel: number) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         const user = (req as any).user; 
 
@@ -90,7 +88,10 @@ export const validatePrivileges = (arrayName: string, minRequiredLevel: number) 
 
         if (userLevel < minRequiredLevel) {
             const response: any = { message: Messages.AUTH_FORBIDDEN };
-            if (req.method !== "DELETE") response[arrayName] = [];
+            if (req.method !== "DELETE") {
+                const names = Array.isArray(arrayName) ? arrayName : [arrayName];
+                names.forEach(name => response[name] = []);
+            }
             return res.status(403).json(response);
         }
 
@@ -98,7 +99,7 @@ export const validatePrivileges = (arrayName: string, minRequiredLevel: number) 
     };
 };
 
-export const validateOwnership = (arrayName: string, bypassLevel: number = 3) => {
+export const validateOwnership = (arrayName: string | string[], bypassLevel: number = 3) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
             const user = (req as any).user;
@@ -107,7 +108,8 @@ export const validateOwnership = (arrayName: string, bypassLevel: number = 3) =>
             const sendAuthError = (status: number, message: string) => {
                 const response: any = { message };
                 if (req.method !== "DELETE") {
-                    response[arrayName] = [];
+                    const names = Array.isArray(arrayName) ? arrayName : [arrayName];
+                    names.forEach(name => response[name] = []);
                 }
                 return res.status(status).json(response);
             };
@@ -117,13 +119,11 @@ export const validateOwnership = (arrayName: string, bypassLevel: number = 3) =>
             }
 
             const isOwner = user.id === paramId;
-            
             const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
             const hasBypass = userLevel >= bypassLevel;
 
-            if (!isOwner && !hasBypass) {
-                return sendAuthError(403, Messages.AUTH_FORBIDDEN);
-            }
+            if (!isOwner && !hasBypass) return sendAuthError(403, Messages.AUTH_FORBIDDEN);
+            
             next();
         } 
         catch (error: any) {
@@ -136,51 +136,61 @@ export const validateOwnership = (arrayName: string, bypassLevel: number = 3) =>
  * Verifies if the authenticated user has administrative rights over a specific cinema.
  * Can take cinemaId from params or body.
  */
-export const validateCinemaMembership = (arrayName: string, bypassLevel: number = 3) => {
+export const validateCinemaMembership = (arrayName: string | string[], bypassLevel: number = 3) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
             const user = (req as any).user;
             const cinemaId = parseInt(req.params.cinemaId || req.body.cinemaId || req.query.cinemaId);
 
-            if (!user) return res.status(401).json({ message: Messages.AUTH_REQUIRED, [arrayName]: [] });
+            const errorResponse: any = { message: "" };
+            const names = Array.isArray(arrayName) ? arrayName : [arrayName];
+            if (req.method !== "DELETE") names.forEach(name => errorResponse[name] = []);
+
+            if (!user) {
+                errorResponse.message = Messages.AUTH_REQUIRED;
+                return res.status(401).json(errorResponse);
+            }
 
             const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
             if (userLevel >= bypassLevel) return next();
 
             if (isNaN(cinemaId) || cinemaId < Constants.TYPICAL_MIN_ID) {
-                return res.status(400).json({ message: Messages.CINEMA_ERR_ID, [arrayName]: [] });
+                errorResponse.message = Messages.CINEMA_ERR_ID;
+                return res.status(400).json(errorResponse);
             }
 
             const hasAccess = await (user as any).hasCinema(cinemaId);
-
             if (!hasAccess) {
-                const response: any = { message: Messages.AUTH_FORBIDDEN };
-                if (req.method !== "DELETE") response[arrayName] = [];
-                return res.status(403).json(response);
+                errorResponse.message = Messages.AUTH_FORBIDDEN;
+                return res.status(403).json(errorResponse);
             }
-
             next();
-        } catch (error) {
+        } 
+        catch (error: any) {
             next(error);
         }
     };
 };
 
-export const validateRoomAccess = (arrayName: string) => {
+export const validateRoomAccess = (arrayName: string | string[]) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         const user = (req as any).user;
         const roomId = parseInt(req.params.roomId || req.body.roomId || req.query.roomId);
 
+        const errorResponse: any = { message: "" };
+        const names = Array.isArray(arrayName) ? arrayName : [arrayName];
+        if (req.method !== "DELETE") names.forEach(name => errorResponse[name] = []);
+
         const room = await Room.findByPk(roomId);
         if (!room) {
-            if (req.method !== "DELETE") res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, [arrayName]: [] });
-            return res.status(404).json({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL });
-        } 
+            errorResponse.message = Messages.ROOM_ERR_NOT_FOUND_GLOBAL;
+            return res.status(404).json(errorResponse);
+        }
 
         const hasAccess = await (user as any).hasCinema(room.cinemaId);
         if (!hasAccess) {
-            if (req.method !== "DELETE") res.status(404).json({ message: Messages.AUTH_FORBIDDEN, [arrayName]: [] });
-            return res.status(403).json({ message: Messages.AUTH_FORBIDDEN });
+            errorResponse.message = Messages.AUTH_FORBIDDEN;
+            return res.status(403).json(errorResponse);
         }
 
         next();

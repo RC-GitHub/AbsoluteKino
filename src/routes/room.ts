@@ -89,7 +89,12 @@ router.post("/new",
   }
 });
 
-router.post("/new/default-seats", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/new/default-seats", 
+  Auth.authorize(["rooms", "seats"]), 
+  Auth.validatePrivileges(["rooms", "seats"], 2), 
+  Auth.validateCinemaMembership(["rooms", "seats"], 3),
+  async (req: Request, res: Response, next: NextFunction) => 
+{
   const t = await sequelize.transaction();
   try {
     const { name, width, depth, rowAmount, colAmount, stairsPlacements, cinemaId } = req.body;

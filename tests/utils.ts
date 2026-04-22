@@ -258,13 +258,17 @@ export const noCookieCheck = async (
     endPoint: string,
     method: string,
     requestData = {},
-    arrayName: string) => 
+    arrayName: string | string[]) => 
 {
-    const response = await sendRequest(endPoint, 401, method, requestData);
-    const expectedResponse = method !== "DELETE" 
-        ? { message: Messages.AUTH_REQUIRED, [arrayName]: [] }
-        : { message: Messages.AUTH_REQUIRED }
+    const expectedResponse: any = { message: Messages.AUTH_REQUIRED }
+    if (method !== "DELETE") {
+        const arrayNames = Array.isArray(arrayName) ? arrayName : [arrayName];
+        arrayNames.forEach(name => {
+            expectedResponse[name] = [];
+        });
+    }
 
+    const response = await sendRequest(endPoint, 401, method, requestData);
     expect(response.body).toEqual(expectedResponse);  
 }
 
@@ -272,14 +276,17 @@ export const unauthorizedCheck = async (
     endPoint: string,
     method: string,
     requestData = {},
-    arrayName: string,
+    arrayName: string | string[],
     cookie: string[] | undefined) => 
 {
+    const expectedResponse: any = { message: Messages.AUTH_FORBIDDEN }
+    if (method !== "DELETE") {
+        const arrayNames = Array.isArray(arrayName) ? arrayName : [arrayName];
+        arrayNames.forEach(name => {
+            expectedResponse[name] = [];
+        });
+    }
     const response = await sendRequest(endPoint, 403, method, requestData, cookie);
-    const expectedResponse = method !== "DELETE" 
-        ? { message: Messages.AUTH_FORBIDDEN, [arrayName]: [] }
-        : { message: Messages.AUTH_FORBIDDEN }
-
     expect(response.body).toEqual(expectedResponse);  
 }
 
@@ -287,17 +294,21 @@ export const deletedAdminCheck = async (
     endPoint: string,
     method: string,
     requestData = {},
-    arrayName: string) => 
+    arrayName: string | string[]) => 
 {
+    const expectedResponse: any = { message: Messages.AUTH_SESSION }
+    if (method !== "DELETE") {
+        const arrayNames = Array.isArray(arrayName) ? arrayName : [arrayName];
+        arrayNames.forEach(name => {
+            expectedResponse[name] = [];
+        });
+    }
+
     const siteAdminData = await createSiteAdmin();
     const siteAdminCookie = siteAdminData.cookie;
     await deleteAdminFromCookie(siteAdminCookie);
 
     const response = await sendRequest(endPoint, 401, method, requestData, siteAdminCookie);
-    const expectedResponse = method !== "DELETE" 
-        ? { message: Messages.AUTH_SESSION, [arrayName]: [] }
-        : { message: Messages.AUTH_SESSION }
-
     expect(response.body).toEqual(expectedResponse);
 }
 
@@ -305,18 +316,22 @@ export const tamperedCookieCheck = async (
     endPoint: string, 
     method: string,
     requestData = {},
-    arrayName: string,
+    arrayName: string | string[],
     cookie: string[] | undefined) => 
 {
+    const expectedResponse: any = { message: Messages.AUTH_SESSION }
+    if (method !== "DELETE") {
+        const arrayNames = Array.isArray(arrayName) ? arrayName : [arrayName];
+        arrayNames.forEach(name => {
+            expectedResponse[name] = [];
+        });
+    }
+
     const cookies = cookie || [];
     if (cookies.length === 0) throw new Error("No cookies found to tamper with");
 
     const tamperedCookie = cookies.map(c => c.replace(".", ".tampered"));
     let response = await sendRequest(endPoint, 401, method, requestData, tamperedCookie);
-
-    const expectedResponse = method !== "DELETE" 
-        ? { message: Messages.AUTH_SESSION, [arrayName]: [] }
-        : { message: Messages.AUTH_SESSION }
 
     expect(response.body).toEqual(expectedResponse);
 
@@ -337,13 +352,17 @@ export const boundsCheck = async (
     errorMsg: string,
     propertyName: string,
     propertyType: ( "string" | "number" ),
-    arrayName: string,
+    arrayName: string | string[],
     cookie: string[] | undefined = undefined) =>    
 {
     let response;
-    const expectedResponse = method !== "DELETE" 
-        ? { message: errorMsg, [arrayName]: [] }
-        : { message: errorMsg }
+    const expectedResponse: any = { message: errorMsg };
+    if (method !== "DELETE") {
+        const arrayNames = Array.isArray(arrayName) ? arrayName : [arrayName];
+        arrayNames.forEach(name => {
+            expectedResponse[name] = [];
+        });
+    }
 
     //Too short
     if (propertyType === "string") {
@@ -385,13 +404,17 @@ export const invalidIdCheck = async (
     method: string,
     requestData = {},
     errorMsg: string,
-    arrayName: string,
+    arrayName: string | string[],
     cookie: string[] | undefined = undefined) =>    
 {
     let response;
-    const expectedResponse = method !== "DELETE" 
-        ? { message: errorMsg, [arrayName]: [] }
-        : { message: errorMsg }
+    const expectedResponse: any = { message: errorMsg }
+    if (method !== "DELETE") {
+        const arrayNames = Array.isArray(arrayName) ? arrayName : [arrayName];
+        arrayNames.forEach(name => {
+            expectedResponse[name] = [];
+        });
+    }
 
     response = await sendRequest(`${endPoint}/abc`, 400, method, requestData, cookie);
     expect(response.body).toEqual(expectedResponse);
@@ -407,8 +430,16 @@ export const freshTokenCheck = async (
     endPoint: string,
     method: string,
     requestData = {},
-    arrayName: string,
+    arrayName: string | string[],
 ) => {
+    const expectedResponse: any = { message: Messages.AUTH_SESSION }
+    if (method !== "DELETE") {
+        const arrayNames = Array.isArray(arrayName) ? arrayName : [arrayName];
+        arrayNames.forEach(name => {
+            expectedResponse[name] = [];
+        });
+    }
+
     const userData = await createRegularUser();
     const userCookie = userData.cookie;
     const user: UserInstance = userData.user;
@@ -417,9 +448,6 @@ export const freshTokenCheck = async (
     expect(logoutResponse.body.message).toBe(Messages.USER_MSG_LOGOUT);
 
     const response = await sendRequest(endPoint, 401, method, requestData, userCookie);
-    const expectedResponse = method !== "DELETE" 
-        ? { message: Messages.AUTH_SESSION, [arrayName]: [] }
-        : { message: Messages.AUTH_SESSION };
     expect(response.body).toEqual(expectedResponse);
 
     const setCookieHeader = response.get("Set-Cookie") || []; 
@@ -431,11 +459,3 @@ export const freshTokenCheck = async (
     const cleanupData = await getCookieFromUser(user);
     await deleteUser(user);
 };
-
-// export const massDelete = async () => {
-//     const response = await Utils.sendRequest("/user/all", 200, "GET", {}, siteAdminCookie);
-//     const users = response.body.users;
-//     users.forEach(async (user: UserInstance) => {
-//         response = await Utils.sendRequest(`/user/delete/3`, 200, "DELETE", {}, siteAdminCookie);
-//     });
-// }
