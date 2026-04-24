@@ -14,7 +14,7 @@ const sequelize: Sequelize = new Sequelize({
     freezeTableName: true
   },
   dialectOptions: {
-    foreign_keys: false 
+    foreign_keys: false
   }
 });
 
@@ -785,6 +785,9 @@ Cinema.belongsToMany(User, { through: 'UserCinema', as: 'admins', foreignKey: 'c
 
 Room.hasMany(Screening, { foreignKey: "roomId", onDelete: 'CASCADE', hooks: true });
 Screening.belongsTo(Room, { foreignKey: "roomId" });
+
+Room.hasMany(Seat, { foreignKey: "roomId", onDelete: 'CASCADE', hooks: true });
+Seat.belongsTo(Room, { foreignKey: "roomId", as: "Room" })
 
 Screening.hasMany(Reservation, { foreignKey: "screeningId", onDelete: 'CASCADE', hooks: true });
 Reservation.belongsTo(Screening, { foreignKey: "screeningId" });

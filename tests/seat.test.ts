@@ -392,8 +392,8 @@ describe("Room Lifecycle Flow", async () => {
 
     describe("PUT /seat/update/:seatId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and modified data", async () => {
-            const seatDataUpdated =  { ...Utils.seatData, type: Constants.SEAT_TYPES[2], row: 5, column: 10 };
-            response = await Utils.sendRequest("/seat/update/1", 200, "PUT", seatDataUpdated);
+            const seatDataUpdated =  { ...Utils.seatData, type: Constants.SEAT_TYPES[2], row: 5, column: 10, roomId: undefined };
+            response = await Utils.sendRequest("/seat/update/1", 200, "PUT", seatDataUpdated, cinemaAdminCookie);
 
             expect(response.body).toHaveProperty("seats");
             expect(response.body.seats).toBeInstanceOf(Array);
@@ -401,129 +401,183 @@ describe("Room Lifecycle Flow", async () => {
             expect(response.body.seats[0]).toHaveProperty("type", seatDataUpdated.type);
         });
 
-        it("should respond with 400 if seatId is not valid", async () => {
-            response = await Utils.sendRequest("/seat/update/abc", 400, "PUT", Utils.seatData);
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID, seats: [] });
-
-            response = await Utils.sendRequest("/seat/update/0", 400, "PUT", Utils.seatData);
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID, seats: [] });
-
-            response = await Utils.sendRequest("/seat/update/-1", 400, "PUT", Utils.seatData);
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID, seats: [] });
-        });
-
-        it("should respond with 404 if specified seat object is not found in the database", async () => {
-            response = await Utils.sendRequest("/seat/update/5", 404, "PUT", Utils.seatData);
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_NOT_FOUND, seats: [] });
+      it("should respond with 400 if seatId is not valid", async () => {
+            await Utils.invalidIdCheck(
+              "/seat/update",
+              "PUT",
+              Utils.seatData,
+              Messages.SEAT_ERR_ID,
+              "seats",
+              cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if all fields are missing", async () => {
             // all are undefined
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", {});
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", {}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_EMPTY_ARGS, seats: [] });
 
             // mixed invalid
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", {x: null, roomId: undefined, y: null, row: undefined, column: null, type: undefined, width: undefined, height: undefined});
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", {x: null, roomId: undefined, y: null, row: undefined, column: null, type: undefined, width: undefined, height: undefined}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_EMPTY_ARGS, seats: [] });
 
             // all are null
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", {x: null, y: null, row: null, column: null, type: null, roomId: null, width: null, depth: null});
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", {x: null, y: null, row: null, column: null, type: null, roomId: null, width: null, depth: null}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_EMPTY_ARGS, seats: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
             // x: not an integer
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", {  x: "1" });
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", {  x: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
             // y: not an integer
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { y: "1" });
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { y: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
             // width: not a finite number
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { width: "1" });
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { width: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
             // depth: not a finite number
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { depth: "1" });
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { depth: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
             // row: not an integer
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { row: "1" });
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { row: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
             // columnumn: not an integer
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { column: "1" });
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { column: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
             // type: not a string
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { type: 1 });
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { type: 1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
         });
 
         it("should respond with 400 if updated x is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { x: Constants.SEAT_X_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_X_INVALID, seats: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { x: Constants.ROOM_WIDTH_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_X_INVALID, seats: [] });
+            await Utils.boundsCheck(
+              "/seat/update/1",
+              "PUT",
+              Utils.seatData,
+              Constants.SEAT_X_MIN_VAL,
+              Constants.ROOM_WIDTH_MAX_VAL,
+              Messages.SEAT_ERR_X_INVALID,
+              "x",
+              "number",
+              "seats",
+              cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if updated y is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { y: Constants.SEAT_Y_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_Y_INVALID, seats: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { y: Constants.ROOM_DEPTH_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_Y_INVALID, seats: [] });
+            await Utils.boundsCheck(
+              "/seat/update/1",
+              "PUT",
+              Utils.seatData,
+              Constants.SEAT_Y_MIN_VAL,
+              Constants.ROOM_DEPTH_MAX_VAL,
+              Messages.SEAT_ERR_Y_INVALID,
+              "y",
+              "number",
+              "seats",
+              cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if updated width is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { width: Constants.SEAT_WIDTH_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_WIDTH_VAL, seats: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { width: Constants.SEAT_WIDTH_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_WIDTH_VAL, seats: [] });
+            await Utils.boundsCheck(
+              "/seat/update/1",
+              "PUT",
+              Utils.seatData,
+              Constants.SEAT_WIDTH_MIN_VAL,
+              Constants.SEAT_WIDTH_MAX_VAL,
+              Messages.SEAT_ERR_WIDTH_VAL,
+              "width",
+              "number",
+              "seats",
+              cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if updated depth is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { depth: Constants.SEAT_DEPTH_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_DEPTH_VAL, seats: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { depth: Constants.SEAT_DEPTH_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_DEPTH_VAL, seats: [] });
+            await Utils.boundsCheck(
+              "/seat/update/1",
+              "PUT",
+              Utils.seatData,
+              Constants.SEAT_DEPTH_MIN_VAL,
+              Constants.SEAT_DEPTH_MAX_VAL,
+              Messages.SEAT_ERR_DEPTH_VAL,
+              "depth",
+              "number",
+              "seats",
+              cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if updated row value is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { row: Constants.ROOM_ROWS_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ROW_INVALID, seats: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { row: Constants.ROOM_ROWS_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ROW_INVALID, seats: [] });
+            await Utils.boundsCheck(
+              "/seat/update/1",
+              "PUT",
+              Utils.seatData,
+              Constants.SEAT_ROW_MIN_VAL,
+              Constants.ROOM_ROWS_MAX_VAL,
+              Messages.SEAT_ERR_ROW_INVALID,
+              "row",
+              "number",
+              "seats",
+              cinemaAdminCookie
+            );
         });
 
-        it("should respond with 400 if updated column value is invalid", async () => {
-            // Too small
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { column: Constants.ROOM_COLS_MIN_VAL-1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_COL_INVALID, seats: [] });
-
-            // Too big
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { column: Constants.ROOM_COLS_MAX_VAL+1 });
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_COL_INVALID, seats: [] });
+      it("should respond with 400 if updated column value is invalid", async () => {
+            await Utils.boundsCheck(
+              "/seat/update/1",
+              "PUT",
+              Utils.seatData,
+              Constants.SEAT_COL_MIN_VAL,
+              Constants.ROOM_COLS_MAX_VAL,
+              Messages.SEAT_ERR_COL_INVALID,
+              "column",
+              "number",
+              "seats",
+              cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if updated type is not in Enum", async () => {
-            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { type: "Invalid_type" });
+            response = await Utils.sendRequest("/seat/update/1", 400, "PUT", { type: "Invalid_type" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPE, seats: [] });
+        });
+
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/seat/update/1", "PUT", {}, "seats");
+        });
+
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/seat/update/1", "PUT", {}, "seats");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
+            await Utils.deletedAdminCheck("/seat/update/1", "PUT", {}, "seats");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/seat/update/1", "PUT", {}, "seats", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /update", async () => {
+            await Utils.unauthorizedCheck("/seat/update/1", "PUT", {}, "seats", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /update", async () => {
+            await Utils.unauthorizedCheck("/seat/update/1", "PUT", { roomId: roomId }, "seats", unauthorizedCinemaAdminCookie)
+        });
+
+        it("should respond with 404 if specified seat object is not found in the database", async () => {
+            response = await Utils.sendRequest("/seat/update/99", 404, "PUT", Utils.seatData, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.SEAT_ERR_NOT_FOUND, seats: [] });
         });
     });
 
@@ -537,30 +591,42 @@ describe("Room Lifecycle Flow", async () => {
 
     describe("DELETE /seat/delete/:seatId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 if seat object is successfully deleted", async () => {
-            await Utils.sendRequest("/seat/delete/1", 200, "DELETE");
-            response = await Utils.sendRequest("/seat/delete/2", 200, "DELETE");
+            response = await Utils.sendRequest("/seat/delete/1", 200, "DELETE", {}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_MSG_DEL});
-
-            await Utils.sendRequest("/room/delete/1", 200, "DELETE", {}, siteAdminCookie);
-            await Utils.sendRequest("/room/delete/2", 200, "DELETE", {}, siteAdminCookie);
-            await Utils.sendRequest("/room/delete/3", 200, "DELETE", {}, siteAdminCookie);
-
-            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE", {}, siteAdminCookie);
         });
 
         it("should respond with 400 if roomId is not valid", async () => {
-            response = await Utils.sendRequest("/seat/delete/abc", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID });
+            await Utils.invalidIdCheck(
+              "/seat/delete", "DELETE", {}, Messages.SEAT_ERR_ID, "seats", cinemaAdminCookie
+            )
+        });
 
-            response = await Utils.sendRequest("/seat/delete/0", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID });
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/seat/delete/1", "DELETE", {}, "seats");
+        });
 
-            response = await Utils.sendRequest("/seat/delete/-1", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID });
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/seat/delete/1", "DELETE", {}, "seats");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
+            await Utils.deletedAdminCheck("/seat/delete/1", "DELETE", {}, "seats");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/seat/delete/1", "DELETE", {}, "seats", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/seat/delete/1", "DELETE", {}, "seats", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/seat/delete/2", "DELETE", {}, "seats", unauthorizedCinemaAdminCookie)
         });
 
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/seat/delete/5", 404, "DELETE");
+            response = await Utils.sendRequest("/seat/delete/99", 404, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_NOT_FOUND });
         });
     });

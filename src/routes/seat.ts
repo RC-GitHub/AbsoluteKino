@@ -14,7 +14,7 @@ import * as Auth from "../middleware/auth.ts";
 const router = express.Router();
 
 /**
- * Only site admin can get to 200 with this endpoint
+ * Only cinema admin and higher can get to 200 with this endpoint
  * ===============================
  * Adds a new seat to a specified room
  * Requires: x, y, row, column, type, and roomId
@@ -138,7 +138,11 @@ router.post(
   },
 );
 
-// Sends data about all seats in a specified room
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all seats in a specified room
+ */
 router.get(
   "/all/:roomId",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -170,7 +174,11 @@ router.get(
   },
 );
 
-// Sends data about a specific seat by ID
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about a specific seat by ID
+ */
 router.get(
   "/id/:seatId",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -195,9 +203,17 @@ router.get(
   },
 );
 
-// Updates data for a seat with the specified ID
+
+/**
+ * Only cinema admin and higher can get to 200 with this endpoint
+ * ===============================
+ * Updates data for a seat with the specified ID
+ */
 router.put(
   "/update/:seatId",
+  Auth.authorize("seats"),
+  Auth.validatePrivileges("seats", 2),
+  Auth.validateSeatAccess("seats", 3),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const seatId: number = parseInt(req.params.seatId.toString());
@@ -292,6 +308,7 @@ router.put(
         updateData.depth = depth;
       }
       if (row !== undefined) {
+        console.log(`[DEBUG] Testing Row: ${row}, Room Max: ${room.rowAmount}`);
         if (typeof row !== "number" || !Number.isInteger(row))
           return res
             .status(400)
@@ -299,7 +316,7 @@ router.put(
 
         if (
           room.rowAmount == null ||
-          row < Constants.ROOM_ROWS_MIN_VAL ||
+          row < Constants.SEAT_ROW_MIN_VAL ||
           row > room.rowAmount
         )
           return res
@@ -315,7 +332,7 @@ router.put(
 
         if (
           room.colAmount == null ||
-          column < Constants.ROOM_COLS_MIN_VAL ||
+          column < Constants.SEAT_COL_MIN_VAL ||
           column > room.colAmount
         )
           return res
@@ -344,9 +361,16 @@ router.put(
   },
 );
 
-// Deletes a seat with the specified ID
+/**
+ * Only cinema admin and higher can get to 200 with this endpoint
+ * ===============================
+ * Deletes a seat with the specified ID
+ */
 router.delete(
   "/delete/:seatId",
+  Auth.authorize("seats"),
+  Auth.validatePrivileges("seats", 2),
+  Auth.validateSeatAccess("seats", 3),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const seatId: number = parseInt(req.params.seatId.toString());

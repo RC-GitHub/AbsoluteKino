@@ -25,6 +25,7 @@ export const DB_ERR_CONN: string = "Unable to connect to the database: ";
 export const DB_ERR_SYNCING: string = "Failed to sync database: ";
 export const DB_ERR_FETCHING: string = "Fetching error: ";
 export const DB_ERR_INTERNAL: string = "Internal Server Error";
+export const DB_ERR_ASSOCIATION: string = "Internal Association Error";
 
 //---------------------------------
 // Authentication

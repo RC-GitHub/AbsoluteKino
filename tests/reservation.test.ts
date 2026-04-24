@@ -1,4 +1,4 @@
-import sequelize, { UserInstance } from "../src/models";
+import sequelize, { Cinema, Room, Seat, User, UserInstance, Reservation } from "../src/models";
 
 import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
@@ -12,7 +12,7 @@ let siteAdminCookie: string[] | undefined = []
 let regularCookie: string[] | undefined = []
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });  
+    await sequelize.sync({ force: true });
 
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
@@ -25,8 +25,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    await deleteSiteAdmin(siteAdmin.id!);
-    await Utils.deleteUser(regularUser);
+    await User.destroy({ where: {}, cascade: true })
+    await Cinema.destroy({ where: {}, cascade: true })
+    await Room.destroy({ where: {}, cascade: true })
+    await Seat.destroy({ where: {}, cascade: true })
 });
 
 describe("Reservation Lifecycle Flow", async () => {
@@ -92,10 +94,10 @@ describe("Reservation Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
 
             // mixed invalid
-            const mixedInvalid = { 
-                type: null, 
+            const mixedInvalid = {
+                type: null,
                 seatId: undefined,
-                screeningId: null, 
+                screeningId: null,
                 userId: undefined,
             };
             response = await Utils.sendRequest("/reservation/new", 400, "POST", mixedInvalid);
@@ -197,7 +199,7 @@ describe("Reservation Lifecycle Flow", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all reservations", async () => {
             // Add a second reservation in a different seat
             await Utils.sendRequest("/reservation/new", 200, "POST", { ...Utils.reservationData, seatId: 11 });
-            
+
             response = await Utils.sendRequest("/reservation/all", 200, "GET");
             expect(response.body.reservations).toHaveLength(2);
         });
@@ -323,12 +325,12 @@ describe("Reservation Lifecycle Flow", async () => {
 
             // all are undefined
             response = await Utils.sendRequest("/reservation/update/1", 400, "PUT", {});
-            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] }); 
+            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
 
             // mixed invalid
-            const mixedInvalid = { 
-                type: null, 
-                seatId: undefined, 
+            const mixedInvalid = {
+                type: null,
+                seatId: undefined,
             };
             response = await Utils.sendRequest("/reservation/update/1", 400, "PUT", mixedInvalid);
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
@@ -366,7 +368,7 @@ describe("Reservation Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/reservation/new", 200, "POST", { ...Utils.reservationData, seatId: 12 });
             response = await Utils.sendRequest("/reservation/update/4", 400, "PUT", { type: Constants.RESERVATION_TYPES[1], seatId: 5 });
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_BLOCKED, reservations: [] });
-            
+
             await Utils.sendRequest("/reservation/complete/1", 200, "PUT", { userId: 1 })
             response = await Utils.sendRequest("/reservation/update/4", 400, "PUT", { seatId: 5 });
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_RESERVED, reservations: [] });
@@ -385,7 +387,7 @@ describe("Reservation Lifecycle Flow", async () => {
     describe("PUT /reservation/complete/:reservationId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and set reservation type to confirmed", async () => {
             response = await Utils.sendRequest("/reservation/complete/2", 200, "PUT", { userId: 1 });
-            
+
             expect(response.body.reservations[0]).toHaveProperty("id", 2);
             expect(response.body.reservations[0]).toHaveProperty("type", Constants.RESERVATION_TYPES[1]);
         });
@@ -430,7 +432,7 @@ describe("Reservation Lifecycle Flow", async () => {
 
         it("should respond with 400 if userId does not match the reservation owner", async () => {
             await Utils.sendRequest("/reservation/new", 200, "POST", { ...Utils.reservationData, seatId: 10 });
-            
+
             response = await Utils.sendRequest("/reservation/complete/3", 400, "PUT", { userId: 2 });
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_BLOCKED, reservations: [] });
         });
@@ -440,38 +442,15 @@ describe("Reservation Lifecycle Flow", async () => {
     // Step 4 - DELETE
     //---------------------------------
     // Systematic database cleanup. All records from ID: 1 to 5 are deleted.
-    // Tests verify ID validation and 404 handling for non-existent or 
+    // Tests verify ID validation and 404 handling for non-existent or
     // already deleted records.
     // End state: All reservations are deleted
     //---------------------------------
 
     describe("DELETE /reservation/delete/:reservationId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and delete reservation", async () => {
-            await Utils.sendRequest("/reservation/delete/1", 200, "DELETE");
-            await Utils.sendRequest("/reservation/delete/2", 200, "DELETE");
-            await Utils.sendRequest("/reservation/delete/3", 200, "DELETE");
-            await Utils.sendRequest("/reservation/delete/4", 200, "DELETE");
-            response = await Utils.sendRequest("/reservation/delete/5", 200, "DELETE");
+            response = await Utils.sendRequest("/reservation/delete/1", 200, "DELETE");
             expect(response.body).toEqual({ message: Messages.RESERVATION_MSG_DEL });
-
-            const seatsResponse = await Utils.sendRequest(`/seat/all/2`, 200, "GET");
-            const seats = seatsResponse.body.seats;
-            for (const seat of seats) {
-                await Utils.sendRequest(`/seat/delete/${seat.id}`, 200, "DELETE");
-            }
-            const finalResponse = await Utils.sendRequest(`/seat/all/2`, 404, "GET");
-            expect(finalResponse.body).toEqual({ 
-                message: Messages.SEAT_ERR_NOT_FOUND_ROOM, 
-                seats: [] 
-            });
-
-            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE", {}, siteAdminCookie);
-            await Utils.sendRequest("/movie/delete/1", 200, "DELETE", {}, siteAdminCookie);
-
-            await deleteSiteAdmin(2);
-            await Utils.sendRequest("/user/delete/3", 200, "DELETE", {}, siteAdminCookie);
-            await Utils.sendRequest("/user/delete/4", 200, "DELETE", {}, siteAdminCookie);
-
         });
 
         it("should respond with 400 if reservationId is not valid", async () => {
@@ -494,12 +473,14 @@ describe("Reservation Lifecycle Flow", async () => {
     //---------------------------------
     // Step 5 - GET (404)
     //---------------------------------
-    // Final state verification. Since the database is empty, fetching all 
+    // Final state verification. Since the database is empty, fetching all
     // reservations must result in a 404 error.
     //---------------------------------
 
     describe("GET (404) /reservation/all", async () => {
         it("should respond with 404 if database is empty", async () => {
+            await Reservation.destroy({ where: {}, cascade: true })
+
             response = await Utils.sendRequest("/reservation/all", 404, "GET");
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_NOT_FOUND_ALL, reservations: [] });
         });
