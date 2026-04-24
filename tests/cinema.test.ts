@@ -344,12 +344,12 @@ describe("Cinema Lifecycle Flow", async () => {
             await Utils.tamperedCookieCheck("/cinema/update/1", "PUT", {}, "cinemas", siteAdminCookie)
         });
 
-        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /all", async () => {
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /update", async () => {
             await Utils.deletedAdminCheck("/cinema/update/1", "PUT", {}, "cinemas");
         });
 
 
-        it("should respond with 403 when a regular user tries to access /new", async () => {
+        it("should respond with 403 when a regular user tries to access /update", async () => {
             await Utils.unauthorizedCheck("/cinema/update/1", "PUT", {}, "cinemas", regularCookie)
         });
 
@@ -392,11 +392,11 @@ describe("Cinema Lifecycle Flow", async () => {
             await Utils.tamperedCookieCheck("/cinema/delete/1", "DELETE", {}, "cinemas", siteAdminCookie)
         });
 
-        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /all", async () => {
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete", async () => {
             await Utils.deletedAdminCheck("/cinema/delete/1", "DELETE", {}, "cinemas");
         });
 
-        it("should respond with 403 when a regular user tries to access /new", async () => {
+        it("should respond with 403 when a regular user tries to access /delete", async () => {
             await Utils.unauthorizedCheck("/cinema/delete/1", "DELETE", {}, "cinemas", regularCookie)
         });
 

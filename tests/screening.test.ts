@@ -1,4 +1,4 @@
-import sequelize, { Cinema, Room, Seat, User, UserInstance, Movie } from "../src/models";
+import sequelize, { Cinema, Room, Seat, User, UserInstance, Movie, Screening } from "../src/models";
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
 import { deleteSiteAdmin } from "../src/owner";
@@ -377,17 +377,8 @@ describe("Screening Lifecycle Flow", async () => {
 
     describe("DELETE /screening/delete/:screeningId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 if room object is successfully deleted", async () => {
-            await Utils.sendRequest("/screening/delete/1", 200, "DELETE");
-            await Utils.sendRequest("/screening/delete/2", 200, "DELETE");
-            await Utils.sendRequest("/screening/delete/3", 200, "DELETE");
-            response = await Utils.sendRequest("/screening/delete/4", 200, "DELETE");
+            response = await Utils.sendRequest("/screening/delete/1", 200, "DELETE");
             expect(response.body).toEqual({ message: Messages.SCREENING_MSG_DEL});
-
-            response = await Utils.sendRequest("/room/delete/1", 200, "DELETE", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_MSG_DEL});
-
-            response = await Utils.sendRequest("/movie/delete/1", 200, "DELETE");
-            expect(response.body).toEqual({ message: Messages.MOVIE_MSG_DEL});
         });
 
         it("should respond with 400 if screeningId is not valid", async () => {
@@ -407,7 +398,6 @@ describe("Screening Lifecycle Flow", async () => {
         });
     });
 
-
     //---------------------------------
     // Step 5 - GET (404)
     //---------------------------------
@@ -417,6 +407,8 @@ describe("Screening Lifecycle Flow", async () => {
 
     describe("GET (404) /screening/all", async () => {
         it("should respond with 404 if no screening objects are found in the database", async () => {
+            await Screening.destroy({ where: {}, cascade: true })
+
             response = await Utils.sendRequest("/screening/all", 404, "GET");
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_NOT_FOUND_ALL, screenings: [] });
         });

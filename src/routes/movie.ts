@@ -92,7 +92,7 @@ router.post(
     ) {
       return res
         .status(400)
-        .json({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+        .json({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
     }
 
     const trimmedTitle = title.trim();
@@ -544,9 +544,15 @@ router.put(
   },
 );
 
-// Deletes a movie with the specified ID
+/**
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Deletes a movie with the specified ID
+ */
 router.delete(
-  "/delete/:movieId",
+    "/delete/:movieId",
+    Auth.authorize("movies"),
+    Auth.validatePrivileges("movies", 3),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const movieId: number = parseInt(req.params.movieId.toString());

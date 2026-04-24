@@ -2,10 +2,6 @@ import sequelize, { Movie, User, UserInstance } from "../src/models";
 import * as Messages from "../src/messages";
 import * as Constants from "../src/constants";
 import * as Utils from "./utils";
-import { deleteSiteAdmin } from "../src/owner";
-
-let siteAdmin: UserInstance;
-let regularUser: UserInstance;
 
 let siteAdminCookie: string[] | undefined = [];
 let regularCookie: string[] | undefined = [];
@@ -18,16 +14,12 @@ beforeAll(async () => {
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
 
-    siteAdmin = siteAdminData.user;
-    regularUser = regularUserData.user;
-
     siteAdminCookie = siteAdminData.cookie;
     regularCookie = regularUserData.cookie;
 });
 
 afterAll(async () => {
     await User.destroy({ where: {}, cascade: true })
-    await Movie.destroy({ where: {}, cascade: true })
 });
 
 describe("Movie Lifecycle Flow", async () => {
@@ -132,51 +124,51 @@ describe("Movie Lifecycle Flow", async () => {
         it("should respond with 400 if required types are incorrect", async () => {
             // title: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, title: 123 }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // viewingFormat: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, viewingFormat: true }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // duration: not a number
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, duration: "120" }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // description: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, description: ["description"] }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // posterUrl: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, posterUrl: 500 }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // trailerUrl: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, trailerUrl: { url: "http://test.com" } }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // language: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, language: 1 }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // premiereDate: not a valid date string/format
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, premiereDate: "not-a-date" }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // genre: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, genre: false }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // restrictions: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, restrictions: 18 }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // cast: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, cast: { lead: "Actor" } }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // director: not a string
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, director: ["Director Name"] }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_TYPING, movies: [] });
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
         });
 
         it("should respond with 400 if title length is invalid", async () => {
@@ -659,26 +651,43 @@ describe("Movie Lifecycle Flow", async () => {
 
     describe("DELETE /movie/delete/:movieId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 if movie is deleted", async () => {
-            await Utils.sendRequest("/movie/delete/1", 200, "DELETE");
-            await Utils.sendRequest("/movie/delete/2", 200, "DELETE");
-            await Utils.sendRequest("/movie/delete/3", 200, "DELETE");
-            response = await Utils.sendRequest("/movie/delete/4", 200, "DELETE");
+            response = await Utils.sendRequest("/movie/delete/1", 200, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_MSG_DEL });
         });
 
         it("should respond with 400 if movieId is invalid", async () => {
-            response = await Utils.sendRequest("/movie/delete/abc", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID });
+            await Utils.invalidIdCheck(
+                "/movie/delete",
+                "DELETE",
+                {},
+                Messages.MOVIE_ERR_ID,
+                "movies",
+                siteAdminCookie,
+            );
+        });
 
-            response = await Utils.sendRequest("/movie/delete/0", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID });
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/movie/delete/1", "DELETE", {}, "movies");
+        });
 
-            response = await Utils.sendRequest("/movie/delete/-1", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID });
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/movie/delete/1", "DELETE", {}, "movies");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/movie/delete/1", "DELETE", {}, "movies", siteAdminCookie)
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete", async () => {
+            await Utils.deletedAdminCheck("/movie/delete/1", "DELETE", {}, "movies");
+        });
+
+        it("should respond with 403 when a regular user tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/movie/delete/1", "DELETE", {}, "movies", regularCookie)
         });
 
         it("should respond with 404 if movie object is not found in the database", async () => {
-            response = await Utils.sendRequest("/movie/delete/1", 404, "DELETE");
+            response = await Utils.sendRequest("/movie/delete/99", 404, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_NOT_FOUND });
         });
     });
@@ -691,6 +700,8 @@ describe("Movie Lifecycle Flow", async () => {
 
     describe("GET (404) /movie/all", async () => {
         it("should respond with 404 if no movies exist", async () => {
+            await Movie.destroy({ where: {}, cascade: true })
+
             response = await Utils.sendRequest("/movie/all", 404, "GET");
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_NOT_FOUND_ALL, movies: [] });
         });
