@@ -321,18 +321,17 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if roomId is not valid", async () => {
-            response = await Utils.sendRequest("/seat/all/abc", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, seats: [] });
-
-            response = await Utils.sendRequest("/seat/all/0", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, seats: [] });
-
-            response = await Utils.sendRequest("/seat/all/-1", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, seats: [] });
+            await Utils.invalidIdCheck(
+                "/seat/all",
+                "GET",
+                {},
+                Messages.ROOM_ERR_ID,
+                "seats",
+            );
         });
 
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/seat/all/3", 404, "GET");
+            response = await Utils.sendRequest("/seat/all/99", 404, "GET");
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, seats: [] });
         });
 
@@ -361,18 +360,17 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if seatId is not valid", async () => {
-            response = await Utils.sendRequest("/seat/id/abc", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID, seats: [] });
-
-            response = await Utils.sendRequest("/seat/id/0", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID, seats: [] });
-
-            response = await Utils.sendRequest("/seat/id/-1", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.SEAT_ERR_ID, seats: [] });
+            await Utils.invalidIdCheck(
+                "/seat/id",
+                "GET",
+                {},
+                Messages.SEAT_ERR_ID,
+                "seats",
+            );
         });
 
         it("should respond with 404 if the specified seat object is not found in the database", async () => {
-            response = await Utils.sendRequest("/seat/id/5", 404, "GET");
+            response = await Utils.sendRequest("/seat/id/99", 404, "GET");
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_NOT_FOUND, seats: [] });
         });
     });

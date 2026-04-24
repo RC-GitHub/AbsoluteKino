@@ -229,7 +229,11 @@ router.post(
   }
 });
 
-// Sends data about all movies in the database
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all movies in the database
+ */
 router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const movies: MovieInstance[] = await Movie.findAll();
@@ -244,7 +248,11 @@ router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// Sends data about a movie with the specified ID
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about a movie with the specified ID
+ */
 router.get(
   "/id/:movieId",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -269,9 +277,15 @@ router.get(
   },
 );
 
-// Updates data for a movie with the specified ID
+/**
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Updates data for a movie with the specified ID
+ */
 router.put(
-  "/update/:movieId",
+    "/update/:movieId",
+    Auth.authorize("movies"),
+    Auth.validatePrivileges("movies", 3),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const movieId: number = parseInt(req.params.movieId.toString());

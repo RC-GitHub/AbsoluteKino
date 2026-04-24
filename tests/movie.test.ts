@@ -28,7 +28,7 @@ beforeAll(async () => {
 afterAll(async () => {
     await User.destroy({ where: {}, cascade: true })
     await Movie.destroy({ where: {}, cascade: true })
-  });
+});
 
 describe("Movie Lifecycle Flow", async () => {
     let response;
@@ -369,18 +369,17 @@ describe("Movie Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if movieId is invalid", async () => {
-            response = await Utils.sendRequest("/movie/id/abc", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
-
-            response = await Utils.sendRequest("/movie/id/0", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
-
-            response = await Utils.sendRequest("/movie/id/-1", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
+            await Utils.invalidIdCheck(
+                "/movie/id",
+                "GET",
+                {},
+                Messages.MOVIE_ERR_ID,
+                "movies",
+            );
         });
 
         it("should respond with 404 if movie object is not found in the database", async () => {
-            response = await Utils.sendRequest("/movie/id/5", 404, "GET");
+            response = await Utils.sendRequest("/movie/id/99", 404, "GET");
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_NOT_FOUND, movies: [] });
         });
     });
@@ -396,17 +395,17 @@ describe("Movie Lifecycle Flow", async () => {
     describe("PUT /movie/update/:movieId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and modified data", async () => {
             const updatedData = { title: "Updated Movie Title" };
-            response = await Utils.sendRequest("/movie/update/1", 200, "PUT", updatedData);
+            response = await Utils.sendRequest("/movie/update/1", 200, "PUT", updatedData, siteAdminCookie);
             expect(response.body.movies[0]).toHaveProperty("title", updatedData.title);
         });
 
         it("should respond with 400 if all update fields are missing", async () => {
             // all are undefined
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", {});
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_EMPTY_ARGS, movies: [] });
 
             // mixed invalid
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { title: null, duration: null });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { title: null, duration: null }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_EMPTY_ARGS, movies: [] });
 
             // all are null
@@ -424,188 +423,229 @@ describe("Movie Lifecycle Flow", async () => {
                 cast: null,
                 director: null
             }
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", invalidMovieData);
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", invalidMovieData, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_EMPTY_ARGS, movies: [] });
         });
 
         it("should respond with 400 if update types are incorrect", async () => {
             // title: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { title: 123 });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { title: 123 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // viewingFormat: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { viewingFormat: true });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { viewingFormat: true }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // duration: not a number
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { duration: "120" });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { duration: "120" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // description: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { description: ["array"] });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { description: ["array"] }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // posterUrl: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: 500 });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: 500 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // trailerUrl: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: { url: 2 } });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: { url: 2 } }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // language: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { language: 1 });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { language: 1 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // premiereDate: not a valid date/string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { premiereDate: {} });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { premiereDate: {} }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // genre: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { genre: false });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { genre: false }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // restrictions: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { restrictions: 18 });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { restrictions: 18 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // cast: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { cast: 2 });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { cast: 2 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
             // director: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { director: ["Name"] });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { director: ["Name"] }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
         });
 
         it("should respond with 400 if updated title length is invalid", async () => {
-            // too short
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { title: "" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TITLE_LEN, movies: [] });
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { title: "   " });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TITLE_LEN, movies: [] });
-
-            // too long
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { title: "a".repeat(Constants.MOVIE_TITLE_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TITLE_LEN, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_TITLE_MIN_LEN,
+                Constants.MOVIE_TITLE_MAX_LEN,
+                Messages.MOVIE_ERR_TITLE_LEN,
+                "title",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if updated viewingFormat is invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { viewingFormat: "4K_ULTRA_FAKE" });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { viewingFormat: "4K_ULTRA_FAKE" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
         });
 
         it("should respond with 400 if updated duration is out of range", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { duration: Constants.MOVIE_DUR_MIN - 1 });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DURATION, movies: [] });
-
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { duration: Constants.MOVIE_DUR_MAX + 1 });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DURATION, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_DUR_MIN,
+                Constants.MOVIE_DUR_MAX,
+                Messages.MOVIE_ERR_DURATION,
+                "duration",
+                "number",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if updated description length is invalid", async () => {
-            // Too short
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { description: "" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DESC, movies: [] });
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { description: " " });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DESC, movies: [] });
-
-            // Too long
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { description: "a".repeat(Constants.MOVIE_DESC_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DESC, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_DESC_MIN_LEN,
+                Constants.MOVIE_DESC_MAX_LEN,
+                Messages.MOVIE_ERR_DESC,
+                "description",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if updated poster url is invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: "ftp://wrong-protocol.com" });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: "ftp://wrong-protocol.com" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_POSTER_URL, movies: [] });
 
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: "just_string" });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { posterUrl: "just_string" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_POSTER_URL, movies: [] });
         });
 
         it("should respond with 400 if updated trailer url is invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: "ftp://wrong-protocol.com" });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: "ftp://wrong-protocol.com" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TRAILER_URL, movies: [] });
 
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: "just_string" });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { trailerUrl: "just_string" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TRAILER_URL, movies: [] });
         });
 
         it("should respond with 400 if updated language length is invalid", async () => {
-            // too short
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { language: "" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_LANG_LEN, movies: [] });
-
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { language: "  " });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_LANG_LEN, movies: [] });
-
-            // too long
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { language: "a".repeat(Constants.MOVIE_LANG_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_LANG_LEN, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_LANG_MIN_LEN,
+                Constants.MOVIE_LANG_MAX_LEN,
+                Messages.MOVIE_ERR_LANG_LEN,
+                "language",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if updated premiere date is invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { premiereDate: "2000-02-30T00:00:00.000Z" });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { premiereDate: "2000-02-30T00:00:00.000Z" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_PREMIERE_DATE, movies: [] });
         });
 
         it("should respond with 400 if updated genre length is invalid", async () => {
-            // too short
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { genre: "" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_GENRE_LEN, movies: [] });
-
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { genre: "  " });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_GENRE_LEN, movies: [] });
-
-            // too long
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { genre: "a".repeat(Constants.MOVIE_GENRE_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_GENRE_LEN, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_GENRE_MIN_LEN,
+                Constants.MOVIE_GENRE_MAX_LEN,
+                Messages.MOVIE_ERR_GENRE_LEN,
+                "genre",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if updated restrictions value is not in Enum", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { restrictions: "21+" });
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { restrictions: "21+" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
         });
 
         it("should respond with 400 if updated cast length is invalid", async () => {
-            // too short
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { cast: "" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_CAST_LEN, movies: [] });
-
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { cast: "  " });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_CAST_LEN, movies: [] });
-
-            // too long
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { cast: "a".repeat(Constants.MOVIE_CAST_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_CAST_LEN, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_CAST_MIN_LEN,
+                Constants.MOVIE_CAST_MAX_LEN,
+                Messages.MOVIE_ERR_CAST_LEN,
+                "cast",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if updated director length is invalid", async () => {
-            // too short
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { director: "" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DIR_LEN, movies: [] });
-
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { director: "  " });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DIR_LEN, movies: [] });
-
-            // too long
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { director: "a".repeat(Constants.MOVIE_DIR_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_DIR_LEN, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_DIR_MIN_LEN,
+                Constants.MOVIE_DIR_MAX_LEN,
+                Messages.MOVIE_ERR_DIR_LEN,
+                "director",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if movieId is invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/abc", 400, "PUT", { title: "Updated Movie Title" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
+            await Utils.invalidIdCheck(
+                "/movie/update",
+                "PUT",
+                Utils.movieData,
+                Messages.MOVIE_ERR_ID,
+                "movies",
+                siteAdminCookie,
+            );
+        });
 
-            response = await Utils.sendRequest("/movie/update/0", 400, "PUT", { title: "Updated Movie Title" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/movie/update/1", "PUT", Utils.movieData, "movies");
+        });
 
-            response = await Utils.sendRequest("/movie/update/-1", 400, "PUT", { title: "Updated Movie Title" });
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, movies: [] });
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/movie/update/1", "PUT", {}, "movies");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /update", async () => {
+            await Utils.deletedAdminCheck("/movie/update/1", "PUT", Utils.movieData, "movies");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/movie/update/1", "PUT", {}, "movies", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /update", async () => {
+            await Utils.unauthorizedCheck("/movie/update/1", "PUT", Utils.movieData, "movies", regularCookie)
         });
 
         it("should respond with 404 if specified movie is not found", async () => {
-            response = await Utils.sendRequest("/movie/update/5", 404, "PUT", { title: "Ghost Movie" });
+            response = await Utils.sendRequest("/movie/update/99", 404, "PUT", { title: "Ghost Movie" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_NOT_FOUND, movies: [] });
         });
     });

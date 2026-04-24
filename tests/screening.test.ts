@@ -1,4 +1,4 @@
-import sequelize, { UserInstance } from "../src/models";
+import sequelize, { Cinema, Room, Seat, User, UserInstance, Movie } from "../src/models";
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
 import { deleteSiteAdmin } from "../src/owner";
@@ -9,7 +9,7 @@ let siteAdminCookie: string[] | undefined = []
 let regularCookie: string[] | undefined = []
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });  
+    await sequelize.sync({ force: true });
 
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
@@ -22,8 +22,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    await deleteSiteAdmin(siteAdmin.id!);
-    await Utils.deleteUser(regularUser);
+    await User.destroy({ where: {}, cascade: true })
+    await Cinema.destroy({ where: {}, cascade: true })
+    await Room.destroy({ where: {}, cascade: true })
+    await Seat.destroy({ where: {}, cascade: true })
+    await Movie.destroy({ where: {}, cascade: true })
 });
 
 describe("Screening Lifecycle Flow", async () => {
@@ -90,10 +93,10 @@ describe("Screening Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
 
             // mixed invalid
-            const mixedInvalid = { 
-                startDate: null, 
-                roomId: undefined, 
-                movieId: null 
+            const mixedInvalid = {
+                startDate: null,
+                roomId: undefined,
+                movieId: null
             };
             response = await Utils.sendRequest("/screening/new", 400, "POST", mixedInvalid);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
@@ -173,7 +176,7 @@ describe("Screening Lifecycle Flow", async () => {
             expect(response.body.screenings[0].id).toEqual(4);
 
             response = await Utils.sendRequest("/screening/all", 200, "GET");
-            expect(response.body).toHaveProperty("screenings");            
+            expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings).toBeInstanceOf(Array);
             expect(response.body.screenings).toHaveLength(4);
         });
@@ -182,7 +185,7 @@ describe("Screening Lifecycle Flow", async () => {
     describe("GET /screening/all/room/:roomId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all screening objects in the specified room", async () => {
             response = await Utils.sendRequest("/screening/all/room/1", 200, "GET");
-            expect(response.body).toHaveProperty("screenings");            
+            expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings).toBeInstanceOf(Array);
             expect(response.body.screenings).toHaveLength(4);
         });
@@ -219,7 +222,7 @@ describe("Screening Lifecycle Flow", async () => {
     describe("GET /screening/all/movie/:movieId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all screening objects connected with the specified movie", async () => {
             response = await Utils.sendRequest("/screening/all/movie/1", 200, "GET");
-            expect(response.body).toHaveProperty("screenings");            
+            expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings).toBeInstanceOf(Array);
             expect(response.body.screenings).toHaveLength(4);
         });
@@ -242,7 +245,7 @@ describe("Screening Lifecycle Flow", async () => {
 
         it("should respond with 404 if no screening objects are connected to the specified movie object", async () => {
             // Adding a cinema which has no rooms connected to it
-            response = await Utils.sendRequest("/movie/new", 200, "POST", Utils.movieData);
+            response = await Utils.sendRequest("/movie/new", 200, "POST", Utils.movieData, siteAdminCookie);
             expect(response.body).toHaveProperty("movies");
             expect(response.body.movies).toBeInstanceOf(Array);
             expect(response.body.movies).toHaveLength(1);
@@ -311,7 +314,7 @@ describe("Screening Lifecycle Flow", async () => {
         });
 
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/update/5", 404, "PUT", Utils.screeningData); 
+            response = await Utils.sendRequest("/screening/update/5", 404, "PUT", Utils.screeningData);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL, screenings: [] });
         });
 
@@ -399,7 +402,7 @@ describe("Screening Lifecycle Flow", async () => {
         });
 
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/delete/5", 404, "DELETE"); 
+            response = await Utils.sendRequest("/screening/delete/5", 404, "DELETE");
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL });
         });
     });
