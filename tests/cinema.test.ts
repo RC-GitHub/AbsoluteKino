@@ -11,7 +11,7 @@ let siteAdminCookie: string[] | undefined = [];
 let regularCookie: string[] | undefined = [];
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });  
+    await sequelize.sync({ force: true });
 
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
@@ -80,11 +80,11 @@ describe("Cinema Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
 
             // Mixed invalid
-            const mixedInvalid = { 
-                name: "  ", 
-                address: undefined, 
-                latitude: null, 
-                longitude: undefined 
+            const mixedInvalid = {
+                name: "  ",
+                address: undefined,
+                latitude: null,
+                longitude: undefined
             };
             response = await Utils.sendRequest("/cinema/new", 400, "POST", mixedInvalid, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_EMPTY_ARGS, cinemas: [] });
@@ -107,7 +107,7 @@ describe("Cinema Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/cinema/new", 400, "POST", { ...Utils.cinemaData, longitude: "180" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_TYPING, cinemas: [] });
         });
-        
+
         it("should respond with 400 if name is too short or too long", async () => {
             await Utils.boundsCheck(
                 "/cinema/new",
@@ -118,7 +118,7 @@ describe("Cinema Lifecycle Flow", async () => {
                 Messages.CINEMA_ERR_NAME_LEN,
                 "name",
                 "string",
-                "cinemas", 
+                "cinemas",
                 siteAdminCookie
             )
         });
@@ -170,7 +170,7 @@ describe("Cinema Lifecycle Flow", async () => {
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
-            await Utils.deletedAdminCheck("/cinema/new", "POST", {}, "cinemas");    
+            await Utils.deletedAdminCheck("/cinema/new", "POST", {}, "cinemas");
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
@@ -289,7 +289,7 @@ describe("Cinema Lifecycle Flow", async () => {
                 Messages.CINEMA_ERR_NAME_LEN,
                 "name",
                 "string",
-                "cinemas", 
+                "cinemas",
                 siteAdminCookie
             )
         });
@@ -345,7 +345,7 @@ describe("Cinema Lifecycle Flow", async () => {
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /all", async () => {
-            await Utils.deletedAdminCheck("/cinema/update/1", "PUT", {}, "cinemas");    
+            await Utils.deletedAdminCheck("/cinema/update/1", "PUT", {}, "cinemas");
         });
 
 
@@ -354,7 +354,7 @@ describe("Cinema Lifecycle Flow", async () => {
         });
 
         it("should respond with 404 if specified cinema object is not found in the database", async () => {
-            response = await Utils.sendRequest("/cinema/update/5", 404, "PUT", Utils.cinemaData, siteAdminCookie); 
+            response = await Utils.sendRequest("/cinema/update/99", 404, "PUT", Utils.cinemaData, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, cinemas: [] });
         });
     });
@@ -391,9 +391,9 @@ describe("Cinema Lifecycle Flow", async () => {
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/cinema/delete/1", "DELETE", {}, "cinemas", siteAdminCookie)
         });
-        
+
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /all", async () => {
-            await Utils.deletedAdminCheck("/cinema/delete/1", "DELETE", {}, "cinemas");    
+            await Utils.deletedAdminCheck("/cinema/delete/1", "DELETE", {}, "cinemas");
         });
 
         it("should respond with 403 when a regular user tries to access /new", async () => {
@@ -401,7 +401,7 @@ describe("Cinema Lifecycle Flow", async () => {
         });
 
         it("should respond with 404 if specified cinema object is not found in the database", async () => {
-            response = await Utils.sendRequest("/cinema/delete/99", 404, "DELETE", {}, siteAdminCookie); 
+            response = await Utils.sendRequest("/cinema/delete/99", 404, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND });
         });
     });

@@ -4,8 +4,6 @@ import * as Constants from "../src/constants"
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
 
-let siteAdmin: UserInstance;
-let regularUser: UserInstance;
 let cinemaAdmin: UserInstance;
 
 let siteAdminCookie: string[] | undefined = []
@@ -21,9 +19,6 @@ beforeAll(async () => {
 
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
-
-    siteAdmin = siteAdminData.user;
-    regularUser = regularUserData.user;
 
     siteAdminCookie = siteAdminData.cookie;
     regularCookie = regularUserData.cookie;
