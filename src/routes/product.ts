@@ -203,10 +203,17 @@ router.put(
     }
 });
 
+
 /**
- * Deletes a product.
+ * Only cinema admin or higher can get to 200 with this endpoint
+ * ===============================
+ * Deletes a product with the specified ID
  */
-router.delete("/delete/:productId", async (req: Request, res: Response, next: NextFunction) => {
+router.delete("/delete/:productId",
+    Auth.authorize("products"),
+    Auth.validatePrivileges("products", 2),
+    Auth.validateProductAccess("products", 3),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const productId: number = parseInt(req.params.productId.toString());
         if (isNaN(productId) || productId < Constants.TYPICAL_MIN_ID) {

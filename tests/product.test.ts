@@ -32,7 +32,6 @@ beforeAll(async () => {
 afterAll(async () => {
     await User.destroy({ where: {}, cascade: true })
     await Cinema.destroy({ where: {}, cascade: true })
-    await Product.destroy({ where: {}, cascade: true })
 });
 
 describe("Product Lifecycle Flow", async () => {
@@ -409,29 +408,48 @@ describe("Product Lifecycle Flow", async () => {
 
     describe("DELETE /product/delete/:productId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and delete product", async () => {
-            await Utils.sendRequest("/product/delete/1", 200, "DELETE");
-            response = await Utils.sendRequest("/product/delete/2", 200, "DELETE");
+            response = await Utils.sendRequest("/product/delete/1", 200, "DELETE", {}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_MSG_DEL });
-
-            // Clear cinemas
-            await Utils.sendRequest("/cinema/delete/1", 200, "DELETE", {}, siteAdminCookie);
-            await Utils.sendRequest("/cinema/delete/2", 200, "DELETE", {}, siteAdminCookie);
         });
 
         it("should respond with 400 if productId is not valid", async () => {
-            response = await Utils.sendRequest("/product/delete/abc", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_ID });
+            await Utils.invalidIdCheck(
+                "/product/delete",
+                "DELETE",
+                {},
+                Messages.PRODUCT_ERR_ID,
+                "products",
+                siteAdminCookie
+            );
+        });
 
-            response = await Utils.sendRequest("/product/delete/0", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_ID });
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/product/delete/1", "DELETE", {}, "products");
+        });
 
-            response = await Utils.sendRequest("/product/delete/-1", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_ID });
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/product/delete/1", "DELETE", {}, "products");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete", async () => {
+            await Utils.deletedAdminCheck("/product/delete/1", "DELETE", {}, "products");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/product/delete/1", "DELETE", {}, "products", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/product/delete/1", "DELETE", {}, "products", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/product/delete/2", "DELETE", { cinemaId: cinemaId }, "products", unauthorizedCinemaAdminCookie)
         });
 
         it("should respond with 404 if deleting non-existent ID", async () => {
-            response = await Utils.sendRequest("/product/delete/1", 404, "DELETE");
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NOT_FOUND, products: [] });
+            response = await Utils.sendRequest("/product/delete/99", 404, "DELETE", {}, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NOT_FOUND });
         });
     });
 
@@ -443,6 +461,8 @@ describe("Product Lifecycle Flow", async () => {
 
     describe("GET (404) /product/all", async () => {
         it("should respond with 404 if database is empty", async () => {
+            await Product.destroy({ where: {}, cascade: true })
+
             response = await Utils.sendRequest("/product/all", 404, "GET");
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NOT_FOUND_ALL, products: [] });
         });
