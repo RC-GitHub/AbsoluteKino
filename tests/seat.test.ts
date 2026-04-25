@@ -590,7 +590,12 @@ describe("Room Lifecycle Flow", async () => {
 
         it("should respond with 400 if roomId is not valid", async () => {
             await Utils.invalidIdCheck(
-              "/seat/delete", "DELETE", {}, Messages.SEAT_ERR_ID, "seats", cinemaAdminCookie
+                "/seat/delete",
+                "DELETE",
+                {},
+                Messages.SEAT_ERR_ID,
+                "seats",
+                cinemaAdminCookie
             )
         });
 
@@ -602,7 +607,7 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.freshTokenCheck("/seat/delete/1", "DELETE", {}, "seats");
         });
 
-        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete", async () => {
             await Utils.deletedAdminCheck("/seat/delete/1", "DELETE", {}, "seats");
         });
 

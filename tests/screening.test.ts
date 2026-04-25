@@ -445,23 +445,47 @@ describe("Screening Lifecycle Flow", async () => {
 
     describe("DELETE /screening/delete/:screeningId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 if room object is successfully deleted", async () => {
-            response = await Utils.sendRequest("/screening/delete/1", 200, "DELETE");
+            response = await Utils.sendRequest("/screening/delete/1", 200, "DELETE", {}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_MSG_DEL});
         });
 
         it("should respond with 400 if screeningId is not valid", async () => {
-            response = await Utils.sendRequest("/screening/delete/abc", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID });
-
-            response = await Utils.sendRequest("/screening/delete/0", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID });
-
-            response = await Utils.sendRequest("/screening/delete/-1", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID });
+            await Utils.invalidIdCheck(
+                "/screening/delete",
+                "DELETE",
+                {},
+                Messages.SCREENING_ERR_ID,
+                "screenings",
+                siteAdminCookie
+            );
         });
 
-        it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/delete/5", 404, "DELETE");
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/screening/delete/1", "DELETE", {}, "screenings");
+        });
+
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/screening/delete/1", "DELETE", {}, "screenings");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete", async () => {
+            await Utils.deletedAdminCheck("/screening/delete/1", "DELETE", {}, "screenings");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/screening/delete/1", "DELETE", {}, "screenings", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/screening/delete/1", "DELETE", {}, "screenings", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/screening/delete/2", "DELETE", {}, "screenings", unauthorizedCinemaAdminCookie)
+        });
+
+        it("should respond with 404 if specified screening object is not found in the database", async () => {
+            response = await Utils.sendRequest("/screening/delete/99", 404, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL });
         });
     });

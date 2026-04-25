@@ -477,9 +477,16 @@ router.put(
     },
 );
 
-// Deletes a room with the specified ID
+/**
+ * Only cinema admin and higher can get to 200 with this endpoint
+ * ===============================
+ * Deletes a screening with the specified ID
+ */
 router.delete(
     "/delete/:screeningId",
+    Auth.authorize("screenings"),
+    Auth.validatePrivileges("screenings", 2),
+    Auth.validateScreeningAccess,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const screeningId: number = parseInt(
@@ -509,7 +516,5 @@ router.delete(
         }
     },
 );
-
-// TODO: /delete/force
 
 export default router;
