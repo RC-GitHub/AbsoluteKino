@@ -287,7 +287,7 @@ router.put("/update/:reservationId",
 });
 
 /**
- * Only cookie owner can get to 200 with this endpoint
+ * Only cookie owner who is an authenticated user or higher can get to 200 with this endpoint
  * ===============================
  * Completes a reservation with the specified ID
  */
@@ -301,19 +301,6 @@ router.put("/complete/:reservationId",
         if (isNaN(reservationId) || reservationId < Constants.TYPICAL_MIN_ID) {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_ID, reservations: [] });
         }
-
-        // // TODO: make the user check more thorough
-        // const { userId } = req.body;
-        // if (userId == null) {
-        //     return res.status(400).json({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] })
-        // }
-
-        // if (userId !== undefined) {
-        //     if (typeof userId !== 'number' || !Number.isInteger(userId)) return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
-        //     if (userId < Constants.TYPICAL_MIN_ID) {
-        //         return res.status(400).json({ message: Messages.USER_ERR_ID, reservations: [] });
-        //     }
-        // }
 
         const reservation: ReservationInstance | null = await Reservation.findByPk(reservationId);
         if (!reservation) {
@@ -336,9 +323,16 @@ router.put("/complete/:reservationId",
 });
 
 /**
- * Deletes a reservation.
+ * Only cookie owner who is an authenticated user or higher can get to 200 with this endpoint
+ * ===============================
+ * Deletes a reservation with the specified ID
  */
-router.delete("/delete/:reservationId", async (req: Request, res: Response, next: NextFunction) => {
+router.delete("/delete/:reservationId",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 1),
+    Auth.validateOwnership("reservations", 4),
+    async (req: Request, res: Response, next: NextFunction) =>
+{
     try {
         const reservationId: number = parseInt(req.params.reservationId.toString());
         if (isNaN(reservationId) || reservationId < Constants.TYPICAL_MIN_ID) {

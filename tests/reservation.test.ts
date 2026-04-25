@@ -167,25 +167,10 @@ describe("Reservation Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if the seat is already reserved", async () => {
-            // // Elevating privleges to complete the reservation
-            // const elevatedData = { accountType: Constants.USER_ACC_TYPES[1], password: "abc".repeat(8), email: Utils.generateUniqueEmail() };
-            // await Utils.sendRequest(`/user/update/${unauthenticatedUser.id}`, 200, "PUT", elevatedData, unauthenticatedCookie);
-
-            // let authenticatedCookie = await Utils.getCookieFromUser(elevatedData as UserInstance);
-
-            // response = await Utils.sendRequest(`/user/update-type/${unauthenticatedUser.id}`, 200, "PUT", elevatedData, authenticatedCookie);
-
-            // const authenticatedUser = response.body.users[0];
-            // authenticatedCookie = await Utils.getCookieFromUser(elevatedData as UserInstance);
-
             // Complete the first reservation
             response = await Utils.sendRequest("/reservation/complete/1", 200, "PUT", { userId: siteAdmin.id }, siteAdminCookie);
             expect(response.body).toHaveProperty("reservations");
             expect(response.body.reservations[0]).toHaveProperty("type", Constants.RESERVATION_TYPES[1]);
-
-            // const unauthenticatedData = await Utils.createRegularUser(Utils.userDataUnauthorized)
-            // unauthenticatedUser = unauthenticatedData.user;
-            // unauthenticatedCookie = unauthenticatedData.cookie;
 
             response = await Utils.sendRequest("/reservation/new", 400, "POST", Utils.reservationData, unauthenticatedCookie);
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_RESERVED, reservations: [] });
@@ -634,23 +619,47 @@ describe("Reservation Lifecycle Flow", async () => {
 
     describe("DELETE /reservation/delete/:reservationId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and delete reservation", async () => {
-            response = await Utils.sendRequest("/reservation/delete/1", 200, "DELETE");
+            response = await Utils.sendRequest("/reservation/delete/1", 200, "DELETE", { userId: siteAdmin.id }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.RESERVATION_MSG_DEL });
         });
 
         it("should respond with 400 if reservationId is not valid", async () => {
-            response = await Utils.sendRequest("/reservation/delete/abc", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_ID });
+            await Utils.invalidIdCheck(
+                "/reservation/delete",
+                "DELETE",
+                { userId: siteAdmin.id },
+                Messages.RESERVATION_ERR_ID,
+                "reservations",
+                siteAdminCookie
+            );
+        });
 
-            response = await Utils.sendRequest("/reservation/delete/0", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_ID });
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/reservation/delete/1", "DELETE", { userId: siteAdmin.id }, "reservations");
+        });
 
-            response = await Utils.sendRequest("/reservation/delete/-1", 400, "DELETE");
-            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_ID });
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/reservation/delete/1", "DELETE", { userId: siteAdmin.id }, "reservations");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete", async () => {
+            await Utils.deletedAdminCheck("/reservation/delete/1", "DELETE", { userId: siteAdmin.id }, "reservations");
+        });
+
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/reservation/delete/1", "DELETE", { userId: siteAdmin.id }, "reservations", siteAdminCookie)
+        });
+
+        it("should respond with 403 when an underprivileged user tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/reservation/delete/1", "DELETE", { userId: unauthenticatedUser.id }, "reservations", unauthenticatedCookie)
+        });
+
+        it("should respond with 403 when an unauthorized user tries to access /delete", async () => {
+            await Utils.unauthorizedCheck("/reservation/delete/1", "DELETE", { userId: siteAdmin.id }, "reservations", regularCookie)
         });
 
         it("should respond with 404 if deleting non-existent ID", async () => {
-            response = await Utils.sendRequest("/reservation/delete/1", 404, "DELETE");
+            response = await Utils.sendRequest("/reservation/delete/99", 404, "DELETE", { userId: siteAdmin.id }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_NOT_FOUND, reservations: [] });
         });
     });
