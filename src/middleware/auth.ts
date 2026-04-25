@@ -108,7 +108,7 @@ export const validateOwnership = (
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      const userId = parseInt(req.params.userId || req.body.userId);
+      const rawUserId = req.params.userId || req.body.userId;
 
       const sendAuthError = (status: number, message: string) => {
         const response: any = { message };
@@ -119,6 +119,12 @@ export const validateOwnership = (
         return res.status(status).json(response);
       };
 
+      if (req.body.userId != null && (typeof req.body.userId !== 'number' || !Number.isInteger(req.body.userId))) {
+        return sendAuthError(400, Messages.RESERVATION_ERR_TYPING);
+      }
+
+      const userId = parseInt(`${rawUserId || ""}`);
+
       if (isNaN(userId) || userId < Constants.TYPICAL_MIN_ID) {
         return sendAuthError(400, Messages.USER_ERR_ID);
       }
@@ -128,16 +134,16 @@ export const validateOwnership = (
       }
 
       const isOwner = user.id === userId;
-      const userLevel = Constants.USER_ACC_TYPES.indexOf(
-        user.accountType || "",
-      );
+      const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
       const hasBypass = userLevel >= bypassLevel;
 
-      if (!isOwner && !hasBypass)
+      if (!isOwner && !hasBypass) {
         return sendAuthError(403, Messages.AUTH_FORBIDDEN);
+      }
 
       next();
-    } catch (error: any) {
+    }
+    catch (error: any) {
       next(error);
     }
   };

@@ -217,10 +217,15 @@ router.get("/all/seat/:seatId",
 });
 
 /**
- * Updates a reservation (Moves seat).
- * Note: screeningId and clientId cannot be changed per requirements.
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Updates data (moves a seat) for a reservation with the specified ID
+ * Note: screeningId and clientId cannot be changed per requirements
  */
-router.put("/update/:reservationId", async (req: Request, res: Response, next: NextFunction) => {
+router.put("/update/:reservationId",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 3),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const reservationId: number = parseInt(req.params.reservationId.toString());
         if (isNaN(reservationId) || reservationId < Constants.TYPICAL_MIN_ID) {
@@ -282,27 +287,33 @@ router.put("/update/:reservationId", async (req: Request, res: Response, next: N
 });
 
 /**
- * Completes a reservation.
+ * Only cookie owner can get to 200 with this endpoint
+ * ===============================
+ * Completes a reservation with the specified ID
  */
-router.put("/complete/:reservationId", async (req: Request, res: Response, next: NextFunction) => {
+router.put("/complete/:reservationId",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 1),
+    Auth.validateOwnership("reservations", 4),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const reservationId: number = parseInt(req.params.reservationId.toString());
         if (isNaN(reservationId) || reservationId < Constants.TYPICAL_MIN_ID) {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_ID, reservations: [] });
         }
 
-        // TODO: make the user check more thorough
-        const { userId } = req.body;
-        if (userId == null) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] })
-        }
+        // // TODO: make the user check more thorough
+        // const { userId } = req.body;
+        // if (userId == null) {
+        //     return res.status(400).json({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] })
+        // }
 
-        if (userId !== undefined) {
-            if (typeof userId !== 'number' || !Number.isInteger(userId)) return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
-            if (userId < Constants.TYPICAL_MIN_ID) {
-                return res.status(400).json({ message: Messages.USER_ERR_ID, reservations: [] });
-            }
-        }
+        // if (userId !== undefined) {
+        //     if (typeof userId !== 'number' || !Number.isInteger(userId)) return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
+        //     if (userId < Constants.TYPICAL_MIN_ID) {
+        //         return res.status(400).json({ message: Messages.USER_ERR_ID, reservations: [] });
+        //     }
+        // }
 
         const reservation: ReservationInstance | null = await Reservation.findByPk(reservationId);
         if (!reservation) {
@@ -313,7 +324,7 @@ router.put("/complete/:reservationId", async (req: Request, res: Response, next:
             return res.status(400).json({ message: Messages.RESERVATION_ERR_RESERVED, reservations: [] });
         }
 
-        if (reservation.userId !== userId) {
+        if (reservation.userId !== (req as any).user.id) {
             return res.status(400).json({ message: Messages.RESERVATION_ERR_BLOCKED, reservations: [] });
         }
 

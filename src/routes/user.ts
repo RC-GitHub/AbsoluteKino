@@ -82,7 +82,7 @@ export const registerUserLogic = async (data: any) => {
             if (existingEmail) throw { status: 400, message: Messages.USER_ERR_EMAIL_UNIQUE };
         }
 
-        if (pureDigits) { 
+        if (pureDigits) {
             const existingPhone = await User.findOne({ where: { phoneNumber: pureDigits } });
             if (existingPhone) throw { status: 400, message: Messages.USER_ERR_PHONE_UNIQUE };
         }
@@ -141,7 +141,7 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
     }
 });
 
-/** 
+/**
  * Anyone can get to 200 with this endpoint
  * ===============================
  * Logs a user in by verifying credentials and setting an auth cookie
@@ -222,15 +222,15 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
     }
 });
 
-/** 
+/**
  * Only authenticated users can get to 200 with this endpoint
  * ===============================
  * Logs a user out by clearing the auth cookie
  */
-router.post("/logout", 
+router.post("/logout",
     Auth.authorize("users"),
     Auth.validatePrivileges("users", 1),
-    async (req: Request, res: Response, next: NextFunction) => 
+    async (req: Request, res: Response, next: NextFunction) =>
 {
     try {
         const decoded = (req as any).user;
@@ -246,15 +246,15 @@ router.post("/logout",
     }
 });
 
-/**  
+/**
  * Only site admin can get to 200 with this endpoint
  * ===============================
  * Sends data about all users in the database
  */
-router.get("/all", 
-    Auth.authorize("users"), 
-    Auth.validatePrivileges("users", 3), 
-    async (req: Request, res: Response, next: NextFunction) => 
+router.get("/all",
+    Auth.authorize("users"),
+    Auth.validatePrivileges("users", 3),
+    async (req: Request, res: Response, next: NextFunction) =>
 {
     try {
         const users: UserInstance[] = await User.findAll();
@@ -269,15 +269,15 @@ router.get("/all",
     }
 });
 
-/**  
+/**
  * Only site admin can get to 200 with this endpoint
  * ===============================
  * Sends data about a user with the specified ID
  */
-router.get("/id/:userId", 
-    Auth.authorize("users"), 
-    Auth.validatePrivileges("users", 3), 
-    async (req: Request, res: Response, next: NextFunction) => 
+router.get("/id/:userId",
+    Auth.authorize("users"),
+    Auth.validatePrivileges("users", 3),
+    async (req: Request, res: Response, next: NextFunction) =>
 {
     try {
         const userId = parseInt(req.params.userId.toString());
@@ -295,17 +295,17 @@ router.get("/id/:userId",
     }
 });
 
-/**  
+/**
  * Only unauthorized users and higher can get to 200 with this endpoint
  * ===============================
  * Updates data for a user with the specified ID
  * Does not allow for changing of the account type
  */
-router.put("/update/:userId", 
-    Auth.authorize("users"), 
-    Auth.validatePrivileges("users", 0), 
+router.put("/update/:userId",
+    Auth.authorize("users"),
+    Auth.validatePrivileges("users", 0),
     Auth.validateOwnership("users", 3),
-    async (req: Request, res: Response, next: NextFunction) => 
+    async (req: Request, res: Response, next: NextFunction) =>
 {
     try {
         const userId: number = parseInt(req.params.userId.toString());
@@ -394,16 +394,16 @@ router.put("/update/:userId",
     }
 });
 
-/**  
+/**
  * Only unauthorized users and higher can get to 200 with this endpoint
  * ===============================
  * Changes account type for a user with the specified ID
  */
 router.put("/update-type/:userId",
-    Auth.authorize("users"), 
-    Auth.validatePrivileges("users", 0), 
+    Auth.authorize("users"),
+    Auth.validatePrivileges("users", 0),
     Auth.validateOwnership("users", 3),
-    async (req: Request, res: Response, next: NextFunction) => 
+    async (req: Request, res: Response, next: NextFunction) =>
 {
     try {
         const userId = parseInt(req.params.userId.toString());
@@ -420,6 +420,8 @@ router.put("/update-type/:userId",
             return res.status(400).json({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
         }
 
+        // TODO: Block user downgrading of privileges
+
         const { accountType }: UserAttributes = req.body;
         if (accountType !== Constants.USER_ACC_TYPES[0] && // Elevating unauthenticated user to an authenticated one
             accountType !== Constants.USER_ACC_TYPES[1] && // Elevating user to cinema admin
@@ -435,15 +437,15 @@ router.put("/update-type/:userId",
     }
 });
 
-/**  
+/**
  * Only site admin can get to 200 with this endpoint
  * ===============================
  * Assigns cinemas to the users
  */
-router.put("/assign-cinema", 
-    Auth.authorize("users"), 
-    Auth.validatePrivileges("users", 3), 
-    async (req: Request, res: Response, next: NextFunction) => 
+router.put("/assign-cinema",
+    Auth.authorize("users"),
+    Auth.validatePrivileges("users", 3),
+    async (req: Request, res: Response, next: NextFunction) =>
 {
     try {
         const { userId, cinemaId } = req.body;
@@ -483,7 +485,7 @@ router.put("/assign-cinema",
         if (user.accountType === Constants.USER_ACC_TYPES[1]) {
             await user.update({ accountType: Constants.USER_ACC_TYPES[2] });
         }
-        
+
         await (user as any).addCinema(cinema);
         const updatedUser = await User.findByPk(userId, {
             include: [{ model: Cinema, as: 'cinemas' }]
@@ -498,16 +500,16 @@ router.put("/assign-cinema",
     }
 });
 
-/**  
+/**
  * Only site admin can get to 200 with this endpoint
  * ===============================
  * Deletes a user with the specified ID
  */
 router.delete("/delete/:userId",
-    Auth.authorize("users"), 
-    Auth.validatePrivileges("users", 1), 
+    Auth.authorize("users"),
+    Auth.validatePrivileges("users", 1),
     Auth.validateOwnership("users", 3),
-    async (req: Request, res: Response, next: NextFunction) => 
+    async (req: Request, res: Response, next: NextFunction) =>
 {
     try {
         const userId: number = parseInt(req.params.userId.toString());
