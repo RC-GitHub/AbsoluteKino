@@ -328,7 +328,7 @@ describe("Movie Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/movie/new", "POST", {}, "movies");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/movie/new", "POST", {}, "movies", siteAdminCookie)
         });
 
@@ -632,7 +632,7 @@ describe("Movie Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/movie/update/1", "PUT", Utils.movieData, "movies");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/movie/update/1", "PUT", {}, "movies", siteAdminCookie)
         });
 
@@ -678,7 +678,7 @@ describe("Movie Lifecycle Flow", async () => {
             await Utils.freshTokenCheck("/movie/delete/1", "DELETE", {}, "movies");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/movie/delete/1", "DELETE", {}, "movies", siteAdminCookie)
         });
 

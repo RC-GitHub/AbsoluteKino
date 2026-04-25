@@ -287,7 +287,7 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/seat/new", "POST", {}, "seats");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/seat/new", "POST", {}, "seats", siteAdminCookie)
         });
 
@@ -565,7 +565,7 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/seat/update/1", "PUT", {}, "seats");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/seat/update/1", "PUT", {}, "seats", siteAdminCookie)
         });
 
@@ -620,7 +620,7 @@ describe("Room Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/seat/delete/1", "DELETE", {}, "seats");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/seat/delete/1", "DELETE", {}, "seats", siteAdminCookie)
         });
 

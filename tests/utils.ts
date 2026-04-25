@@ -5,7 +5,7 @@ import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 
 import { registerSiteAdmin, elevateToSiteAdmin, deleteSiteAdmin } from "../src/owner";
-import { UserInstance } from "../src/models";
+import { UserAttributes, UserInstance } from "../src/models";
 
 
 export const cinemaData = {
@@ -99,10 +99,10 @@ export const generateUniqueEmail = () => {
 }
 
 export async function sendRequest(
-    endPoint: string, 
-    httpStatus: number, 
-    type: string, 
-    requestData = {}, 
+    endPoint: string,
+    httpStatus: number,
+    type: string,
+    requestData = {},
     cookie: string | string[] | null = null
 ) {
     try {
@@ -131,11 +131,11 @@ export async function sendRequest(
         console.error(`\n [Test Request Error]`);
         console.error(` Target: ${type.toUpperCase()} ${endPoint}`);
         console.error(` Expected Status: ${httpStatus}`);
-        
+
         if (error.response) {
             console.error(` Actual Status: ${error.response.status}`);
             console.error(` Actual Body:`, JSON.stringify(error.response.body, null, 2));
-            
+
             if (error.response.text && !error.response.body) {
                 console.error(` Raw Text (First 200 chars): ${error.response.text.substring(0, 200)}...`);
             }
@@ -143,7 +143,7 @@ export async function sendRequest(
             console.error(` Message: ${error.message}`);
         }
         console.error(`---------------------------\n`);
-        
+
         throw error;
     }
 }
@@ -151,10 +151,16 @@ export async function sendRequest(
 // User operations
 
 export async function createRegularUser(
-    regularData = { 
+    regularData: {
+        name: string | null,
+        password: string | null,
+        email: string | null,
+        phoneNumber: string | null
+    } = {
         name: userData.name,
         password: userData.password,
-        email: generateUniqueEmail()
+        email: generateUniqueEmail(),
+        phoneNumber: null
     }
 ) {
     const regularRes = await sendRequest("/user/register", 200, "POST", regularData);
@@ -165,15 +171,15 @@ export async function createRegularUser(
         ...regularUser,
         password: regularData.password
     }
-    
+
     return { cookie: regularCookie, user: adjustedUser }
 }
 
 export async function createSiteAdmin(
-    adminData = { 
-        name: "New site admin", 
-        password: "Admin password", 
-        email: generateUniqueEmail() 
+    adminData = {
+        name: "New site admin",
+        password: "Admin password",
+        email: generateUniqueEmail()
     }
 ) {
     await registerSiteAdmin(adminData)
@@ -212,7 +218,7 @@ export async function getUserFromCookie(
     }
 }
 
-export async function getCookieFromUser(    
+export async function getCookieFromUser(
     userData: UserInstance
 ) {
     const response = await sendRequest("/user/login", 200, "POST",  { email: userData.email, password: userData.password }, null);
@@ -258,7 +264,7 @@ export const noCookieCheck = async (
     endPoint: string,
     method: string,
     requestData = {},
-    arrayName: string | string[]) => 
+    arrayName: string | string[]) =>
 {
     const expectedResponse: any = { message: Messages.AUTH_REQUIRED }
     if (method !== "DELETE") {
@@ -269,7 +275,7 @@ export const noCookieCheck = async (
     }
 
     const response = await sendRequest(endPoint, 401, method, requestData);
-    expect(response.body).toEqual(expectedResponse);  
+    expect(response.body).toEqual(expectedResponse);
 }
 
 export const unauthorizedCheck = async (
@@ -277,7 +283,7 @@ export const unauthorizedCheck = async (
     method: string,
     requestData = {},
     arrayName: string | string[],
-    cookie: string[] | undefined) => 
+    cookie: string[] | undefined) =>
 {
     const expectedResponse: any = { message: Messages.AUTH_FORBIDDEN }
     if (method !== "DELETE") {
@@ -287,14 +293,14 @@ export const unauthorizedCheck = async (
         });
     }
     const response = await sendRequest(endPoint, 403, method, requestData, cookie);
-    expect(response.body).toEqual(expectedResponse);  
+    expect(response.body).toEqual(expectedResponse);
 }
 
 export const deletedAdminCheck = async (
     endPoint: string,
     method: string,
     requestData = {},
-    arrayName: string | string[]) => 
+    arrayName: string | string[]) =>
 {
     const expectedResponse: any = { message: Messages.AUTH_SESSION }
     if (method !== "DELETE") {
@@ -313,11 +319,11 @@ export const deletedAdminCheck = async (
 }
 
 export const tamperedCookieCheck = async (
-    endPoint: string, 
+    endPoint: string,
     method: string,
     requestData = {},
     arrayName: string | string[],
-    cookie: string[] | undefined) => 
+    cookie: string[] | undefined) =>
 {
     const expectedResponse: any = { message: Messages.AUTH_SESSION }
     if (method !== "DELETE") {
@@ -335,8 +341,8 @@ export const tamperedCookieCheck = async (
 
     expect(response.body).toEqual(expectedResponse);
 
-    const setCookieHeader = response.get("Set-Cookie") || []; 
-    const isCookieCleared = setCookieHeader.some(header => 
+    const setCookieHeader = response.get("Set-Cookie") || [];
+    const isCookieCleared = setCookieHeader.some(header =>
         header.includes("Max-Age=0") || header.includes("1970")
     );
 
@@ -353,7 +359,7 @@ export const boundsCheck = async (
     propertyName: string,
     propertyType: ( "string" | "number" ),
     arrayName: string | string[],
-    cookie: string[] | undefined = undefined) =>    
+    cookie: string[] | undefined = undefined) =>
 {
     let response;
     const expectedResponse: any = { message: errorMsg };
@@ -399,13 +405,13 @@ export const boundsCheck = async (
     }
 }
 
-export const invalidIdCheck = async (    
+export const invalidIdCheck = async (
     endPoint: string,
     method: string,
     requestData = {},
     errorMsg: string,
     arrayName: string | string[],
-    cookie: string[] | undefined = undefined) =>    
+    cookie: string[] | undefined = undefined) =>
 {
     let response;
     const expectedResponse: any = { message: errorMsg }
@@ -431,6 +437,7 @@ export const freshTokenCheck = async (
     method: string,
     requestData = {},
     arrayName: string | string[],
+    isAdmin: boolean = false
 ) => {
     const expectedResponse: any = { message: Messages.AUTH_SESSION }
     if (method !== "DELETE") {
@@ -440,7 +447,7 @@ export const freshTokenCheck = async (
         });
     }
 
-    const userData = await createRegularUser();
+    const userData = !isAdmin ? await createRegularUser() : await createSiteAdmin();
     const userCookie = userData.cookie;
     const user: UserInstance = userData.user;
 
@@ -450,12 +457,16 @@ export const freshTokenCheck = async (
     const response = await sendRequest(endPoint, 401, method, requestData, userCookie);
     expect(response.body).toEqual(expectedResponse);
 
-    const setCookieHeader = response.get("Set-Cookie") || []; 
-    const isCookieCleared = setCookieHeader.some(header => 
+    const setCookieHeader = response.get("Set-Cookie") || [];
+    const isCookieCleared = setCookieHeader.some(header =>
         header.includes("Max-Age=0") || header.includes("1970")
     );
     expect(isCookieCleared).toBe(true);
 
-    const cleanupData = await getCookieFromUser(user);
-    await deleteUser(user);
+    if (!isAdmin) {
+        await deleteUser(user);
+    }
+    else {
+        await deleteSiteAdmin(user.id as any);
+    }
 };

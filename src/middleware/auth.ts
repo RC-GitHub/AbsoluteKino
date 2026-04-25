@@ -154,9 +154,7 @@ export const validateCinemaMembership = (
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      const cinemaId = parseInt(
-        req.params.cinemaId || req.body.cinemaId || req.query.cinemaId,
-      );
+      const cinemaId = parseInt(`${req.params.cinemaId || req.body.cinemaId || req.query.cinemaId || ""}`);
 
       const errorResponse: any = { message: "" };
       const names = Array.isArray(arrayName) ? arrayName : [arrayName];
@@ -201,7 +199,7 @@ const validateCinemaResourceAccess = (
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      const resourceId = parseInt(req.params[resourceIdKey] || req.body[resourceIdKey] || req.query[resourceIdKey]);
+      const resourceId = parseInt(`${req.params[resourceIdKey] || req.body[resourceIdKey] || req.query[resourceIdKey] || ""}`);
 
       const errorResponse: any = { message: "" };
       const names = Array.isArray(arrayName) ? arrayName : [arrayName];

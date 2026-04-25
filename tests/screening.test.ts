@@ -177,7 +177,7 @@ describe("Screening Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/screening/new", "POST", {}, "screenings");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/screening/new", "POST", {}, "screenings", siteAdminCookie)
         });
 
@@ -426,7 +426,7 @@ describe("Screening Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/screening/update/1", "PUT", {}, "screenings");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/screening/update/1", "PUT", {}, "screenings", siteAdminCookie)
         });
 
@@ -481,7 +481,7 @@ describe("Screening Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/screening/delete/1", "DELETE", {}, "screenings");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/screening/delete/1", "DELETE", {}, "screenings", siteAdminCookie)
         });
 

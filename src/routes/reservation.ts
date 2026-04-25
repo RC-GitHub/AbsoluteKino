@@ -1,12 +1,14 @@
 import express, { Request, Response, NextFunction } from "express";
+import {
+    Reservation, ReservationAttributes, ReservationInstance,
+    Screening, ScreeningInstance,
+    Seat, SeatInstance,
+    User, UserInstance
+} from "../models.js";
+
 import * as Constants from "../constants.ts";
 import * as Messages from "../messages.ts";
-import { 
-    Reservation, ReservationAttributes, ReservationInstance, 
-    Screening, ScreeningInstance, 
-    Seat, SeatInstance, 
-    User, UserInstance 
-} from "../models.js";
+import * as Auth from "../middleware/auth.ts";
 
 const router = express.Router();
 
@@ -14,16 +16,16 @@ export const createReservationLogic = async (data: any) => {
     let { type, seatId, screeningId, userId }: ReservationAttributes = data;
 
     if (
-        type == null || 
-        seatId == null || 
-        screeningId == null || 
+        type == null ||
+        seatId == null ||
+        screeningId == null ||
         userId == null
     ) {
         throw { status: 400, message: Messages.RESERVATION_ERR_EMPTY_ARGS };
     }
 
     if (
-        typeof type !== 'string' || 
+        typeof type !== 'string' ||
         typeof seatId !== 'number' || !Number.isInteger(seatId) ||
         typeof screeningId !== 'number' || !Number.isInteger(screeningId) ||
         typeof userId !== 'number' || !Number.isInteger(userId)
@@ -68,28 +70,33 @@ export const createReservationLogic = async (data: any) => {
         }
     }
 
-    return Reservation.build({ 
+    return Reservation.build({
         type,
         seatId,
-        screeningId, 
-        userId 
+        screeningId,
+        userId
     });
 }
 
 /**
- * Adds a new reservation.
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Adds a new reservation
  * Requires a reservation row, column, screening id and client id (user id)
  */
-router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/new",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 0),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const reservation = await createReservationLogic(req.body);
         await reservation.save();
         res.send({ reservations: [reservation] });
     } catch (error: any) {
         if (error.status) {
-            return res.status(error.status).json({ 
-                message: error.message, 
-                reservations: error.reservations || [], 
+            return res.status(error.status).json({
+                message: error.message,
+                reservations: error.reservations || [],
             });
         }
         next(error);
@@ -97,9 +104,15 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * Fetches all reservations.
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all reservations
  */
-router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
+router.get("/all",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 3),
+    async (req: Request, res: Response, next: NextFunction) =>
+{
     try {
         const reservations: ReservationInstance[] = await Reservation.findAll();
         if (reservations.length === 0) {
@@ -112,9 +125,14 @@ router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * Fetches reservations for a specific screening.
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all reservations for a specific screening
  */
-router.get("/all/screening/:screeningId", async (req: Request, res: Response, next: NextFunction) => {
+router.get("/all/screening/:screeningId",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 3),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const screeningId: number = parseInt(req.params.screeningId.toString());
         if (isNaN(screeningId) || screeningId < Constants.TYPICAL_MIN_ID) {
@@ -137,9 +155,15 @@ router.get("/all/screening/:screeningId", async (req: Request, res: Response, ne
 });
 
 /**
- * Fetches reservations for a specific user.
+ * Only authenticated user and higher can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all reservations for a specific user
  */
-router.get("/all/user/:userId", async (req: Request, res: Response, next: NextFunction) => {
+router.get("/all/user/:userId",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 1),
+    Auth.validateOwnership("reservations", 3),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId: number = parseInt(req.params.userId.toString());
         if (isNaN(userId) || userId < Constants.TYPICAL_MIN_ID) {
@@ -162,9 +186,14 @@ router.get("/all/user/:userId", async (req: Request, res: Response, next: NextFu
 });
 
 /**
- * Fetches reservations for a specific seat.
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all reservations for a specific seat
  */
-router.get("/all/seat/:seatId", async (req: Request, res: Response, next: NextFunction) => {
+router.get("/all/seat/:seatId",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 3),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const seatId: number = parseInt(req.params.seatId.toString());
         if (isNaN(seatId) || seatId < Constants.TYPICAL_MIN_ID) {
@@ -221,7 +250,7 @@ router.put("/update/:reservationId", async (req: Request, res: Response, next: N
         if (seatId !== undefined) {
             if (typeof seatId !== 'number' || !Number.isInteger(seatId)) return res.status(400).json({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
             if (seatId < Constants.TYPICAL_MIN_ID) {
-                return res.status(400).json({ message: Messages.SEAT_ERR_ID, reservations: [] }); 
+                return res.status(400).json({ message: Messages.SEAT_ERR_ID, reservations: [] });
             }
 
             const seat: SeatInstance | null = await Seat.findByPk(seatId);
@@ -231,7 +260,7 @@ router.put("/update/:reservationId", async (req: Request, res: Response, next: N
 
             const seatReservation: ReservationInstance | null = await Reservation.findOne({where: { seatId, screeningId: reservation.screeningId }});
             console.log(`Informacje`, seatReservation, reservation);
-            if (seatReservation && 
+            if (seatReservation &&
                 seatReservation.id !== reservation.id &&
                 seatReservation.screeningId === reservation.screeningId
             ) {
@@ -243,7 +272,7 @@ router.put("/update/:reservationId", async (req: Request, res: Response, next: N
                 }
             }
             updateData.seatId = seatId;
-        }        
+        }
 
         await reservation.update(updateData);
         res.send({ reservations: [reservation] });

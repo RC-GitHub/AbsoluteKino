@@ -43,7 +43,7 @@ describe("Product Lifecycle Flow", async () => {
     // A Cinema object is created first to satisfy the foreign key constraint
     // Then a cinema admin is created and connected with that cinema
     // His cookie is stored for use in subsequent tests
-    // Then products are created with various validation checks.]
+    // Then products are created with various validation checks
     // At the end, 1 product exists in the database.
     //---------------------------------
 
@@ -186,7 +186,7 @@ describe("Product Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/product/new", "POST", {}, "products");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/product/new", "POST", {}, "products", siteAdminCookie)
         });
 
@@ -375,7 +375,7 @@ describe("Product Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/product/update/1", "PUT", {}, "products");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/product/update/1", "PUT", {}, "products", siteAdminCookie)
         });
 
@@ -435,7 +435,7 @@ describe("Product Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/product/delete/1", "DELETE", {}, "products");
         });
 
-        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/product/delete/1", "DELETE", {}, "products", siteAdminCookie)
         });
 
