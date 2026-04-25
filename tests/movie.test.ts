@@ -1,4 +1,4 @@
-import sequelize, { Movie, User, UserInstance } from "../src/models";
+import sequelize, { Movie, User } from "../src/models";
 import * as Messages from "../src/messages";
 import * as Constants from "../src/constants";
 import * as Utils from "./utils";
@@ -6,7 +6,12 @@ import * as Utils from "./utils";
 let siteAdminCookie: string[] | undefined = [];
 let regularCookie: string[] | undefined = [];
 
-let movieId: number;
+//---------------------------------
+// Step 0 - Users
+//---------------------------------
+// Site admin and regular user are created before all tests
+// Their cookies are stored for use in subsequent tests
+//---------------------------------
 
 beforeAll(async () => {
     await sequelize.sync({ force: true });
@@ -36,7 +41,6 @@ describe("Movie Lifecycle Flow", async () => {
     describe("POST /movie/new", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created movie object", async () => {
             response = await Utils.sendRequest("/movie/new", 200, "POST", Utils.movieData, siteAdminCookie);
-            movieId = response.body.movies[0].id;
 
             expect(response.body).toHaveProperty("movies");
             expect(response.body.movies[0]).toHaveProperty("title", Utils.movieData.title);

@@ -13,6 +13,13 @@ let unauthorizedCinemaAdminCookie: string [] | undefined = [];
 let cinemaId: number;
 let roomId: number;
 
+//---------------------------------
+// Step 0 - Users
+//---------------------------------
+// Site admin and regular user are created before all tests
+// Their cookies are stored for use in subsequent tests
+//---------------------------------
+
 beforeAll(async () => {
     await sequelize.sync({ force: true });
 
@@ -38,6 +45,8 @@ describe("Screening Lifecycle Flow", async () => {
     // Step 1 - POST
     //---------------------------------
     // First cinema object is created successfully
+    // Then a cinema admin is created and connected with that cinema
+    // His cookie is stored for use in subsequent tests
     // Then a room connected with that cinema
     // Then a screening connected with that room
     // Then tests go over all cases which result in failure

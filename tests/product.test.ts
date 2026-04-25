@@ -1,30 +1,38 @@
-import sequelize, { UserInstance } from "../src/models";
+import sequelize, { User, Cinema, Product, UserInstance } from "../src/models";
 import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 import * as Utils from "./utils";
-import { deleteSiteAdmin } from "../src/owner";
 
-let siteAdmin: UserInstance;
-let regularUser: UserInstance;
-let siteAdminCookie: string[] | undefined = []
-let regularCookie: string[] | undefined = []
+let cinemaAdmin: UserInstance;
+
+let siteAdminCookie: string[] | undefined = [];
+let regularCookie: string[] | undefined = [];
+let cinemaAdminCookie: string [] | undefined = [];
+let unauthorizedCinemaAdminCookie: string [] | undefined = [];
+
+let cinemaId: number;
+
+//---------------------------------
+// Step 0 - Users
+//---------------------------------
+// Site admin and regular user are created before all tests
+// Their cookies are stored for use in subsequent tests
+//---------------------------------
 
 beforeAll(async () => {
-    await sequelize.sync({ force: true });  
+    await sequelize.sync({ force: true });
 
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
-
-    siteAdmin = siteAdminData.user;
-    regularUser = regularUserData.user;
 
     siteAdminCookie = siteAdminData.cookie;
     regularCookie = regularUserData.cookie;
 });
 
 afterAll(async () => {
-    await deleteSiteAdmin(siteAdmin.id!);
-    await Utils.deleteUser(regularUser);
+    await User.destroy({ where: {}, cascade: true })
+    await Cinema.destroy({ where: {}, cascade: true })
+    await Product.destroy({ where: {}, cascade: true })
 });
 
 describe("Product Lifecycle Flow", async () => {
@@ -33,16 +41,24 @@ describe("Product Lifecycle Flow", async () => {
     //---------------------------------
     // Step 1 - POST
     //---------------------------------
-    // A Cinema object is created first to satisfy the foreign key constraint.
-    // Then products are created with various validation checks.
+    // A Cinema object is created first to satisfy the foreign key constraint
+    // Then a cinema admin is created and connected with that cinema
+    // His cookie is stored for use in subsequent tests
+    // Then products are created with various validation checks.]
     // At the end, 1 product exists in the database.
     //---------------------------------
 
     describe("POST /product/new", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created product object", async () => {
-            await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
+            response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
+            cinemaId = response.body.cinemas[0].id;
 
-            response = await Utils.sendRequest("/product/new", 200, "POST", Utils.productData);
+            let cinemaAdminData = await Utils.createRegularUser();
+            cinemaAdmin = cinemaAdminData.user;
+            cinemaAdminCookie = cinemaAdminData.cookie;
+            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: cinemaAdmin.id, cinemaId: cinemaId }, siteAdminCookie);
+
+            response = await Utils.sendRequest("/product/new", 200, "POST", Utils.productData, cinemaAdminCookie);
             expect(response.body).toHaveProperty("products");
             expect(response.body.products[0]).toHaveProperty("id", 1);
             expect(response.body.products[0]).toHaveProperty("name", Utils.productData.name);
@@ -51,89 +67,144 @@ describe("Product Lifecycle Flow", async () => {
 
         it("should respond with 400 if required fields are missing", async () => {
             // name: null or undefined
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: undefined });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: undefined }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: null });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: null }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
 
             // price: null or undefined
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, price: undefined });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, price: undefined }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, price: null });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, price: null }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
 
             // cinemaId: null or undefined
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: undefined });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: null });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: undefined }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: null }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
+
+            // all are undefined
+            response = await Utils.sendRequest("/product/new", 400, "POST", {}, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
+
+            // all are null
+            response = await Utils.sendRequest("/product/new", 400, "POST", { name: null, price: null, size: null, discount: null, cinemaId: null }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
+
+            // mixed invalid
+            const mixedInvalid = {
+                name: null,
+                price: undefined,
+                size: null,
+                discount: undefined,
+                cinemaId: null
+            };
+            response = await Utils.sendRequest("/product/new", 400, "POST", mixedInvalid, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
         });
 
         it("should respond with 400 if typings are incorrect", async () => {
             // name: not a string
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: 123 });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: 123 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
 
             // price: not a number
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, price: "5.00" });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, price: "5.00" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
 
             // size: not a string
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, size: true });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, size: true }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
 
             // discount: not a number
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, discount: "5" });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, discount: "5" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
 
             // cinemaId: not a number
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: "5" });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: "5" }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
         });
 
         it("should respond with 400 if name length is invalid", async () => {
-            //Too short
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: "" });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NAME_LEN, products: [] });
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: "   " });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NAME_LEN, products: [] });
-
-            //Too long
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, name: "a".repeat(Constants.PRODUCT_NAME_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NAME_LEN, products: [] });
+            await Utils.boundsCheck(
+                "/product/new",
+                "POST",
+                Utils.productData,
+                Constants.PRODUCT_NAME_MIN_LEN,
+                Constants.PRODUCT_NAME_MAX_LEN,
+                Messages.PRODUCT_ERR_NAME_LEN,
+                "name",
+                "string",
+                "products",
+                cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if price is invalid", async () => {
             // Negative price
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, price: -1 });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, price: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_PRICE, products: [] });
         });
 
         it("should respond with 400 if discount is invalid", async () => {
-            // Negative discount
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, discount: Constants.PRODUCT_DISCOUNT_MIN_VAL - 1 });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_DISCOUNT, products: [] });
-           
-            // Discount is bigger than max
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, discount: Constants.PRODUCT_DISCOUNT_MAX_VAL + 1 });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_DISCOUNT, products: [] });
+            await Utils.boundsCheck(
+                "/product/new",
+                "POST",
+                Utils.productData,
+                Constants.PRODUCT_DISCOUNT_MIN_VAL,
+                Constants.PRODUCT_DISCOUNT_MAX_VAL,
+                Messages.PRODUCT_ERR_DISCOUNT,
+                "discount",
+                "number",
+                "products",
+                cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if size is not in allowed list", async () => {
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, size: "SuperSize" });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, size: "SuperSize" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_SIZE, products: [] });
         });
 
         it("should respond with 400 if cinema id is invalid", async () => {
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: 0 });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: 0 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
 
-            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: -1 });
+            response = await Utils.sendRequest("/product/new", 400, "POST", { ...Utils.productData, cinemaId: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
         });
 
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/product/new", "POST", {}, "products");
+        });
+
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/product/new", "POST", {}, "products");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
+            await Utils.deletedAdminCheck("/product/new", "POST", {}, "products");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/product/new", "POST", {}, "products", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /new", async () => {
+            await Utils.unauthorizedCheck("/product/new", "POST", {}, "products", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /new", async () => {
+            let unauthorizedCinemaAdminData = await Utils.createRegularUser();
+            unauthorizedCinemaAdminData = await Utils.levelUserTo(unauthorizedCinemaAdminData.user, 2, unauthorizedCinemaAdminData.cookie);
+            unauthorizedCinemaAdminCookie = unauthorizedCinemaAdminData.cookie;
+
+            await Utils.unauthorizedCheck("/product/new", "POST", { cinemaId: cinemaId }, "products", unauthorizedCinemaAdminCookie)
+        });
+
         it("should respond with 404 if cinemaId does not exist", async () => {
-            response = await Utils.sendRequest("/product/new", 404, "POST", { ...Utils.productData, cinemaId: 999 });
+            response = await Utils.sendRequest("/product/new", 404, "POST", { ...Utils.productData, cinemaId: 99 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, products: [] });
         });
     });
@@ -148,7 +219,7 @@ describe("Product Lifecycle Flow", async () => {
     describe("GET /product/all", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all products", async () => {
             // Add second product
-            await Utils.sendRequest("/product/new", 200, "POST", { ...Utils.productData, name: "Popcorn Large", size: "Large" });
+            await Utils.sendRequest("/product/new", 200, "POST", { ...Utils.productData, name: "Popcorn Large", size: "Large" }, cinemaAdminCookie);
 
             response = await Utils.sendRequest("/product/all", 200, "GET");
             expect(response.body.products).toHaveLength(2);
@@ -163,24 +234,24 @@ describe("Product Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if cinemaId is not valid", async () => {
-            response = await Utils.sendRequest("/product/all/cinema/abc", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
-
-            response = await Utils.sendRequest("/product/all/cinema/0", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
-
-            response = await Utils.sendRequest("/product/all/cinema/-1", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
+            await Utils.invalidIdCheck(
+                "/product/all/cinema",
+                "GET",
+                {},
+                Messages.CINEMA_ERR_ID,
+                "products",
+            );
         });
 
         it("should respond with 404 if specified cinema object is not found in the database", async () => {
-            response = await Utils.sendRequest("/product/all/cinema/3", 404, "GET");
+            response = await Utils.sendRequest("/product/all/cinema/99", 404, "GET");
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, products: [] });
         });
 
         it("should respond with 404 if cinema has no products", async () => {
             // Create a new cinema (ID 2)
             await Utils.sendRequest("/cinema/new", 200, "POST", { ...Utils.cinemaData, name: "Empty Cinema" }, siteAdminCookie);
+
             response = await Utils.sendRequest("/product/all/cinema/2", 404, "GET");
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NOT_FOUND_CINEMA, products: [] });
         });
@@ -196,97 +267,134 @@ describe("Product Lifecycle Flow", async () => {
     describe("PUT /product/update/:productId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and update product fields", async () => {
             const updateData = { price: 15.50, discount: 10 };
-            response = await Utils.sendRequest("/product/update/1", 200, "PUT", updateData);
+            response = await Utils.sendRequest("/product/update/1", 200, "PUT", updateData, cinemaAdminCookie);
             expect(Number(response.body.products[0].price)).toBe(updateData.price);
             expect(Number(response.body.products[0].discount)).toBe(updateData.discount);
         });
 
         it("should respond with 400 if required fields are missing", async () => {
             // all are null
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { name: null, price: null, size: null, discount: null, cinemaId: null });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { name: null, price: null, size: null, discount: null, cinemaId: null }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
 
             // all are undefined
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", {});
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] }); 
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", {}, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
 
             // mixed invalid
-            const mixedInvalid = { 
-                name: null, 
-                price: undefined, 
+            const mixedInvalid = {
+                name: null,
+                price: undefined,
                 size: null,
                 discount: undefined,
                 cinemaId: null
             };
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", mixedInvalid);
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", mixedInvalid, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
             // row as string
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, name: 5 });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, name: 5 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
 
             // price as string
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, price: true });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, price: true }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
 
             // size as string
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, size: 3 });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, size: 3 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
 
             // discount as string
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, discount: "a" });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, discount: "a" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
 
             // cinemaId as string
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, cinemaId: "123" });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, cinemaId: "123" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
         });
-        
-        it("should respond with 400 if updated name length is invalid", async () => {
-            //Too short
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, name: "" });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NAME_LEN, products: [] });
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, name: "   " });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NAME_LEN, products: [] });
 
-            //Too long
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, name: "a".repeat(Constants.PRODUCT_NAME_MAX_LEN + 1) });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NAME_LEN, products: [] });
+        it("should respond with 400 if updated name length is invalid", async () => {
+            await Utils.boundsCheck(
+                "/product/update/1",
+                "PUT",
+                Utils.productData,
+                Constants.PRODUCT_NAME_MIN_LEN,
+                Constants.PRODUCT_NAME_MAX_LEN,
+                Messages.PRODUCT_ERR_NAME_LEN,
+                "name",
+                "string",
+                "products",
+                cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if updated price is invalid", async () => {
             // Negative price
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, price: -1 });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, price: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_PRICE, products: [] });
         });
 
         it("should respond with 400 if updated discount is invalid", async () => {
-            // Negative discount
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, discount: Constants.PRODUCT_DISCOUNT_MIN_VAL - 1 });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_DISCOUNT, products: [] });
-           
-            // Discount is bigger than max
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, discount: Constants.PRODUCT_DISCOUNT_MAX_VAL + 1 });
-            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_DISCOUNT, products: [] });
+            await Utils.boundsCheck(
+                "/product/update/1",
+                "PUT",
+                Utils.productData,
+                Constants.PRODUCT_DISCOUNT_MIN_VAL,
+                Constants.PRODUCT_DISCOUNT_MAX_VAL,
+                Messages.PRODUCT_ERR_DISCOUNT,
+                "discount",
+                "number",
+                "products",
+                cinemaAdminCookie
+            );
         });
 
         it("should respond with 400 if updated size is not in allowed list", async () => {
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, size: "SuperSize" });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, size: "SuperSize" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_SIZE, products: [] });
         });
 
         it("should respond with 400 if updated cinema id is invalid", async () => {
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, cinemaId: 0 });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, cinemaId: 0 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
 
-            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, cinemaId: -1 });
+            response = await Utils.sendRequest("/product/update/1", 400, "PUT", { ...Utils.productData, cinemaId: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, products: [] });
         });
 
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/product/update/1", "PUT", {}, "products");
+        });
+
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/product/update/1", "PUT", {}, "products");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /update", async () => {
+            await Utils.deletedAdminCheck("/product/update/1", "PUT", {}, "products");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/product/update/1", "PUT", {}, "products", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /update", async () => {
+            await Utils.unauthorizedCheck("/product/update/1", "PUT", {}, "products", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /update", async () => {
+            await Utils.unauthorizedCheck("/product/update/1", "PUT", { cinemaId: cinemaId }, "products", unauthorizedCinemaAdminCookie)
+        });
+
+        it("should respond with 404 if specified product object is not found in the database", async () => {
+            response = await Utils.sendRequest("/product/update/99", 404, "PUT", Utils.productData, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.PRODUCT_ERR_NOT_FOUND, products: [] });
+        });
+
         it("should respond with 404 if updated cinemaId does not exist", async () => {
-            response = await Utils.sendRequest("/product/update/1", 404, "PUT", { ...Utils.productData, cinemaId: 999 });
+            response = await Utils.sendRequest("/product/update/1", 404, "PUT", { ...Utils.productData, cinemaId: 99 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, products: [] });
         });
     });

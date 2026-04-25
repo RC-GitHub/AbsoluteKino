@@ -4,12 +4,17 @@ import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 import * as Utils from "./utils";
 
-import { deleteSiteAdmin } from "../src/owner";
-
 let siteAdmin: UserInstance;
 let regularUser: UserInstance;
 let siteAdminCookie: string[] | undefined = []
 let regularCookie: string[] | undefined = []
+
+//---------------------------------
+// Step 0 - Users
+//---------------------------------
+// Site admin and regular user are created before all tests
+// Their cookies are stored for use in subsequent tests
+//---------------------------------
 
 beforeAll(async () => {
     await sequelize.sync({ force: true });

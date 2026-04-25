@@ -213,7 +213,7 @@ router.put(
   "/update/:seatId",
   Auth.authorize("seats"),
   Auth.validatePrivileges("seats", 2),
-  Auth.validateSeatAccess,
+  Auth.validateSeatAccess("seats", 3),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const seatId: number = parseInt(req.params.seatId.toString());
@@ -370,7 +370,7 @@ router.delete(
   "/delete/:seatId",
   Auth.authorize("seats"),
   Auth.validatePrivileges("seats", 2),
-  Auth.validateSeatAccess,
+  Auth.validateSeatAccess("seats", 3),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const seatId: number = parseInt(req.params.seatId.toString());

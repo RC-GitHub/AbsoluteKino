@@ -1,19 +1,28 @@
 import { Router, Request, Response, NextFunction } from "express";
-import * as Constants from "../constants.ts";
-import * as Messages from "../messages.ts";
-import { 
+import {
     Cinema, CinemaAttributes, CinemaInstance,
     Product, ProductAttributes, ProductInstance
 } from "../models.js";
 
+import * as Constants from "../constants.ts";
+import * as Messages from "../messages.ts";
+import * as Auth from "../middleware/auth.ts";
+
 const router = Router();
 
 /**
+ * Only cinema admin and higher can get to 200 with this endpoint
+ * ===============================
  * Adds product to the database
  * Requires name, price and cinema id
  * Additionally allows the request to have size and discount
  */
-router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
+router.post(
+    "/new",
+    Auth.authorize("products"),
+    Auth.validatePrivileges("products", 2),
+    Auth.validateCinemaMembership("products", 3),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { name, price, size, discount, cinemaId } : ProductAttributes = req.body;
 
@@ -21,8 +30,8 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
             return res.status(400).json({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
         }
 
-        if (typeof name !== "string" || typeof price !== "number" || 
-            (size !== undefined && typeof size !== "string") || (discount !== undefined && typeof discount !== "number") || 
+        if (typeof name !== "string" || typeof price !== "number" ||
+            (size !== undefined && typeof size !== "string") || (discount !== undefined && typeof discount !== "number") ||
             typeof cinemaId !== "number") {
             return res.status(400).json({ message: Messages.PRODUCT_ERR_TYPING, products: [] });
         }
@@ -71,7 +80,9 @@ router.post("/new", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * Fetches all products.
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Sends data about all products
  */
 router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -86,6 +97,8 @@ router.get("/all", async (req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
  * Fetches products for a specific cinema
  */
 router.get("/all/cinema/:cinemaId", async (req: Request, res: Response, next: NextFunction) => {
@@ -111,9 +124,16 @@ router.get("/all/cinema/:cinemaId", async (req: Request, res: Response, next: Ne
 });
 
 /**
- * Updates a product
+ * Only cinema admin or higher can get to 200 with this endpoint
+ * ===============================
+ * Updates data for a product with the specified ID
  */
-router.put("/update/:productId", async (req: Request, res: Response, next: NextFunction) => {
+router.put(
+    "/update/:productId",
+    Auth.authorize("products"),
+    Auth.validatePrivileges("products", 2),
+    Auth.validateProductAccess("products", 3),
+    async (req: Request, res: Response, next: NextFunction) => {
     try {
         const productId: number = parseInt(req.params.productId.toString());
         const { name, price, size, discount, cinemaId } = req.body;
@@ -127,10 +147,10 @@ router.put("/update/:productId", async (req: Request, res: Response, next: NextF
             return res.status(404).json({ message: Messages.PRODUCT_ERR_NOT_FOUND, products: [] });
         }
 
-        if ((name === undefined || name === null) && 
-            (price === undefined || price === null) && 
-            (size === undefined || size === null) && 
-            (discount === undefined || discount === null) && 
+        if ((name === undefined || name === null) &&
+            (price === undefined || price === null) &&
+            (size === undefined || size === null) &&
+            (discount === undefined || discount === null) &&
             (cinemaId === undefined || cinemaId === null)) {
             return res.status(400).json({ message: Messages.PRODUCT_ERR_EMPTY_ARGS, products: [] });
         }

@@ -1,4 +1,4 @@
-import { Room, User, UserInstance, Seat, Screening } from "../models";
+import { Room, User, UserInstance, Seat, Screening, Product, Reservation } from "../models";
 import { Request, Response, NextFunction } from "express";
 
 import jwt from "jsonwebtoken";
@@ -190,59 +190,53 @@ export const validateCinemaMembership = (
   };
 };
 
-export const validateRoomAccess = (
+const validateCinemaResourceAccess = (
+  Model: any,
+  resourceIdKey: string,
+  idErrorMessage: string,
+  notFoundMessage: string,
   arrayName: string | string[],
-  bypassLevel: number,
+  bypassLevel: number = 3
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      const roomId = parseInt(
-        req.params.roomId || req.body.roomId || req.query.roomId,
-      );
+      const resourceId = parseInt(req.params[resourceIdKey] || req.body[resourceIdKey] || req.query[resourceIdKey]);
 
       const errorResponse: any = { message: "" };
       const names = Array.isArray(arrayName) ? arrayName : [arrayName];
-      if (req.method !== "DELETE")
-        names.forEach((name) => (errorResponse[name] = []));
+      if (req.method !== "DELETE") names.forEach((n) => (errorResponse[n] = []));
 
-      if (isNaN(roomId) || roomId < Constants.TYPICAL_MIN_ID) {
-        errorResponse.message = Messages.ROOM_ERR_ID;
-        return res.status(400).json(errorResponse);
+      if (isNaN(resourceId) || resourceId < Constants.TYPICAL_MIN_ID) {
+        return res.status(400).json({ ...errorResponse, message: idErrorMessage });
       }
 
-      if (!user) {
-        errorResponse.message = Messages.AUTH_REQUIRED;
-        return res.status(401).json(errorResponse);
-      }
+      if (!user) return res.status(401).json({ ...errorResponse, message: Messages.AUTH_REQUIRED });
 
-      const room = await Room.findByPk(roomId);
-      if (!room) {
-        errorResponse.message = Messages.ROOM_ERR_NOT_FOUND_GLOBAL;
-        return res.status(404).json(errorResponse);
-      }
+      const record = await Model.findByPk(resourceId);
+      if (!record) return res.status(404).json({ ...errorResponse, message: notFoundMessage });
 
       const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
       if (userLevel >= bypassLevel) return next();
 
-      const hasAccess = await (user as any).hasCinema(room.cinemaId);
-      if (!hasAccess) {
-        errorResponse.message = Messages.AUTH_FORBIDDEN;
-        return res.status(403).json(errorResponse);
-      }
+      const hasAccess = await (user as any).hasCinema(record.cinemaId);
+      if (!hasAccess) return res.status(403).json({ ...errorResponse, message: Messages.AUTH_FORBIDDEN });
 
       next();
     }
     catch (error: any) {
-      next(error);
+        next(error);
     }
   };
 };
 
-/**
- * Shared logic for resources linked to a Room (Seats, Screenings, etc.)
- */
-export const validateRoomLinkedAccess = (
+export const validateRoomAccess = (arr: string | string[], level: number) =>
+  validateCinemaResourceAccess(Room, "roomId", Messages.ROOM_ERR_ID, Messages.ROOM_ERR_NOT_FOUND_GLOBAL, arr, level);
+
+export const validateProductAccess = (arr: string | string[], level: number) =>
+  validateCinemaResourceAccess(Product, "productId", Messages.PRODUCT_ERR_ID, Messages.PRODUCT_ERR_NOT_FOUND, arr, level);
+
+const validateRoomLinkedAccess = (
   Model: any,
   resourceIdKey: string,      // e.g., "seatId" or "screeningId"
   arrayNames: string | string[], // e.g., ["seats", "otherData"]
@@ -306,18 +300,26 @@ export const validateRoomLinkedAccess = (
   };
 };
 
-export const validateSeatAccess = validateRoomLinkedAccess(
+export const validateSeatAccess = (
+  arrayNames: string | string[],
+  bypassLevel: number = 3
+) => validateRoomLinkedAccess(
   Seat,
   "seatId",
-  "seats",
+  arrayNames,
   Messages.SEAT_ERR_NOT_FOUND,
-  Messages.SEAT_ERR_ID
+  Messages.SEAT_ERR_ID,
+  bypassLevel
 );
 
-export const validateScreeningAccess = validateRoomLinkedAccess(
+export const validateScreeningAccess = (
+  arrayNames: string | string[],
+  bypassLevel: number = 3
+) => validateRoomLinkedAccess(
   Screening,
   "screeningId",
-  "screenings",
+  arrayNames,
   Messages.SCREENING_ERR_NOT_FOUND_ROOM,
-  Messages.SCREENING_ERR_ID
+  Messages.SCREENING_ERR_ID,
+  bypassLevel
 );

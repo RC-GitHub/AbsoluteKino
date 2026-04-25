@@ -13,8 +13,15 @@ let unauthorizedCinemaAdminCookie: string [] | undefined = [];
 
 let cinemaId: number;
 
+//---------------------------------
+// Step 0 - Users
+//---------------------------------
+// Site admin and regular user are created before all tests
+// Their cookies are stored for use in subsequent tests
+//---------------------------------
+
 beforeAll(async () => {
-    await sequelize.sync({ force: true });  
+    await sequelize.sync({ force: true });
 
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
@@ -37,7 +44,9 @@ describe("Room Lifecycle Flow", async () => {
     // Step 1 - POST
     //---------------------------------
     // First cinema object is created successfully
-    // Then two rooms connected with that cinema
+    // Then a cinema admin is created and connected with that cinema
+    // His cookie is stored for use in subsequent tests
+    // Then two rooms connected with that cinema are created
     // Then tests go over all cases which result in failure
     // Then yet another two rooms connected with that cinema, which also create many seats
     // Then tests go over all cases which result in failure
@@ -91,10 +100,18 @@ describe("Room Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/room/new", 400, "POST", {}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
 
+            // all are null
+            response = await Utils.sendRequest("/room/new", 400, "POST", { name: null, cinemaId: null, width: null, depth: null, rowAmount: null, colAmount: null }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
+
             // mixed invalid
-            const mixedInvalid = { 
-                name: null, 
-                cinemaId: undefined 
+            const mixedInvalid = {
+                name: null,
+                width: undefined,
+                depth: null,
+                rowAmount: undefined,
+                colAmount: null,
+                cinemaId: undefined
             };
             response = await Utils.sendRequest("/room/new", 400, "POST", mixedInvalid, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [] });
@@ -218,7 +235,7 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
-            await Utils.deletedAdminCheck("/room/new", "POST", {}, "rooms");    
+            await Utils.deletedAdminCheck("/room/new", "POST", {}, "rooms");
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
@@ -247,7 +264,7 @@ describe("Room Lifecycle Flow", async () => {
     describe("POST /room/new/default-seats", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created room object", async () => {
             response = await Utils.sendRequest("/room/new/default-seats", 200, "POST", Utils.roomDataWithStairs, cinemaAdminCookie);
-            
+
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms[0]).toHaveProperty("name", Utils.roomDataWithStairs.name);
             expect(response.body.rooms[0]).toHaveProperty("width", Utils.roomDataWithStairs.width);
@@ -299,8 +316,8 @@ describe("Room Lifecycle Flow", async () => {
             expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, rooms: [], seats: [] });
 
             // mixed invalid
-            const mixedInvalid = { 
-                name: null, 
+            const mixedInvalid = {
+                name: null,
                 cinemaId: undefined,
                 stairsPlacements: null
             };
@@ -452,7 +469,7 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new/default-seats", async () => {
-            await Utils.deletedAdminCheck("/room/new/default-seats", "POST", {}, ["rooms", "seats"]);    
+            await Utils.deletedAdminCheck("/room/new/default-seats", "POST", {}, ["rooms", "seats"]);
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
@@ -484,7 +501,7 @@ describe("Room Lifecycle Flow", async () => {
     describe("GET /room/all/:cinemaId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all room objects", async () => {
             response = await Utils.sendRequest("/room/all/1", 200, "GET");
-            expect(response.body).toHaveProperty("rooms");            
+            expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms).toBeInstanceOf(Array);
             expect(response.body.rooms).toHaveLength(4);
         });
@@ -686,7 +703,7 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /update", async () => {
-            await Utils.deletedAdminCheck("/room/update/1", "PUT", {}, "rooms");    
+            await Utils.deletedAdminCheck("/room/update/1", "PUT", {}, "rooms");
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
@@ -702,7 +719,7 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/room/update/99", 404, "PUT", Utils.roomData, cinemaAdminCookie); 
+            response = await Utils.sendRequest("/room/update/99", 404, "PUT", Utils.roomData, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, rooms: [] });
         });
 
@@ -739,7 +756,7 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /delete", async () => {
-            await Utils.deletedAdminCheck("/room/delete/1", "DELETE", {}, "rooms");    
+            await Utils.deletedAdminCheck("/room/delete/1", "DELETE", {}, "rooms");
         });
 
         it("should return 401 when accessing a protected route with a tampered cookie", async () => {
@@ -755,7 +772,7 @@ describe("Room Lifecycle Flow", async () => {
         });
 
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/room/delete/99", 404, "DELETE", {}, siteAdminCookie); 
+            response = await Utils.sendRequest("/room/delete/99", 404, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL });
         });
     });

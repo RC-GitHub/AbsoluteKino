@@ -319,7 +319,7 @@ router.put(
     "/update/:screeningId",
     Auth.authorize("screenings"),
     Auth.validatePrivileges("screenings", 2),
-    Auth.validateScreeningAccess,
+    Auth.validateScreeningAccess("screenings", 3),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const screeningId: number = parseInt(
@@ -486,7 +486,7 @@ router.delete(
     "/delete/:screeningId",
     Auth.authorize("screenings"),
     Auth.validatePrivileges("screenings", 2),
-    Auth.validateScreeningAccess,
+    Auth.validateScreeningAccess("screenings", 3),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const screeningId: number = parseInt(
