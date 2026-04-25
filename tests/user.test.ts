@@ -274,7 +274,7 @@ describe("User Lifecycle Flow", () => {
             await Utils.freshTokenCheck("/user/logout", "POST", {}, "users");
         });
 
-        it("should respond with 301 when attempting to logout with a tampered cookie", async () => {
+        it("should respond with 401 when attempting to logout with a tampered cookie", async () => {
             const tempAdminCookie = (await Utils.createSiteAdmin()).cookie;
             await Utils.tamperedCookieCheck("/user/logout", "POST", {}, "users", tempAdminCookie);
         });
@@ -320,7 +320,7 @@ describe("User Lifecycle Flow", () => {
             await Utils.deletedAdminCheck("/user/all", "GET", {}, "users");
         });
 
-        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/user/all", "GET", {}, "users", siteAdminCookie)
         });
 
@@ -355,7 +355,7 @@ describe("User Lifecycle Flow", () => {
             await Utils.deletedAdminCheck("/user/id/1", "GET", {}, "users");
         });
 
-        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/user/id/1", "GET", {}, "users", siteAdminCookie);
         });
 
@@ -490,7 +490,7 @@ describe("User Lifecycle Flow", () => {
             await Utils.deletedAdminCheck("/user/update/1", "PUT", { name: "Updated User Name v3" }, "users");
         });
 
-        it("should respond with 301 when accessing the route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing the route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/user/update/1", "PUT", { name: "Updated User Name v3" }, "users", siteAdminCookie)
         });
 
@@ -526,7 +526,7 @@ describe("User Lifecycle Flow", () => {
 
     describe("PUT /user/update-type/:userId", () => {
         it("(MODEL EXAMPLE) should respond with 200 and user object", async () => {
-            response = await Utils.sendRequest("/user/update-type/1", 200, "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, regularCookie);
+            response = await Utils.sendRequest("/user/update-type/1", 200, "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, siteAdminCookie);
             expect(response.body.users[0]).toHaveProperty("accountType", Constants.USER_ACC_TYPES[2]);
         });
 
@@ -545,6 +545,20 @@ describe("User Lifecycle Flow", () => {
             expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         });
 
+        it("should respond with 400 if user is underprivileged to change his account type to the specified one", async () => {
+            response = await Utils.sendRequest("/user/register", 200, "POST", {});
+            const newUser = response.body.users[0];
+            const newUserCookie = response.get("Set-Cookie")
+
+            response = await Utils.sendRequest(`/user/update-type/${newUser.id}`, 400, "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, newUserCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE_CHANGE, users: [] });
+
+            await Utils.sendRequest(`/user/update-type/${newUser.id}`, 200, "PUT", { accountType: Constants.USER_ACC_TYPES[1] }, newUserCookie);
+
+            response = await Utils.sendRequest(`/user/update-type/${newUser.id}`, 400, "PUT", { accountType: Constants.USER_ACC_TYPES[0] }, newUserCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ACC_TYPE_CHANGE, users: [] });
+        });
+
         it("should respond with 401 when no cookies are provided", async () => {
             await Utils.noCookieCheck("/user/update-type/1", "PUT", {}, "users");
         });
@@ -553,7 +567,7 @@ describe("User Lifecycle Flow", () => {
             await Utils.deletedAdminCheck("/user/update-type/1", "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, "users");
         });
 
-        it("should respond with 301 when accessing the route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing the route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/user/update-type/1", "PUT", { accountType: Constants.USER_ACC_TYPES[2] }, "users", siteAdminCookie)
         });
 
@@ -680,7 +694,7 @@ describe("User Lifecycle Flow", () => {
             await Utils.deletedAdminCheck("/user/assign-cinema", "PUT", {}, "users");
         });
 
-        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/user/assign-cinema", "PUT", {}, "users", siteAdminCookie)
         });
 
@@ -736,7 +750,7 @@ describe("User Lifecycle Flow", () => {
             await Utils.deletedAdminCheck("/user/delete/1", "DELETE", {}, "users");
         });
 
-        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/user/delete/1", "DELETE", {}, "users", siteAdminCookie)
         });
 

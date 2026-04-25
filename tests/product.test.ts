@@ -186,7 +186,7 @@ describe("Product Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/product/new", "POST", {}, "products");
         });
 
-        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/product/new", "POST", {}, "products", siteAdminCookie)
         });
 
@@ -196,7 +196,7 @@ describe("Product Lifecycle Flow", async () => {
 
         it("should respond with 403 when a cinema admin without necessary privileges tries to access /new", async () => {
             let unauthorizedCinemaAdminData = await Utils.createRegularUser();
-            unauthorizedCinemaAdminData = await Utils.levelUserTo(unauthorizedCinemaAdminData.user, 2, unauthorizedCinemaAdminData.cookie);
+            unauthorizedCinemaAdminData = await Utils.levelUserTo(unauthorizedCinemaAdminData.user, 2, siteAdminCookie);
             unauthorizedCinemaAdminCookie = unauthorizedCinemaAdminData.cookie;
 
             await Utils.unauthorizedCheck("/product/new", "POST", { cinemaId: cinemaId }, "products", unauthorizedCinemaAdminCookie)
@@ -375,7 +375,7 @@ describe("Product Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/product/update/1", "PUT", {}, "products");
         });
 
-        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/product/update/1", "PUT", {}, "products", siteAdminCookie)
         });
 
@@ -435,7 +435,7 @@ describe("Product Lifecycle Flow", async () => {
             await Utils.deletedAdminCheck("/product/delete/1", "DELETE", {}, "products");
         });
 
-        it("should respond with 301 when accessing a protected route with a tampered cookie", async () => {
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
             await Utils.tamperedCookieCheck("/product/delete/1", "DELETE", {}, "products", siteAdminCookie)
         });
 

@@ -430,7 +430,15 @@ router.put("/update-type/:userId",
             return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE, users: [] });
         }
 
-        await user.update({ accountType });
+        if ((req as any).user.accountType === Constants.USER_ACC_TYPES[3] ||
+            ((req as any).user.accountType === Constants.USER_ACC_TYPES[0] && accountType === Constants.USER_ACC_TYPES[1]))
+        {
+            await user.update({ accountType });
+        }
+        else {
+            return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE_CHANGE, users: [] });
+        }
+
         res.send({ users: [user] });
     } catch (error: any) {
         next(error);
