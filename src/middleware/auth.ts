@@ -1,11 +1,11 @@
+import { Room, User, UserInstance, Seat, Screening } from "../models";
 import { Request, Response, NextFunction } from "express";
+
 import jwt from "jsonwebtoken";
 
 import { CONFIG } from "../config";
 import * as Messages from "../messages";
 import * as Constants from "../constants";
-
-import { Room, User, UserInstance, Seat } from "../models";
 
 const JWT_SECRET: string = CONFIG.JWT_SECRET;
 
@@ -239,24 +239,33 @@ export const validateRoomAccess = (
   };
 };
 
-export const validateSeatAccess = (
-  arrayName: string | string[],
-  bypassLevel: number = 3,
+/**
+ * Shared logic for resources linked to a Room (Seats, Screenings, etc.)
+ */
+export const validateRoomLinkedAccess = (
+  Model: any,
+  resourceIdKey: string,      // e.g., "seatId" or "screeningId"
+  arrayNames: string | string[], // e.g., ["seats", "otherData"]
+  notFoundMessage: string,
+  idErrorMessage: string,
+  bypassLevel: number = 3
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      const seatId = parseInt(
-        req.params.seatId || req.body.seatId || req.query.seatId,
+      const resourceId = parseInt(
+        req.params[resourceIdKey] || req.body[resourceIdKey] || req.query[resourceIdKey]
       );
 
       const errorResponse: any = { message: "" };
-      const names = Array.isArray(arrayName) ? arrayName : [arrayName];
-      if (req.method !== "DELETE")
-        names.forEach((name) => (errorResponse[name] = []));
+      const names = Array.isArray(arrayNames) ? arrayNames : [arrayNames];
 
-      if (isNaN(seatId) || seatId < Constants.TYPICAL_MIN_ID) {
-        errorResponse.message = Messages.SEAT_ERR_ID;
+      if (req.method !== "DELETE") {
+        names.forEach((name) => (errorResponse[name] = []));
+      }
+
+      if (isNaN(resourceId) || resourceId < Constants.TYPICAL_MIN_ID) {
+        errorResponse.message = idErrorMessage;
         return res.status(400).json(errorResponse);
       }
 
@@ -265,36 +274,30 @@ export const validateSeatAccess = (
         return res.status(401).json(errorResponse);
       }
 
-      const userLevel = Constants.USER_ACC_TYPES.indexOf(
-        user.accountType || "",
-      );
+      const userLevel = Constants.USER_ACC_TYPES.indexOf(user.accountType || "");
       if (userLevel >= bypassLevel) return next();
 
-      const seat = await Seat.findByPk(seatId, {
-          include: [{
-              model: Room,
-              as: 'Room'
-          }]
+      const record = await Model.findByPk(resourceId, {
+        include: [{ model: Room, as: "Room" }]
       });
 
-      if (!seat) {
-        errorResponse.message = Messages.SEAT_ERR_NOT_FOUND;
+      if (!record) {
+        errorResponse.message = notFoundMessage;
         return res.status(404).json(errorResponse);
       }
 
-      const cinemaId = (seat as any).Room?.cinemaId;
-
+      const cinemaId = (record as any).Room?.cinemaId;
       if (!cinemaId) {
-          return res.status(500).json({ message: Messages.DB_ERR_ASSOCIATION, seats: [] });
+        return res.status(500).json({ message: Messages.DB_ERR_ASSOCIATION, ...errorResponse });
       }
 
       const hasAccess = await (user as any).hasCinema(cinemaId);
-
       if (!hasAccess) {
-          errorResponse.message = Messages.AUTH_FORBIDDEN;
-          return res.status(403).json(errorResponse);
+        errorResponse.message = Messages.AUTH_FORBIDDEN;
+        return res.status(403).json(errorResponse);
       }
 
+      (req as any)[names[0]] = record;
       next();
     }
     catch (error: any) {
@@ -302,3 +305,19 @@ export const validateSeatAccess = (
     }
   };
 };
+
+export const validateSeatAccess = validateRoomLinkedAccess(
+  Seat,
+  "seatId",
+  "seats",
+  Messages.SEAT_ERR_NOT_FOUND,
+  Messages.SEAT_ERR_ID
+);
+
+export const validateScreeningAccess = validateRoomLinkedAccess(
+  Screening,
+  "screeningId",
+  "screenings",
+  Messages.SCREENING_ERR_NOT_FOUND_ROOM,
+  Messages.SCREENING_ERR_ID
+);

@@ -230,7 +230,7 @@ describe("Reservation Lifecycle Flow", async () => {
 
         it("should respond with 404 if no screening objects are connected to the specified reservation object", async () => {
             // Create a new screening (ID 2) with no bookings
-            await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData);
+            await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, siteAdminCookie);
             response = await Utils.sendRequest("/reservation/all/screening/2", 404, "GET");
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_NOT_FOUND_SCREENING, reservations: [] });
         });
@@ -270,7 +270,7 @@ describe("Reservation Lifecycle Flow", async () => {
     describe("GET /reservation/all/seat/:seatId", async () => {
         it("should respond with 200 and reservations for specific seat", async () => {
             // Same seat, but different screening
-            await Utils.sendRequest("/reservation/new", 200, "POST", { ...Utils.reservationData, screeningId: 2 });
+            await Utils.sendRequest("/reservation/new", 200, "POST", { ...Utils.reservationData, screeningId: 2 }, siteAdminCookie);
             response = await Utils.sendRequest("/reservation/all/seat/1", 200, "GET");
             expect(response.body.reservations).toBeInstanceOf(Array);
             expect(response.body.reservations.length).toBe(2);

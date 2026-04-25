@@ -150,7 +150,7 @@ describe("Room Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/seat/new", 400, "POST", { ...Utils.seatData, row: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 
-            // columnumn: not an integer
+            // column: not an integer
             response = await Utils.sendRequest("/seat/new", 400, "POST", { ...Utils.seatData, column: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SEAT_ERR_TYPING, seats: [] });
 

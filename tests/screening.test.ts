@@ -1,21 +1,23 @@
 import sequelize, { Cinema, Room, Seat, User, UserInstance, Movie, Screening } from "../src/models";
+
 import * as Messages from "../src/messages"
 import * as Utils from "./utils"
-import { deleteSiteAdmin } from "../src/owner";
 
-let siteAdmin: UserInstance;
-let regularUser: UserInstance;
+let cinemaAdmin: UserInstance;
+
 let siteAdminCookie: string[] | undefined = []
 let regularCookie: string[] | undefined = []
+let cinemaAdminCookie: string [] | undefined = [];
+let unauthorizedCinemaAdminCookie: string [] | undefined = [];
+
+let cinemaId: number;
+let roomId: number;
 
 beforeAll(async () => {
     await sequelize.sync({ force: true });
 
     const siteAdminData = await Utils.createSiteAdmin();
     const regularUserData = await Utils.createRegularUser();
-
-    siteAdmin = siteAdminData.user;
-    regularUser = regularUserData.user;
 
     siteAdminCookie = siteAdminData.cookie;
     regularCookie = regularUserData.cookie;
@@ -46,10 +48,18 @@ describe("Screening Lifecycle Flow", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the created screening object", async () => {
             // Creating a cinema to connect to a new room
             response = await Utils.sendRequest("/cinema/new", 200, "POST", Utils.cinemaData, siteAdminCookie);
+            cinemaId = response.body.cinemas[0].id;
             expect(response.body).toHaveProperty("cinemas");
             expect(response.body.cinemas[0].id).toEqual(1);
 
+            // Creating a user with privileges connected with that room
+            let cinemaAdminData = await Utils.createRegularUser();
+            cinemaAdmin = cinemaAdminData.user;
+            cinemaAdminCookie = cinemaAdminData.cookie;
+            response = await Utils.sendRequest("/user/assign-cinema", 200, "PUT", { userId: cinemaAdmin.id, cinemaId: cinemaId }, siteAdminCookie);
+
             response = await Utils.sendRequest("/room/new", 200, "POST", Utils.roomData, siteAdminCookie);
+            roomId = response.body.rooms[0].id;
             expect(response.body).toHaveProperty("rooms");
             expect(response.body.rooms[0].id).toEqual(1);
             expect(response.body.rooms[0]).toHaveProperty("cinemaId", Utils.roomData.cinemaId);
@@ -59,38 +69,36 @@ describe("Screening Lifecycle Flow", async () => {
             expect(response.body.movies[0].id).toEqual(1);
             expect(response.body.movies[0]).toHaveProperty("title", Utils.movieData.title);
 
-            response = await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, siteAdminCookie);
+            response = await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, cinemaAdminCookie);
             expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings[0]).toHaveProperty("startDate", Utils.screeningData.startDate.toISOString());
             expect(response.body.screenings[0]).toHaveProperty("basePrice", Utils.screeningData.basePrice);
             expect(response.body.screenings[0]).toHaveProperty("movieId", Utils.screeningData.movieId);
             expect(response.body.screenings[0]).toHaveProperty("roomId", Utils.screeningData.roomId);
-
-
         });
 
         it("should respond with 400 if required fields are missing", async () => {
             // startDate: undefined or null
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: undefined });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: undefined }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: null });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: null }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
 
             // roomId: undefined or null
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: undefined});
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: null});
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: undefined }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: null }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
 
             // movieId: undefined or null
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: undefined});
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: undefined }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: null});
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: null }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
 
             // all are undefined
-            response = await Utils.sendRequest("/screening/new", 400, "POST", {});
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", {}, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
 
             // mixed invalid
             const mixedInvalid = {
@@ -98,58 +106,92 @@ describe("Screening Lifecycle Flow", async () => {
                 roomId: undefined,
                 movieId: null
             };
-            response = await Utils.sendRequest("/screening/new", 400, "POST", mixedInvalid);
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", mixedInvalid, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
             // invalid start date
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: 1 });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: 1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: {} });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: {} }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
             // invalid base price
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, basePrice: "1" });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, basePrice: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
             // invalid room id
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: "1" });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
             // invalid movie id
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: "1" });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
         });
 
         it("should respond with 400 if base price is not valid", async () => {
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, basePrice: "-1" });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, basePrice: "-1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
         });
 
         it("should respond with 400 if roomId is not valid", async () => {
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: 0 });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: 0 }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
+
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, roomId: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
         });
 
         it("should respond with 400 if movieId is not valid", async () => {
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: 0 });
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: 0 }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, screenings: [] });
+
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, movieId: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, screenings: [] });
         });
 
+        it("should respond with 400 if start date is invalid", async () => {
+            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: "2000-02-30T00:00:00.000Z" }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_START_DATE, screenings: [] });
+        });
+
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/screening/new", "POST", {}, "screenings");
+        });
+
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/screening/new", "POST", {}, "screenings");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /new", async () => {
+            await Utils.deletedAdminCheck("/screening/new", "POST", {}, "screenings");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/screening/new", "POST", {}, "screenings", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /new", async () => {
+            await Utils.unauthorizedCheck("/screening/new", "POST", {}, "screenings", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /new", async () => {
+            let unauthorizedCinemaAdminData = await Utils.createRegularUser();
+            unauthorizedCinemaAdminData = await Utils.levelUserTo(unauthorizedCinemaAdminData.user, 2, unauthorizedCinemaAdminData.cookie);
+            unauthorizedCinemaAdminCookie = unauthorizedCinemaAdminData.cookie;
+
+            await Utils.unauthorizedCheck("/screening/new", "POST", { roomId: roomId }, "screenings", unauthorizedCinemaAdminCookie)
+        });
+
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/new", 404, "POST", { ...Utils.screeningData, roomId: 2 });
+            response = await Utils.sendRequest("/screening/new", 404, "POST", { ...Utils.screeningData, roomId: 99 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, screenings: [] });
         });
 
         it("should respond with 404 if specified movie object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/new", 404, "POST", { ...Utils.screeningData, movieId: 2 });
+            response = await Utils.sendRequest("/screening/new", 404, "POST", { ...Utils.screeningData, movieId: 99 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_NOT_FOUND, screenings: [] });
-        });
-
-        it("should respond with 400 if start date is invalid", async () => {
-            response = await Utils.sendRequest("/screening/new", 400, "POST", { ...Utils.screeningData, startDate: "2000-02-30T00:00:00.000Z" });
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_START_DATE, screenings: [] });
         });
     });
 
@@ -169,9 +211,9 @@ describe("Screening Lifecycle Flow", async () => {
     describe("GET /screening/all", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and all screening objects", async () => {
             // Adding a few more screenings
-            await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData);
-            await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData);
-            response = await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData);
+            await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, cinemaAdminCookie);
+            await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, cinemaAdminCookie);
+            response = await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, cinemaAdminCookie);
             expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings[0].id).toEqual(4);
 
@@ -191,18 +233,17 @@ describe("Screening Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if roomId is not valid", async () => {
-            response = await Utils.sendRequest("/screening/all/room/abc", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
-
-            response = await Utils.sendRequest("/screening/all/room/0", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
-
-            response = await Utils.sendRequest("/screening/all/room/-1", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
+            await Utils.invalidIdCheck(
+                "/screening/all/room",
+                "GET",
+                {},
+                Messages.ROOM_ERR_ID,
+                "screenings",
+            );
         });
 
         it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/all/room/2", 404, "GET");
+            response = await Utils.sendRequest("/screening/all/room/99", 404, "GET");
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_NOT_FOUND_GLOBAL, screenings: [] });
         });
 
@@ -228,18 +269,17 @@ describe("Screening Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if movieId is not valid", async () => {
-            response = await Utils.sendRequest("/screening/all/movie/abc", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, screenings: [] });
-
-            response = await Utils.sendRequest("/screening/all/movie/0", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, screenings: [] });
-
-            response = await Utils.sendRequest("/screening/all/movie/-1", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, screenings: [] });
+            await Utils.invalidIdCheck(
+                "/screening/all/movie",
+                "GET",
+                {},
+                Messages.MOVIE_ERR_ID,
+                "screenings",
+            );
         });
 
         it("should respond with 404 if specified movie object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/all/movie/2", 404, "GET");
+            response = await Utils.sendRequest("/screening/all/movie/99", 404, "GET");
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_NOT_FOUND, screenings: [] });
         });
 
@@ -258,7 +298,6 @@ describe("Screening Lifecycle Flow", async () => {
 
     describe("GET /screening/id/:screeningId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and the specified room object", async () => {
-            // Adding a few more rooms
             response = await Utils.sendRequest("/screening/id/1", 200, "GET");
             expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings).toBeInstanceOf(Array);
@@ -267,18 +306,17 @@ describe("Screening Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if screening is not valid", async () => {
-            response = await Utils.sendRequest("/screening/id/abc", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID, screenings: [] });
-
-            response = await Utils.sendRequest("/screening/id/0", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID, screenings: [] });
-
-            response = await Utils.sendRequest("/screening/id/-1", 400, "GET");
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID, screenings: [] });
+            await Utils.invalidIdCheck(
+                "/screening/id",
+                "GET",
+                {},
+                Messages.SCREENING_ERR_ID,
+                "screenings",
+            );
         });
 
         it("should respond with 404 if the specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/id/5", 404, "GET");
+            response = await Utils.sendRequest("/screening/id/99", 404, "GET");
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL, screenings: [] });
         });
     });
@@ -294,7 +332,7 @@ describe("Screening Lifecycle Flow", async () => {
     describe("PUT /screening/update/:screeningId", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and modified data", async () => {
             const screeningDataUpdated =  { ...Utils.screeningData, roomId: 2 };
-            response = await Utils.sendRequest("/screening/update/1", 200, "PUT", screeningDataUpdated);
+            response = await Utils.sendRequest("/screening/update/1", 200, "PUT", screeningDataUpdated, cinemaAdminCookie);
 
             expect(response.body).toHaveProperty("screenings");
             expect(response.body.screenings).toBeInstanceOf(Array);
@@ -303,67 +341,97 @@ describe("Screening Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if screeningId is not valid", async () => {
-            response = await Utils.sendRequest("/screening/update/abc", 400, "PUT", Utils.screeningData);
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID, screenings: [] });
-
-            response = await Utils.sendRequest("/screening/update/0", 400, "PUT", Utils.screeningData);
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID, screenings: [] });
-
-            response = await Utils.sendRequest("/screening/update/-1", 400, "PUT", Utils.screeningData);
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_ID, screenings: [] });
-        });
-
-        it("should respond with 404 if specified room object is not found in the database", async () => {
-            response = await Utils.sendRequest("/screening/update/5", 404, "PUT", Utils.screeningData);
-            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL, screenings: [] });
+            await Utils.invalidIdCheck(
+                "/screening/update",
+                "PUT",
+                {},
+                Messages.SCREENING_ERR_ID,
+                "screenings",
+                siteAdminCookie
+            );
         });
 
         it("should respond with 400 if all fields are missing", async () => {
             // all are undefined
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", {});
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", {}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
 
             // some are null, some are undefined
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", {startDate: null, roomId: undefined, movieId: null, basePrice: undefined});
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", {startDate: null, roomId: undefined, movieId: null, basePrice: undefined}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
 
             // all are null
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", {startDate: null, roomId: null, movieId: null});
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", {startDate: null, roomId: null, movieId: null}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_EMPTY_ARGS, screenings: [] });
         });
 
         it("should respond with 400 if required types are incorrect", async () => {
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, startDate: 1 });
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, startDate: 1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, basePrice: "1" });
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, basePrice: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, roomId: "1" });
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, roomId: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
 
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, movieId: "1" });
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, movieId: "1" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_TYPING, screenings: [] });
         });
 
         it("should respond with 400 if updated name is too short or too long", async () => {
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, startDate: "2000-02-30T00:00:00.000Z" });
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, startDate: "2000-02-30T00:00:00.000Z" }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_START_DATE, screenings: [] });
         });
 
         it("should respond with 400 if updated base price is not valid", async () => {
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, basePrice: -1 });
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, basePrice: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.SCREENING_ERR_PRICE, screenings: [] });
         });
 
         it("should respond with 400 if updated roomId is not valid", async () => {
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, roomId: -1 });
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, roomId: 0 }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
+
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, roomId: -1 }, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.ROOM_ERR_ID, screenings: [] });
         });
 
         it("should respond with 400 if updated movieId is not valid", async () => {
-            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, movieId: -1 });
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, movieId: 0}, cinemaAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, screenings: [] });
+
+            response = await Utils.sendRequest("/screening/update/1", 400, "PUT", { ...Utils.screeningData, movieId: -1 }, cinemaAdminCookie);
+            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_ID, screenings: [] });
+        });
+
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/screening/update/1", "PUT", {}, "screenings");
+        });
+
+        it("should respond with 401 when trying to use the same cookie after logout", async () => {
+            await Utils.freshTokenCheck("/screening/update/1", "PUT", {}, "screenings");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /update", async () => {
+            await Utils.deletedAdminCheck("/screening/update/1", "PUT", {}, "screenings");
+        });
+
+        it("should return 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/screening/update/1", "PUT", {}, "screenings", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to access /update", async () => {
+            await Utils.unauthorizedCheck("/screening/update/1", "PUT", {}, "screenings", regularCookie)
+        });
+
+        it("should respond with 403 when a cinema admin without necessary privileges tries to access /update", async () => {
+            await Utils.unauthorizedCheck("/screening/update/1", "PUT", { roomId: roomId }, "screenings", unauthorizedCinemaAdminCookie)
+        });
+
+        it("should respond with 404 if specified screening object is not found in the database", async () => {
+            response = await Utils.sendRequest("/screening/update/99", 404, "PUT", Utils.screeningData, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL, screenings: [] });
         });
     });
 
