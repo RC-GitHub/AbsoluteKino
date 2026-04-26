@@ -103,9 +103,11 @@ export const createReservationLogic = async (data: any) => {
 router.post("/new",
     Auth.authorize("reservations"),
     Auth.validatePrivileges("reservations", 0),
-    async (req: Request, res: Response, next: NextFunction) => {
+    async (req: Request, res: Response, next: NextFunction) =>
+{
     try {
-        const reservation = await createReservationLogic(req.body);
+        const authUserId = (req as any).user.id;
+        const reservation = await createReservationLogic({ ...req.body, userId: authUserId });
         await reservation.save();
         res.send({ reservations: [reservation] });
     } catch (error: any) {
@@ -117,7 +119,7 @@ router.post("/new",
         }
         next(error);
     }
-    });
+});
 
 export const createBulkReservationLogic = async (data: any, transaction?: any) => {
     let { type, seatIds, screeningId, userId }: { type: string, seatIds: number[], screeningId: number, userId: number } = data;
@@ -223,7 +225,8 @@ router.post("/new/bulk",
     async (req: Request, res: Response, next: NextFunction) => {
         const t = await sequelize.transaction();
         try {
-            const reservations = await createBulkReservationLogic(req.body, t);
+            const authUserId = (req as any).user.id;
+            const reservations = await createBulkReservationLogic({ ...req.body, userId: authUserId }, t);
 
             await t.commit();
             res.send({ reservations });
@@ -523,7 +526,6 @@ export const completeBulkPaymentLogic = async (
     }
 };
 
-
 /**
  * Only cookie owner who is an authenticated user or higher can get to 200 with this endpoint
  * ===============================
@@ -563,50 +565,11 @@ router.post("/complete",
 /**
  * Only cookie owner who is an authenticated user or higher can get to 200 with this endpoint
  * ===============================
- * Completes a reservation with the specified ID
- */
-/*
-router.put("/complete/:reservationId",
-    Auth.authorize("reservations"),
-    Auth.validatePrivileges("reservations", 1),
-    Auth.validateOwnership("reservations", 4),
-    async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const reservationId: number = parseInt(req.params.reservationId.toString());
-        if (isNaN(reservationId) || reservationId < Constants.TYPICAL_MIN_ID) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_ID, reservations: [] });
-        }
-
-        const reservation: ReservationInstance | null = await Reservation.findByPk(reservationId);
-        if (!reservation) {
-            return res.status(404).json({ message: Messages.RESERVATION_ERR_NOT_FOUND, reservations: [] });
-        }
-
-        if (reservation.type !== Constants.RESERVATION_TYPES[0]) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_RESERVED, reservations: [] });
-        }
-
-        if (reservation.userId !== (req as any).user.id) {
-            return res.status(400).json({ message: Messages.RESERVATION_ERR_BLOCKED, reservations: [] });
-        }
-
-        await reservation.update({ type: Constants.RESERVATION_TYPES[1] });
-        res.send({ reservations: [reservation] });
-    } catch (error: any) {
-        next(error);
-    }
-});
-*/
-
-/**
- * Only cookie owner who is an authenticated user or higher can get to 200 with this endpoint
- * ===============================
  * Deletes a reservation with the specified ID
  */
 router.delete("/delete/:reservationId",
     Auth.authorize("reservations"),
     Auth.validatePrivileges("reservations", 1),
-    Auth.validateOwnership("reservations", 4),
     async (req: Request, res: Response, next: NextFunction) =>
 {
     try {
@@ -615,9 +578,17 @@ router.delete("/delete/:reservationId",
             return res.status(400).json({ message: Messages.RESERVATION_ERR_ID });
         }
 
+        const reservation = await Reservation.findByPk(reservationId);
+        if (!reservation) {
+            return res.status(404).json({ message: Messages.RESERVATION_ERR_NOT_FOUND });
+        }
+        if (reservation.userId !== (req as any).user.id) {
+            return res.status(403).json({ message: Messages.AUTH_FORBIDDEN });
+        }
+
         const deletedRows = await Reservation.destroy({ where: { id: reservationId } });
         if (deletedRows === 0) {
-            return res.status(404).json({ message: Messages.RESERVATION_ERR_NOT_FOUND, reservations: [] });
+            return res.status(404).json({ message: Messages.RESERVATION_ERR_NOT_FOUND });
         }
         res.send({ message: Messages.RESERVATION_MSG_DEL });
     } catch (error: any) {

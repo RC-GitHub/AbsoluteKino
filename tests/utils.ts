@@ -77,7 +77,7 @@ export const userData = {
     phoneNumber: "+48512616092"
 }
 
-export const userDataUnauthorized = {
+export const userDataUnauthenticated = {
     name: null,
     password: null,
     email: null,

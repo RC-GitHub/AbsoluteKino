@@ -294,7 +294,7 @@ describe("User Lifecycle Flow", () => {
     describe("GET /user/all", () => {
         it("(MODEL EXAMPLE) should respond with 200 and all user objects", async () => {
             // Adding other users
-            response = await Utils.sendRequest("/user/register", 200, "POST", Utils.userDataUnauthorized);
+            response = await Utils.sendRequest("/user/register", 200, "POST", Utils.userDataUnauthenticated);
             unauthorizedCookie = response.get("Set-Cookie");
             unauthorizedId = response.body.users[0].id;
 
