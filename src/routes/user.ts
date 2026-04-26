@@ -110,7 +110,6 @@ export const registerUserLogic = async (data: any) => {
     }
 }
 
-
 /**
  * Anyone can get to 200 with this endpoint
  * ===============================
@@ -128,7 +127,13 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
         const tokenOptions = Auth.createUserTokenOptions();
         res.cookie("auth_token", token, tokenOptions);
 
-        res.send({ users: [user] });
+        const userJson = user.get({ plain: true });
+        const { password: unusedPass, ...userWithoutPassword } = userJson;
+
+        res.send({
+            message: Messages.USER_MSG_LOGIN,
+            users: [userWithoutPassword]
+        });
     }
     catch (error: any) {
         if (error.status) {
@@ -155,9 +160,12 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
                 const user = await User.findByPk(decoded.id);
 
                 if (user) {
+                    const userJson = user.get({ plain: true });
+                    const { password: unusedPass, ...userWithoutPassword } = userJson;
+
                     return res.send({
                         message: Messages.USER_ERR_ALREADY_LOGGED_IN,
-                        users: [user]
+                        users: [userWithoutPassword]
                     });
                 }
                 res.clearCookie("auth_token");
@@ -213,9 +221,12 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
         const tokenOptions = Auth.createUserTokenOptions();
         res.cookie("auth_token", token, tokenOptions);
 
+        const userJson = user.get({ plain: true });
+        const { password: unusedPass, ...userWithoutPassword } = userJson;
+
         res.send({
             message: Messages.USER_MSG_LOGIN,
-            users: [user] // Preserve this in the browser, because /id/:userId cannot be accessed by non-site-admin users!!!
+            users: [userWithoutPassword]
         });
     } catch (error: any) {
         next(error);
@@ -388,7 +399,13 @@ router.put("/update/:userId",
         }
 
         await user.update(updateData);
-        res.send({ users: [user] });
+        const userJson = user.get({ plain: true });
+        const { password: unusedPass, ...userWithoutPassword } = userJson;
+
+        res.send({
+            message: Messages.USER_MSG_LOGIN,
+            users: [userWithoutPassword]
+        });
     } catch (error: any) {
         next(error);
     }
@@ -420,8 +437,6 @@ router.put("/update-type/:userId",
             return res.status(400).json({ message: Messages.USER_ERR_OWNER_MODIFY, users: [] });
         }
 
-        // TODO: Block user downgrading of privileges
-
         const { accountType }: UserAttributes = req.body;
         if (accountType !== Constants.USER_ACC_TYPES[0] && // Elevating unauthenticated user to an authenticated one
             accountType !== Constants.USER_ACC_TYPES[1] && // Elevating user to cinema admin
@@ -439,7 +454,13 @@ router.put("/update-type/:userId",
             return res.status(400).json({ message: Messages.USER_ERR_ACC_TYPE_CHANGE, users: [] });
         }
 
-        res.send({ users: [user] });
+        const userJson = user.get({ plain: true });
+        const { password: unusedPass, ...userWithoutPassword } = userJson;
+
+        res.send({
+            message: Messages.USER_MSG_LOGIN,
+            users: [userWithoutPassword]
+        });
     } catch (error: any) {
         next(error);
     }

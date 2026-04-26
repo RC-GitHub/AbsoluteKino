@@ -5,7 +5,7 @@ import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 
 import { registerSiteAdmin, deleteSiteAdmin } from "../src/owner";
-import { UserInstance } from "../src/models";
+import { UserAttributes, UserInstance } from "../src/models";
 
 
 export const cinemaData = {
@@ -192,7 +192,12 @@ export async function createSiteAdmin(
     const siteAdminCookie = adminRes.get("Set-Cookie");
     const siteAdminUser = adminRes.body.users[0];
 
-    return { cookie: siteAdminCookie, user: siteAdminUser };
+    const adjustedUser = {
+        ...siteAdminUser,
+        password: adminData.password
+    }
+
+    return { cookie: siteAdminCookie, user: adjustedUser };
 }
 
 export async function levelUserTo(
@@ -224,29 +229,21 @@ export async function getUserFromCookie(
 }
 
 export async function getCookieFromUser(
-    userData: UserInstance
+    data: Partial<UserAttributes>
 ) {
-    const response = await sendRequest("/user/login", 200, "POST",  { email: userData.email, password: userData.password }, null);
+    const response = await sendRequest("/user/login", 200, "POST", data, null);
     const cookie = response.get("Set-Cookie");
 
     if (!cookie) {
         throw new Error(response.body.message)
     }
     else {
-        return cookie
+        return cookie;
     }
 }
 
-export async function deleteAdminFromCookie(
-    cookie: string[] | undefined
-) {
-    const user = await getUserFromCookie(cookie);
-    const isDeleted = await deleteSiteAdmin(user.id);
-    expect(isDeleted.message).toBe(Messages.USER_MSG_DEL_SUCCESS)
-}
-
 export async function deleteUser(
-    user: UserInstance,
+    user: Partial<UserAttributes>,
 ) {
     const cookie = await getCookieFromUser(user);
     const response = await sendRequest(`/user/delete/${user.id}`, 200, "DELETE", {}, cookie);
@@ -317,7 +314,7 @@ export const deletedAdminCheck = async (
 
     const siteAdminData = await createSiteAdmin();
     const siteAdminCookie = siteAdminData.cookie;
-    await deleteAdminFromCookie(siteAdminCookie);
+    await deleteSiteAdmin(siteAdminData.user.id);
 
     const response = await sendRequest(endPoint, 401, method, requestData, siteAdminCookie);
     expect(response.body).toEqual(expectedResponse);
