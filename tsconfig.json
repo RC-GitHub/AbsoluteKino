@@ -1,17 +1,17 @@
 {
   "compilerOptions": {
-    "target": "es6",                          
-    "module": "commonjs",                     
-    "strict": true,      
-    "allowJs": true,  
-    "checkJs": false,                   
-    "esModuleInterop": true,                  
-    "skipLibCheck": true,                     
+    "target": "es6",
+    "module": "commonjs",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "types": ["vitest/globals"]
   },
-  "include": ["*.ts", "src/*.ts", "tests/*.ts"],                         
-  "exclude": ["node_modules"]                  
+  "include": ["*.ts", "src/*.ts", "tests/*.ts", "scripts/owner-tool.ts"],
+  "exclude": ["node_modules"]
 }

@@ -51,7 +51,7 @@ async function runScraper() {
         let allCodes = await fetchAllCodes();
 
         if (MOVIE_LIMIT && !isNaN(MOVIE_LIMIT)) {
-            console.log(`Ograniczam pobieranie do ${MOVIE_LIMIT} filmów.`);
+            console.log(`[CLI] Limiting fetch to ${MOVIE_LIMIT} movies.`);
             allCodes = allCodes.slice(0, MOVIE_LIMIT);
         }
 
@@ -76,13 +76,13 @@ async function runScraper() {
 
         if (moviesToInsert.length > 0) {
             await Movie.bulkCreate(moviesToInsert);
-            console.log(`Dodano ${moviesToInsert.length} nowych filmów.`);
+            console.log(`[CLI] Added ${moviesToInsert.length} new movies.`);
         } else {
-            console.log("Baza jest aktualna, brak nowych filmów.");
+            console.log("[CLI] Database is up to date, no new movies.");
         }
     }
     catch (error: any) {
-        console.error('Scraper error:', error);
+        console.error('[CLI] Scraper error:', error);
     } finally {
         await sequelize.close();
     }

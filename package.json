@@ -15,9 +15,10 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "test": "vitest run --reporter=verbose --no-isolate",
     "dev": "nodemon --exec tsx src/server.ts",
-    "scrape": "tsx scraping/scraper.ts"
+    "admin": "tsx scripts/owner-tool.ts",
+    "scrape": "tsx scraping/scraper.ts",
+    "test": "vitest run --reporter=verbose --no-isolate"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
