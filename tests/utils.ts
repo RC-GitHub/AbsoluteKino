@@ -4,8 +4,8 @@ import app from "../src/server";
 import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 
-import { registerSiteAdmin, elevateToSiteAdmin, deleteSiteAdmin } from "../src/owner";
-import { UserAttributes, UserInstance } from "../src/models";
+import { registerSiteAdmin, deleteSiteAdmin } from "../src/owner";
+import { UserInstance } from "../src/models";
 
 
 export const cinemaData = {
@@ -58,8 +58,13 @@ export const movieData = {
     director: "Quentin Tarantino"
 }
 
+export const createOffsetDate = (offset: number): Date => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + offset, now.getDate());
+};
+
 export const screeningData = {
-    startDate: new Date(),
+    startDate: createOffsetDate(1),
     basePrice: Constants.SCREENING_BASE_SEAT_PRICE,
     roomId: 1,
     movieId: 1

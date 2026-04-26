@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import sequelize from "../models.js";
 import {
     Reservation, ReservationAttributes, ReservationInstance,
     Screening, ScreeningInstance,
@@ -55,6 +56,17 @@ export const createReservationLogic = async (data: any) => {
     if (!screening) {
         throw { status: 404, message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL };
     }
+
+    const reservationDate = new Date();
+    const screeningStart = new Date(screening.startDate);
+
+    if (reservationDate >= screeningStart) {
+        throw {
+            status: 400,
+            message: Messages.RESERVATION_ERR_DATE_EXPIRED
+        };
+    }
+
     const user: UserInstance | null = await User.findByPk(userId);
     if (!user) {
         throw { status: 404, message: Messages.USER_ERR_NOT_FOUND };
@@ -74,7 +86,8 @@ export const createReservationLogic = async (data: any) => {
         type,
         seatId,
         screeningId,
-        userId
+        userId,
+        reservationDate
     });
 }
 
@@ -82,7 +95,7 @@ export const createReservationLogic = async (data: any) => {
  * Anyone can get to 200 with this endpoint
  * ===============================
  * Adds a new reservation
- * Requires a reservation row, column, screening id and client id (user id)
+ * Requires a reservation seat id, screening id and client id (user id)
  */
 router.post("/new",
     Auth.authorize("reservations"),
@@ -101,7 +114,128 @@ router.post("/new",
         }
         next(error);
     }
-});
+    });
+
+export const createBulkReservationLogic = async (data: any, transaction?: any) => {
+    let { type, seatIds, screeningId, userId }: { type: string, seatIds: number[], screeningId: number, userId: number } = data;
+
+    if (type == null || seatIds == null || screeningId == null || userId == null) {
+        throw { status: 400, message: Messages.RESERVATION_ERR_EMPTY_ARGS };
+    }
+
+    if (!Array.isArray(seatIds)) {
+        throw { status: 400, message: Messages.RESERVATION_ERR_TYPING };
+    }
+
+    if (seatIds.length === 0) {
+        throw { status: 400, message: Messages.RESERVATION_ERR_EMPTY_ARGS };
+    }
+
+    const allSeatsAreInts = seatIds.every(id => typeof id === 'number' && Number.isInteger(id));
+    if (
+        typeof type !== 'string' ||
+        !allSeatsAreInts ||
+        typeof screeningId !== 'number' || !Number.isInteger(screeningId) ||
+        typeof userId !== 'number' || !Number.isInteger(userId)
+    ) {
+        throw { status: 400, message: Messages.RESERVATION_ERR_TYPING };
+    }
+
+    if (seatIds.some(id => id < Constants.TYPICAL_MIN_ID)) {
+        throw { status: 400, message: Messages.SEAT_ERR_ID };
+    }
+    if (screeningId < Constants.TYPICAL_MIN_ID) {
+        throw { status: 400, message: Messages.SCREENING_ERR_ID };
+    }
+    if (userId < Constants.TYPICAL_MIN_ID) {
+        throw { status: 400, message: Messages.USER_ERR_ID };
+    }
+    if (!Constants.RESERVATION_TYPES.includes(type as any)) {
+        throw { status: 400, message: Messages.RESERVATION_ERR_TYPE };
+    }
+
+    const [user, screening] = await Promise.all([
+        User.findByPk(userId, { transaction }),
+        Screening.findByPk(screeningId, { transaction })
+    ]);
+
+    if (!user) throw { status: 404, message: Messages.USER_ERR_NOT_FOUND };
+    if (!screening) throw { status: 404, message: Messages.SCREENING_ERR_NOT_FOUND_GLOBAL };
+
+    const reservationDate = new Date();
+    const screeningStart = new Date(screening.startDate);
+
+    if (reservationDate >= screeningStart) {
+        throw {
+            status: 400,
+            message: Messages.RESERVATION_ERR_DATE_EXPIRED
+        };
+    }
+
+    const seats = await Seat.findAll({
+        where: { id: seatIds },
+        transaction
+    });
+    if (seats.length !== seatIds.length) {
+        throw { status: 404, message: Messages.SEAT_ERR_NOT_FOUND };
+    }
+
+    const existingReservations = await Reservation.findAll({
+        where: {
+            screeningId,
+            seatId: seatIds
+        },
+        transaction
+    });
+
+    if (existingReservations.length > 0) {
+        const isAnyReserved = existingReservations.some(r => r.type !== Constants.RESERVATION_TYPES[0]);
+        if (isAnyReserved) {
+            throw { status: 400, message: Messages.RESERVATION_ERR_RESERVED, reservations: [] };
+        } else {
+            throw { status: 400, message: Messages.RESERVATION_ERR_BLOCKED, reservations: [] };
+        }
+    }
+
+    const reservationData = seatIds.map(id => ({
+        type,
+        seatId: id,
+        screeningId,
+        userId,
+        reservationDate
+    }));
+
+    return Reservation.bulkCreate(reservationData, { transaction });
+}
+
+/**
+ * Anyone can get to 200 with this endpoint
+ * ===============================
+ * Adds multiple reservations in bulk
+ * Requires a reservation seat ids, screening id and client id (user id)
+ */
+router.post("/new/bulk",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 0),
+    async (req: Request, res: Response, next: NextFunction) => {
+        const t = await sequelize.transaction();
+        try {
+            const reservations = await createBulkReservationLogic(req.body, t);
+
+            await t.commit();
+            res.send({ reservations });
+        }
+        catch (error: any) {
+            await t.rollback();
+            if (error.status) {
+                return res.status(error.status).json({
+                    message: error.message,
+                    reservations: [],
+                });
+            }
+            next(error);
+        }
+    });
 
 /**
  * Only site admin can get to 200 with this endpoint
