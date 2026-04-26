@@ -55,7 +55,7 @@ export const movieData = {
     genre: "Action",
     restrictions: Constants.MOVIE_AGE_RESTRICTIONS[3],
     cast: "Michael Mind, Louis Armstrong",
-    director: "Quentin Tarantino"
+    directors: "Quentin Tarantino"
 }
 
 export const createOffsetDate = (offset: number): Date => {

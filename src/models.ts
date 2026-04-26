@@ -4,18 +4,24 @@ import { CONFIG } from './config.ts';
 import * as Constants from "./constants.ts";
 import * as Messages from "./messages.ts";
 
-const isTest = CONFIG.NODE_ENV === "test";
+const isSqlite = CONFIG.DB.DIALECT === 'sqlite';
+const isTest = CONFIG.NODE_ENV === 'test';
 
 const sequelize: Sequelize = new Sequelize({
-  dialect: CONFIG.DB.DIALECT as Dialect,
-  storage: isTest ? CONFIG.DB.TEST_STORAGE : CONFIG.DB.STORAGE,
-  logging: CONFIG.DB.LOGGING,
-  define: {
-    freezeTableName: true
-  },
-  dialectOptions: {
-    foreign_keys: false
-  }
+    dialect: CONFIG.DB.DIALECT as Dialect,
+    storage: isSqlite ? (isTest ? CONFIG.DB.TEST_STORAGE : CONFIG.DB.STORAGE) : undefined,
+
+    host: !isSqlite ? CONFIG.DB.HOST : undefined,
+    port: !isSqlite ? CONFIG.DB.PORT : undefined,
+    username: !isSqlite ? CONFIG.DB.USER : undefined,
+    password: !isSqlite ? CONFIG.DB.PASSWORD : undefined,
+    database: !isSqlite ? CONFIG.DB.NAME : undefined,
+
+    logging: CONFIG.DB.LOGGING,
+    define: {
+        freezeTableName: true
+    },
+    dialectOptions: isSqlite ? { foreign_keys: true } : {}
 });
 
 try {
@@ -502,8 +508,8 @@ export interface MovieAttributes {
   premiereDate: Date;
   genre: string;
   restrictions: string;
-  cast: string;
-  director: string;
+  cast: string | null;
+  directors: string | null;
 }
 
 export interface MovieInstance extends Model<MovieAttributes>, MovieAttributes { }
@@ -604,7 +610,7 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
   // Full cast names after commas
   cast: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
     validate: {
       len: {
         args: [Constants.MOVIE_CAST_MIN_LEN, Constants.MOVIE_CAST_MAX_LEN],
@@ -612,9 +618,9 @@ export const Movie = sequelize.define<MovieInstance>("Movie", {
       }
     }
   },
-  director: {
+  directors: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
     validate: {
       len: {
         args: [Constants.MOVIE_DIR_MIN_LEN, Constants.MOVIE_DIR_MAX_LEN],

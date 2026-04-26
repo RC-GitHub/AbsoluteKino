@@ -16,8 +16,8 @@
   "main": "server.js",
   "scripts": {
     "test": "vitest run --reporter=verbose --no-isolate",
-    "start": "node server.js",
-    "dev": "nodemon --exec tsx src/server.ts"
+    "dev": "nodemon --exec tsx src/server.ts",
+    "scrape": "tsx scraping/scraper.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

@@ -7,13 +7,6 @@ import * as Auth from "../middleware/auth.ts";
 
 const router = express.Router();
 
-function isViewingFormatCorrect(viewingFormat: string): boolean {
-  const viewingFormats: string[] = viewingFormat.split(" ");
-  return viewingFormats.every((format) =>
-    Constants.MOVIE_STD_VIEWING_FORMATS.includes(format),
-  );
-}
-
 function isValidURL(url: string): boolean {
   const pattern = new RegExp(
     "^(https?:\\/\\/)?" + // protocol
@@ -32,7 +25,7 @@ function isValidURL(url: string): boolean {
  * ===============================
  * Adds a new movie to the database
  * Requires: title, viewing format, duration, description, poster url,
- * trailer url, language, premiere date, genre, restrictions, cast and director
+ * trailer url, language, premiere date, genre, restrictions, cast and directors
  */
 router.post(
   "/new",
@@ -51,7 +44,7 @@ router.post(
       genre,
       restrictions,
       cast,
-      director,
+      directors,
     }: MovieAttributes = req.body;
 
     if (
@@ -66,7 +59,7 @@ router.post(
       genre == null ||
       restrictions == null ||
       cast == null ||
-      director == null
+      directors == null
     ) {
       return res
         .status(400)
@@ -88,7 +81,7 @@ router.post(
       typeof genre !== "string" ||
       typeof restrictions !== "string" ||
       typeof cast !== "string" ||
-      typeof director !== "string"
+      typeof directors !== "string"
     ) {
       return res
         .status(400)
@@ -105,7 +98,11 @@ router.post(
         .json({ message: Messages.MOVIE_ERR_TITLE_LEN, movies: [] });
     }
 
-    if (!isViewingFormatCorrect(viewingFormat)) {
+    const trimmedViewingFormat = viewingFormat.trim();
+    if (
+      trimmedViewingFormat.length < Constants.MOVIE_VF_MIN_LEN ||
+      trimmedViewingFormat.length > Constants.MOVIE_VF_MAX_LEN
+    ) {
       return res
         .status(400)
         .json({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
@@ -170,9 +167,11 @@ router.post(
         .json({ message: Messages.MOVIE_ERR_PREMIERE_DATE, movies: [] });
     }
 
-    const validRestrictions =
-      Constants.MOVIE_AGE_RESTRICTIONS as readonly string[];
-    if (!validRestrictions.includes(restrictions)) {
+    const trimmedRestrictions = restrictions.trim();
+    if (
+      trimmedRestrictions.length < Constants.MOVIE_AR_MIN_LEN ||
+      trimmedRestrictions.length > Constants.MOVIE_AR_MAX_LEN
+    ) {
       return res
         .status(400)
         .json({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
@@ -198,7 +197,7 @@ router.post(
         .json({ message: Messages.MOVIE_ERR_CAST_LEN, movies: [] });
     }
 
-    const trimmedDir = director.trim();
+    const trimmedDir = directors.trim();
     if (
       trimmedDir.length < Constants.MOVIE_DIR_MIN_LEN ||
       trimmedDir.length > Constants.MOVIE_DIR_MAX_LEN
@@ -210,7 +209,7 @@ router.post(
 
     const movie = await Movie.create({
       title: trimmedTitle,
-      viewingFormat,
+      viewingFormat: trimmedViewingFormat,
       duration,
       description: trimmedDesc,
       posterUrl,
@@ -218,9 +217,9 @@ router.post(
       language: trimmedLang,
       premiereDate: parsedDate,
       genre: trimmedGenre,
-      restrictions,
+      restrictions: trimmedRestrictions,
       cast: trimmedCast,
-      director: trimmedDir,
+      directors: trimmedDir,
     });
 
     res.send({ movies: [movie] });
@@ -314,7 +313,7 @@ router.put(
         genre,
         restrictions,
         cast,
-        director,
+        directors,
       } = req.body;
 
       if (
@@ -329,7 +328,7 @@ router.put(
         genre == null &&
         restrictions == null &&
         cast == null &&
-        director == null
+        directors == null
       ) {
         return res
           .status(400)
@@ -377,12 +376,16 @@ router.put(
           return res
             .status(400)
             .json({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
-        if (!isViewingFormatCorrect(viewingFormat)) {
+        const trimmedViewingFormat = viewingFormat.trim();
+        if (
+            trimmedViewingFormat.length < Constants.MOVIE_VF_MIN_LEN ||
+            trimmedViewingFormat.length > Constants.MOVIE_VF_MAX_LEN
+        ) {
           return res
             .status(400)
             .json({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
         }
-        updateData.viewingFormat = viewingFormat;
+        updateData.viewingFormat = trimmedViewingFormat;
       }
 
       if (description !== undefined) {
@@ -504,12 +507,12 @@ router.put(
         updateData.cast = trimmed;
       }
 
-      if (director !== undefined) {
-        if (typeof director !== "string")
+      if (directors !== undefined) {
+        if (typeof directors !== "string")
           return res
             .status(400)
             .json({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
-        const trimmed = director.trim();
+        const trimmed = directors.trim();
         if (
           trimmed.length < Constants.MOVIE_DIR_MIN_LEN ||
           trimmed.length > Constants.MOVIE_DIR_MAX_LEN
@@ -518,7 +521,7 @@ router.put(
             .status(400)
             .json({ message: Messages.MOVIE_ERR_DIR_LEN, movies: [] });
         }
-        updateData.director = trimmed;
+        updateData.directors = trimmed;
       }
 
       if (restrictions !== undefined) {
@@ -526,14 +529,16 @@ router.put(
           return res
             .status(400)
             .json({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
-        const validRestrictions =
-          Constants.MOVIE_AGE_RESTRICTIONS as readonly string[];
-        if (!validRestrictions.includes(restrictions)) {
+          const trimmedRestrictions = restrictions.trim();
+          if (
+              trimmedRestrictions.length < Constants.MOVIE_AR_MIN_LEN ||
+              trimmedRestrictions.length > Constants.MOVIE_AR_MAX_LEN
+          ) {
           return res
             .status(400)
             .json({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
         }
-        updateData.restrictions = restrictions;
+        updateData.restrictions = trimmedRestrictions;
       }
 
       await movie.update(updateData);

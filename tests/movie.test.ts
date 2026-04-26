@@ -114,10 +114,10 @@ describe("Movie Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, cast: null }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_EMPTY_ARGS, movies: [] });
 
-            // director: undefined or null
-            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, director: undefined }, siteAdminCookie);
+            // directors: undefined or null
+            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, directors: undefined }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_EMPTY_ARGS, movies: [] });
-            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, director: null }, siteAdminCookie);
+            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, directors: null }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_EMPTY_ARGS, movies: [] });
 
             // All are undefined/empty object
@@ -170,8 +170,8 @@ describe("Movie Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, cast: { lead: "Actor" } }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
-            // director: not a string
-            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, director: ["Director Name"] }, siteAdminCookie);
+            // directors: not a string
+            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, directors: ["Directors' Names"] }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
         });
 
@@ -191,13 +191,18 @@ describe("Movie Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if viewingFormat is invalid", async () => {
-            // format not in MOVIE_STD_VIEWING_FORMATS
-            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, viewingFormat: "INVALID_FORMAT" }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
-
-            // one is invalid
-            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, viewingFormat: "IMAX INVALID" }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/new",
+                "POST",
+                Utils.movieData,
+                Constants.MOVIE_VF_MIN_LEN,
+                Constants.MOVIE_VF_MAX_LEN,
+                Messages.MOVIE_ERR_VIEWING_FORMAT,
+                "viewingFormat",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if duration is out of range", async () => {
@@ -282,8 +287,18 @@ describe("Movie Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if restrictions value is not in Enum", async () => {
-            response = await Utils.sendRequest("/movie/new", 400, "POST", { ...Utils.movieData, restrictions: "Unrated" }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/new",
+                "POST",
+                Utils.movieData,
+                Constants.MOVIE_AR_MIN_LEN,
+                Constants.MOVIE_AR_MAX_LEN,
+                Messages.MOVIE_ERR_RESTRICTIONS,
+                "restrictions",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if cast length is invalid", async () => {
@@ -301,7 +316,7 @@ describe("Movie Lifecycle Flow", async () => {
             );
         });
 
-        it("should respond with 400 if director length is invalid", async () => {
+        it("should respond with 400 if directors' length is invalid", async () => {
             await Utils.boundsCheck(
                 "/movie/new",
                 "POST",
@@ -309,7 +324,7 @@ describe("Movie Lifecycle Flow", async () => {
                 Constants.MOVIE_DIR_MIN_LEN,
                 Constants.MOVIE_DIR_MAX_LEN,
                 Messages.MOVIE_ERR_DIR_LEN,
-                "director",
+                "directors",
                 "string",
                 "movies",
                 siteAdminCookie,
@@ -417,7 +432,7 @@ describe("Movie Lifecycle Flow", async () => {
                 genre: null,
                 restrictions: null,
                 cast: null,
-                director: null
+                directors: null
             }
             response = await Utils.sendRequest("/movie/update/1", 400, "PUT", invalidMovieData, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_EMPTY_ARGS, movies: [] });
@@ -468,8 +483,8 @@ describe("Movie Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { cast: 2 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
 
-            // director: not a string
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { director: ["Name"] }, siteAdminCookie);
+            // directors: not a string
+            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { directors: ["Name"] }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.MOVIE_ERR_TYPING, movies: [] });
         });
 
@@ -489,8 +504,18 @@ describe("Movie Lifecycle Flow", async () => {
         });
 
         it("should respond with 400 if updated viewingFormat is invalid", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { viewingFormat: "4K_ULTRA_FAKE" }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_VIEWING_FORMAT, movies: [] });
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_VF_MIN_LEN,
+                Constants.MOVIE_VF_MAX_LEN,
+                Messages.MOVIE_ERR_VIEWING_FORMAT,
+                "viewingFormat",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if updated duration is out of range", async () => {
@@ -574,9 +599,19 @@ describe("Movie Lifecycle Flow", async () => {
             );
         });
 
-        it("should respond with 400 if updated restrictions value is not in Enum", async () => {
-            response = await Utils.sendRequest("/movie/update/1", 400, "PUT", { restrictions: "21+" }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.MOVIE_ERR_RESTRICTIONS, movies: [] });
+        it("should respond with 400 if updated restrictions value is invalid", async () => {
+            await Utils.boundsCheck(
+                "/movie/update/1",
+                "PUT",
+                Utils.movieData,
+                Constants.MOVIE_AR_MIN_LEN,
+                Constants.MOVIE_AR_MAX_LEN,
+                Messages.MOVIE_ERR_RESTRICTIONS,
+                "restrictions",
+                "string",
+                "movies",
+                siteAdminCookie,
+            );
         });
 
         it("should respond with 400 if updated cast length is invalid", async () => {
@@ -594,7 +629,7 @@ describe("Movie Lifecycle Flow", async () => {
             );
         });
 
-        it("should respond with 400 if updated director length is invalid", async () => {
+        it("should respond with 400 if updated directors' length is invalid", async () => {
             await Utils.boundsCheck(
                 "/movie/update/1",
                 "PUT",
@@ -602,7 +637,7 @@ describe("Movie Lifecycle Flow", async () => {
                 Constants.MOVIE_DIR_MIN_LEN,
                 Constants.MOVIE_DIR_MAX_LEN,
                 Messages.MOVIE_ERR_DIR_LEN,
-                "director",
+                "directors",
                 "string",
                 "movies",
                 siteAdminCookie,

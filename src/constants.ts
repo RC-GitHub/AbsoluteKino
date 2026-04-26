@@ -104,7 +104,13 @@ export const MOVIE_DUR_MIN: number = 1;
 export const MOVIE_DUR_MAX: number = 857 * 60; // The duration of the longest movie in the world, i.e. 'Logistics' (2012)
 
 export const MOVIE_DESC_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
-export const MOVIE_DESC_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 16;
+export const MOVIE_DESC_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 64;
+
+export const MOVIE_VF_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const MOVIE_VF_MAX_LEN: number = TYPICAL_NAME_MAX_LEN * 8;
+
+export const MOVIE_AR_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
+export const MOVIE_AR_MAX_LEN: number = TYPICAL_NAME_MAX_LEN;
 
 export const MOVIE_LANG_MIN_LEN: number = TYPICAL_NAME_MIN_LEN;
 export const MOVIE_LANG_MAX_LEN: number = TYPICAL_NAME_MAX_LEN;
@@ -142,7 +148,7 @@ export const USER_EMAIL_REGEX: RegExp = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-z
 
 export const USER_PHONE_REGEX: RegExp = /^[1-9]\d{6,14}$/;
 
-export const USER_TOKEN_VER_MIN_VAL: number = 1 
+export const USER_TOKEN_VER_MIN_VAL: number = 1
 
 //---------------------------------
 // Reservation
