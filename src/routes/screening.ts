@@ -11,16 +11,6 @@ import * as Auth from "../middleware/auth.ts";
 
 const router = express.Router();
 
-function vipPrice(price: number): number {
-    if (price <= 0) return 0;
-    else return price * 1.25 + 3;
-}
-
-function discountedPrice(price: number): number {
-    if (price <= 0) return 0;
-    else return price * 0.8;
-}
-
 /**
  * Only cinema admin and higher can get to 200 with this endpoint
  * ===============================

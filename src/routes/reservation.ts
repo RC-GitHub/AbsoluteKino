@@ -13,6 +13,9 @@ import * as Auth from "../middleware/auth.ts";
 
 const router = express.Router();
 
+const vipPrice = (price: number) => (price <= 0 ? 0 : price * 1.25 + 3);
+const discountedPrice = (price: number) => (price <= 0 ? 0 : price * 0.8);
+
 export const createReservationLogic = async (data: any) => {
     let { type, seatId, screeningId, userId }: ReservationAttributes = data;
 
@@ -420,11 +423,149 @@ router.put("/update/:reservationId",
     }
 });
 
+export const completeBulkPaymentLogic = async (
+    userId: number,
+    reservationIds: number[],
+    amountPaid: number
+) => {
+    if (!Array.isArray(reservationIds) || reservationIds.length === 0) {
+        throw { status: 400, message: Messages.RESERVATION_ERR_EMPTY_ARGS,
+        reservations: [] };
+    }
+
+    const allIdsValid = reservationIds.every(id =>
+        typeof id === 'number' &&
+        Number.isInteger(id) &&
+        id >= Constants.TYPICAL_MIN_ID
+    );
+
+    if (!allIdsValid) {
+        throw { status: 400, message: Messages.RESERVATION_ERR_ID,
+        reservations: [] };
+    }
+
+    const t = await sequelize.transaction();
+
+    try {
+        const user = await User.findByPk(userId, { transaction: t });
+        if (!user) {
+            throw { status: 404, message: Messages.USER_ERR_NOT_FOUND,
+            reservations: [] };
+        }
+
+        if (user.accountType === Constants.USER_ACC_TYPES[0]) {
+            throw { status: 403, message: Messages.AUTH_FORBIDDEN,
+            reservations: [] };
+        }
+
+        const reservations = await Reservation.findAll({
+            where: { id: reservationIds, userId },
+            include: [
+                { model: Seat },
+                { model: Screening }
+            ],
+            transaction: t,
+            lock: t.LOCK.UPDATE
+        });
+
+        if (reservations.length !== reservationIds.length) {
+            throw { status: 403, message: Messages.AUTH_FORBIDDEN,
+            reservations: [] };
+        }
+
+        let totalCalculatedPrice = 0;
+        const now = new Date();
+
+        for (const res of reservations) {
+            if (now >= new Date(res.Screening.startDate)) {
+                throw { status: 400, message: Messages.RESERVATION_ERR_DATE_EXPIRED,
+                reservations: [] };
+            }
+
+            if (res.type === Constants.RESERVATION_TYPES[1]) {
+                throw { status: 400, message: Messages.RESERVATION_ERR_RESERVED,
+                reservations: [] };
+            }
+
+            const basePrice = res.Screening.basePrice;
+            let seatPrice = basePrice;
+
+            if (res.Seat.type === Constants.SEAT_TYPES[2]) {
+                seatPrice = vipPrice(basePrice);
+            } else if (res.Seat.type === Constants.SEAT_TYPES[1]) {
+                seatPrice = discountedPrice(basePrice);
+            }
+
+            totalCalculatedPrice += seatPrice;
+        }
+
+        if (Math.abs(amountPaid - totalCalculatedPrice) > 0.01) {
+            throw { status: 400, message: Messages.RESERVATION_ERR_PAYMENT,
+            reservations: [] };
+        }
+
+        await Reservation.update(
+            { type: Constants.RESERVATION_TYPES[1] },
+            { where: { id: reservationIds }, transaction: t }
+        );
+
+        await t.commit();
+
+        const finalReservations = await Reservation.findAll({
+            where: { id: reservationIds }
+        });
+
+        return { reservations: finalReservations, totalAmount: totalCalculatedPrice };
+    }
+    catch (error: any) {
+        await t.rollback();
+        throw error;
+    }
+};
+
+
+/**
+ * Only cookie owner who is an authenticated user or higher can get to 200 with this endpoint
+ * ===============================
+ * Completes multiple reservations by verifying payment amount against seat-type calculations
+ */
+router.post("/complete",
+    Auth.authorize("reservations"),
+    Auth.validatePrivileges("reservations", 1),
+    async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = (req as any).user.id;
+        const { reservationIds, amount } = req.body;
+
+        if (amount == null || typeof amount !== 'number' || amount < 0) {
+            return res.status(400).json({ message: Messages.RESERVATION_ERR_PAYMENT,
+            reservations: [] });
+        }
+
+        const result = await completeBulkPaymentLogic(userId, reservationIds, amount);
+
+        res.send({
+            message: Messages.RESERVATION_ERR_COMPLETED,
+            amountPaid: result.totalAmount,
+            reservations: result.reservations
+        });
+    } catch (error: any) {
+        if (error.status) {
+            return res.status(error.status).json({
+                message: error.message,
+                reservations: []
+            });
+        }
+        next(error);
+    }
+});
+
 /**
  * Only cookie owner who is an authenticated user or higher can get to 200 with this endpoint
  * ===============================
  * Completes a reservation with the specified ID
  */
+/*
 router.put("/complete/:reservationId",
     Auth.authorize("reservations"),
     Auth.validatePrivileges("reservations", 1),
@@ -455,6 +596,7 @@ router.put("/complete/:reservationId",
         next(error);
     }
 });
+*/
 
 /**
  * Only cookie owner who is an authenticated user or higher can get to 200 with this endpoint

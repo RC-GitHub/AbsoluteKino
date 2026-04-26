@@ -12,6 +12,9 @@ let siteAdminCookie: string[] | undefined = []
 let regularCookie: string[] | undefined = []
 let unauthenticatedCookie: string[] | undefined = [];
 
+
+let bulkData: any;
+
 //---------------------------------
 // Step 0 - Users
 //---------------------------------
@@ -33,6 +36,13 @@ beforeAll(async () => {
     siteAdminCookie = siteAdminData.cookie;
     regularCookie = regularUserData.cookie;
     unauthenticatedCookie = unauthenticatedUserData.cookie;
+
+    bulkData = {
+        type: Constants.RESERVATION_TYPES[0],
+        seatIds: [2, 3, 4],
+        screeningId: 1,
+        userId: unauthenticatedUser.id
+    };
 });
 
 afterAll(async () => {
@@ -79,11 +89,11 @@ describe("Reservation Lifecycle Flow", async () => {
             const fields = ["type", "seatId", "screeningId", "userId"];
             for (const field of fields) {
                 // Check undefined
-                response = await Utils.sendRequest("/reservation/new/bulk", 400, "POST", { ...Utils.reservationData, [field]: undefined }, unauthenticatedCookie);
+                response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, [field]: undefined }, unauthenticatedCookie);
                 expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
 
                 // Check null
-                response = await Utils.sendRequest("/reservation/new/bulk", 400, "POST", { ...Utils.reservationData, [field]: null }, unauthenticatedCookie);
+                response = await Utils.sendRequest("/reservation/new", 400, "POST", { ...Utils.reservationData, [field]: null }, unauthenticatedCookie);
                 expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_EMPTY_ARGS, reservations: [] });
             }
             // all are undefined
@@ -165,7 +175,7 @@ describe("Reservation Lifecycle Flow", async () => {
 
         it("should respond with 400 if the seat is already reserved", async () => {
             // Complete the first reservation
-            response = await Utils.sendRequest("/reservation/complete/1", 200, "PUT", { userId: siteAdmin.id }, siteAdminCookie);
+            response = await Utils.sendRequest("/reservation/complete", 200, "POST", { userId: siteAdmin.id, amount: Constants.SCREENING_BASE_SEAT_PRICE, reservationIds: [1] }, siteAdminCookie);
             expect(response.body).toHaveProperty("reservations");
             expect(response.body.reservations[0]).toHaveProperty("type", Constants.RESERVATION_TYPES[1]);
 
@@ -234,16 +244,6 @@ describe("Reservation Lifecycle Flow", async () => {
     //---------------------------------
 
     describe("POST /reservation/new/bulk", async () => {
-        let bulkData: any;
-
-        beforeEach(() => {
-            bulkData = {
-                type: Constants.RESERVATION_TYPES[0],
-                seatIds: [2, 3, 4],
-                screeningId: 1,
-                userId: unauthenticatedUser.id
-            };
-        });
 
         it("should respond with 200 and create multiple reservation objects", async () => {
             response = await Utils.sendRequest("/reservation/new/bulk", 200, "POST", bulkData, unauthenticatedCookie);
@@ -354,7 +354,7 @@ describe("Reservation Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/reservation/new", 200, "POST", { ...Utils.reservationData, seatId: 7, userId: regularUser.id }, regularCookie);
             // expect(response.body).toEqual([]);
             const newReservation = response.body.reservations[0];
-            await Utils.sendRequest(`/reservation/complete/${newReservation.id}`, 200, "PUT", { userId: regularUser.id }, regularCookie);
+            await Utils.sendRequest(`/reservation/complete`, 200, "POST", { userId: regularUser.id, reservationIds: [newReservation.id], amount: Constants.SCREENING_BASE_SEAT_PRICE }, regularCookie);
 
             // Try to bulk reserve [newReservationId, 8, 9]. Since newReservationId points to RESERVED, it should fail.
             response = await Utils.sendRequest("/reservation/new/bulk", 400, "POST", { ...bulkData, seatIds: [newReservation.seatId, 8, 9] }, unauthenticatedCookie);
@@ -659,7 +659,7 @@ describe("Reservation Lifecycle Flow", async () => {
             response = await Utils.sendRequest("/reservation/update/5", 400, "PUT", { type: Constants.RESERVATION_TYPES[1], seatId: 5 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_BLOCKED, reservations: [] });
 
-            response = await Utils.sendRequest("/reservation/complete/1", 200, "PUT", { userId: siteAdmin.id }, siteAdminCookie);
+            response = await Utils.sendRequest("/reservation/complete", 200, "POST", { userId: siteAdmin.id, reservationIds: [1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, siteAdminCookie);
             response = await Utils.sendRequest("/reservation/update/5", 400, "PUT", { seatId: 5 }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_RESERVED, reservations: [] });
         });
@@ -696,86 +696,94 @@ describe("Reservation Lifecycle Flow", async () => {
     });
 
     //---------------------------------
-    // Step 3.5 - PUT (Complete)
+    // Step 4 - POST (Complete)
     //---------------------------------
     // Finalizing reservations (changing type to RESERVED).
     // Ensuring a user cannot finalize a reservation they don't own (400 error).
     // End state: 7 reservations exist in the database
     //---------------------------------
 
-    describe("PUT /reservation/complete/:reservationId", async () => {
+    describe("PUT /reservation/complete", async () => {
         it("(MODEL EXAMPLE) should respond with 200 and set reservation type to confirmed", async () => {
-            response = await Utils.sendRequest("/reservation/complete/7", 200, "PUT", { userId: regularUser.id }, regularCookie);
+            response = await Utils.sendRequest("/reservation/complete", 200, "POST", { userId: regularUser.id, reservationIds: [7], amount: Constants.SCREENING_BASE_SEAT_PRICE }, regularCookie);
 
             expect(response.body.reservations[0]).toHaveProperty("id", 7);
             expect(response.body.reservations[0]).toHaveProperty("type", Constants.RESERVATION_TYPES[1]);
         });
 
         it("should respond with 400 if reservationId is not a valid number", async () => {
-            await Utils.invalidIdCheck(
-                "/reservation/complete",
-                "PUT",
-                { userId: regularUser.id },
-                Messages.RESERVATION_ERR_ID,
-                "reservations",
-                regularCookie
-            );
-        });
+            response = await Utils.sendRequest("/reservation/complete", 400, "POST", { userId: siteAdmin.id, reservationIds: [0], amount: Constants.SCREENING_BASE_SEAT_PRICE }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_ID, reservations: [] });
 
-        it("should respond with 400 if userId is invalid or missing", async () => {
-            // Missing userId
-            response = await Utils.sendRequest("/reservation/complete/1", 400, "PUT", {}, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, reservations: [] });
+            response = await Utils.sendRequest("/reservation/complete", 400, "POST", { userId: siteAdmin.id, reservationIds: [-1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_ID, reservations: [] });
 
-            // Incorrect type (string instead of number)
-            response = await Utils.sendRequest("/reservation/complete/1", 400, "PUT", { userId: "1" }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_TYPING, reservations: [] });
-
-            // Id too small
-            response = await Utils.sendRequest("/reservation/complete/1", 400, "PUT", { userId: -1 }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, reservations: [] });
-
-            response = await Utils.sendRequest("/reservation/complete/1", 400, "PUT", { userId: 0 }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, reservations: [] });
+            response = await Utils.sendRequest("/reservation/complete", 400, "POST", { userId: siteAdmin.id, reservationIds: ["abc"], amount: Constants.SCREENING_BASE_SEAT_PRICE }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_ID, reservations: [] });
         });
 
         it("should respond with 400 if reservation is already completed (wrong type)", async () => {
-            response = await Utils.sendRequest("/reservation/complete/1", 400, "PUT", { userId: siteAdmin.id }, siteAdminCookie);
+            response = await Utils.sendRequest("/reservation/complete", 400, "POST", { userId: siteAdmin.id, reservationIds: [1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_RESERVED, reservations: [] });
         });
 
+        it("should respond with 400 if payment amount is invalid", async () => {
+            response = await Utils.sendRequest("/reservation/new", 200, "POST", { ...Utils.reservationData, seatId: 24, userId: regularUser.id }, regularCookie);
+            const reservationId = response.body.reservations[0].id;
+
+            response = await Utils.sendRequest("/reservation/complete", 400, "POST", { userId: siteAdmin.id, reservationIds: [reservationId], amount: -1 }, regularCookie);
+            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_PAYMENT, reservations: [] });
+
+            response = await Utils.sendRequest("/reservation/complete", 400, "POST", { userId: siteAdmin.id, reservationIds: [reservationId], amount: 100 }, regularCookie);
+            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_PAYMENT, reservations: [] });
+        });
+
+        it("should respond with 400 if moment of completion is farther in the future than screening start date", async () => {
+            response = await Utils.sendRequest("/screening/new", 200, "POST", Utils.screeningData, siteAdminCookie);
+            const screeningId = response.body.screenings[0].id;
+
+            response = await Utils.sendRequest("/reservation/new/bulk", 200, "POST", { ...bulkData, screeningId, seatIds: [10, 11], userId: regularUser.id }, regularCookie);
+            const reservationIds = response.body.reservations.map((r: any) => r.id);
+
+            // Update screening start date to be in the past
+            await Utils.sendRequest(`/screening/update/${screeningId}`, 200, "PUT", { startDate: Utils.createOffsetDate(-1) }, siteAdminCookie);
+
+            response = await Utils.sendRequest("/reservation/complete", 400, "POST", { userId: regularUser.id, reservationIds: [...reservationIds], amount: reservationIds.length * Constants.SCREENING_BASE_SEAT_PRICE }, regularCookie);
+            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_DATE_EXPIRED, reservations: [] });
+        });
+
         it("should respond with 401 when no cookies are provided", async () => {
-            await Utils.noCookieCheck("/reservation/complete/1", "PUT", {}, "reservations");
+            await Utils.noCookieCheck("/reservation/complete", "POST", { userId: regularUser.id, reservationIds: [1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, "reservations");
         });
 
         it("should respond with 401 when trying to use the same cookie after logout", async () => {
-            await Utils.freshTokenCheck("/reservation/complete/1", "PUT", {}, "reservations");
+            await Utils.freshTokenCheck("/reservation/complete", "POST", { userId: regularUser.id, reservationIds: [1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, "reservations");
         });
 
         it("should respond with 401 when a deleted site admin user with valid cookies tries to access /complete", async () => {
-            await Utils.deletedAdminCheck("/reservation/complete/1", "PUT", {}, "reservations");
+            await Utils.deletedAdminCheck("/reservation/complete", "POST", { userId: siteAdmin.id, reservationIds: [1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, "reservations");
         });
 
         it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
-            await Utils.tamperedCookieCheck("/reservation/complete/1", "PUT", {}, "reservations", siteAdminCookie)
+            await Utils.tamperedCookieCheck("/reservation/complete", "POST", { userId: regularUser.id, reservationIds: [1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, "reservations", siteAdminCookie)
         });
 
         it("should respond with 403 when an underprivileged user tries to access /complete", async () => {
-            await Utils.unauthorizedCheck("/reservation/complete/1", "PUT", {}, "reservations", unauthenticatedCookie)
+            await Utils.unauthorizedCheck("/reservation/complete", "POST", { userId: regularUser.id, reservationIds: [1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, "reservations", unauthenticatedCookie)
         });
 
         it("should respond with 403 when an unauthorized user tries to access /complete", async () => {
-            await Utils.unauthorizedCheck("/reservation/complete/1", "PUT", { userId: siteAdmin.id }, "reservations", regularCookie)
+            await Utils.unauthorizedCheck("/reservation/complete", "POST", { userId: siteAdmin.id, reservationIds: [1], amount: Constants.SCREENING_BASE_SEAT_PRICE }, "reservations", regularCookie)
         });
 
-        it("should respond with 404 if reservation does not exist", async () => {
-            response = await Utils.sendRequest("/reservation/complete/99", 404, "PUT", { userId: siteAdmin.id }, siteAdminCookie);
-            expect(response.body).toEqual({ message: Messages.RESERVATION_ERR_NOT_FOUND, reservations: [] });
+        it("should respond with 403 if reservation does not exist", async () => {
+            response = await Utils.sendRequest("/reservation/complete", 403, "POST", { userId: siteAdmin.id, reservationIds: [99], amount: Constants.SCREENING_BASE_SEAT_PRICE }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.AUTH_FORBIDDEN, reservations: [] });
         });
     });
 
     //---------------------------------
-    // Step 4 - DELETE
+    // Step 5 - DELETE
     //---------------------------------
     // Reservation with id 1 is deleted
     // Tests verify ID validation and 404 handling for non-existent or
@@ -831,7 +839,7 @@ describe("Reservation Lifecycle Flow", async () => {
     });
 
     //---------------------------------
-    // Step 5 - GET (404)
+    // Step 6 - GET (404)
     //---------------------------------
     // All reservations are deleted
     // Final state verification. Since the database is empty,

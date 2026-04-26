@@ -637,7 +637,11 @@ export interface ReservationAttributes {
   userId: number;
 }
 
-export interface ReservationInstance extends Model<ReservationAttributes>, ReservationAttributes { }
+export interface ReservationInstance extends Model<ReservationAttributes>, ReservationAttributes {
+    Screening: ScreeningInstance;
+    Seat: SeatInstance;
+    User: UserInstance;
+}
 
 export const Reservation = sequelize.define<ReservationInstance>("Reservation", {
   ...commonAttributes,
@@ -788,6 +792,8 @@ Screening.belongsTo(Room, { foreignKey: "roomId" });
 
 Room.hasMany(Seat, { foreignKey: "roomId", onDelete: 'CASCADE', hooks: true });
 Seat.belongsTo(Room, { foreignKey: "roomId", as: "Room" })
+
+Reservation.belongsTo(Seat, { foreignKey: "seatId" });
 
 Screening.hasMany(Reservation, { foreignKey: "screeningId", onDelete: 'CASCADE', hooks: true });
 Reservation.belongsTo(Screening, { foreignKey: "screeningId" });

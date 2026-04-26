@@ -173,6 +173,7 @@ export const RESERVATION_ERR_ID: string = "Reservation ID should be a positive i
 export const RESERVATION_ERR_TYPING: string = "Reservation row, column,  screening ID and user ID should have correct typings (integer, integer, integer and integer respectively)";
 export const RESERVATION_ERR_DATE: string = "Reservation date is an invalid date";
 export const RESERVATION_ERR_DATE_EXPIRED: string = "Reservation cannot be made after the screening start date";
+export const RESERVATION_ERR_PAYMENT: string = "Reservation payment amount is invalid";
 export const RESERVATION_ERR_TYPE: string = `Reservation type should be one of the following: ${Constants.RESERVATION_TYPES.join(", ")}`;
 export const RESERVATION_ERR_BLOCKED: string = "Reservation is temporarily blocked as someone is undergoing a transaction containing one of the chosen seats";
 export const RESERVATION_ERR_RESERVED: string = "Reservation cannot be completed as one of the chosen seats is already reserved";
