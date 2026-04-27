@@ -218,7 +218,7 @@ Deletes a non-Site Admin user from the system.
 <summary><h3>/cinema</h3></summary>
 <br>
 
-### POST /new
+#### POST /new
 Adds a new cinema to the system. 
 * **Requirements:** Site-admin privileges (Level 3).
 
@@ -241,7 +241,7 @@ Adds a new cinema to the system.
 
 ---
 
-### GET /all
+#### GET /all
 Returns a list of all cinemas in the database.
 * **Requirements:** Public.
 
@@ -253,7 +253,7 @@ Returns a list of all cinemas in the database.
 
 ---
 
-### GET /id/:cinemaId
+#### GET /id/:cinemaId
 Returns details of a specific cinema.
 * **Requirements:** Public.
 * **Path Params:** `cinemaId` (Number, $\ge$ `TYPICAL_MIN_ID`).
@@ -267,7 +267,7 @@ Returns details of a specific cinema.
 
 ---
 
-### PUT /update/:cinemaId
+#### PUT /update/:cinemaId
 Updates an existing cinema record.
 * **Requirements:** Site Admin privileges (Level 3).
 * **Path Params:** `cinemaId` (Number, $\ge$ `TYPICAL_MIN_ID`).
@@ -292,7 +292,7 @@ Updates an existing cinema record.
 
 ---
 
-### DELETE /delete/:cinemaId
+#### DELETE /delete/:cinemaId
 Removes a cinema from the database.
 * **Requirements:** Site Admin privileges (Level 3).
 * **Path Params:** `cinemaId` (Number, $\ge$ `TYPICAL_MIN_ID`).
