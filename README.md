@@ -1,81 +1,98 @@
 # AbsoluteKino
-Backend for a platform capable of managing cinemas and related data
+Backend for a platform capable of managing cinemas and related data.
+
+---
 
 ## Documentation
 
-<details>
-<summary><h3>/cinema</h3></summary>
+<details open>
+<summary><b>/cinema</b></summary>
+<br>
 
-#### POST /new
-Adds a new cinema. Requires site-admin privileges.
+### POST /new
+Adds a new cinema to the system. 
+* **Requirements:** Site-admin privileges (Level 3).
 
-Request body (JSON)
+**Request Body (JSON):**
 ```json
 {
-  "name": "string",         // required; trimmed length between CINEMA_NAME_MIN_LEN and CINEMA_NAME_MAX_LEN
-  "address": "string",      // required; must match CINEMA_POLISH_ADDRESS_REGEX
-  "latitude": 12.345,       // required; number between CINEMA_MIN_LATITUDE and CINEMA_MAX_LATITUDE
-  "longitude": 67.890       // required; number between CINEMA_MIN_LONGITUDE and CINEMA_MAX_LONGITUDE
+  "name": "string",      // required; length: CINEMA_NAME_MIN to MAX
+  "address": "string",   // required; regex: CINEMA_POLISH_ADDRESS_REGEX
+  "latitude": 12.345,    // required; range: MIN_LATITUDE to MAX_LATITUDE
+  "longitude": 67.890    // required; range: MIN_LONGITUDE to MAX_LONGITUDE
 }
 ```
 
-Responses
-- 200: { cinemas: [ Cinema ] } — created cinema object
-- 400: { message: <error message>, cinemas: [] } — missing/invalid fields, wrong types, or validation failures
-- errors forwarded to next(error)
+**Responses:**
+| Status | Description | Body |
+| :--- | :--- | :--- |
+| **200** | Success | `{ "cinemas": [ CinemaInstance ] }` |
+| **400** | Validation/Type Error | `{ "message": "error string", "cinemas": [] }` |
+| **401** | Unauthorized | `{ "message": "Unauthorized" }` |
 
-#### GET /all
-Returns all cinemas. Public endpoint.
+---
 
-Responses
-- 200: { cinemas: [ CinemaInstance, ... ] }
-- 404: { message: CINEMA_ERR_NOT_FOUND_ALL, cinemas: [] } — no cinemas in DB
-- errors forwarded to next(error)
+### GET /all
+Returns a list of all cinemas in the database.
+* **Requirements:** Public.
 
-#### GET /id/:cinemaId
-Returns cinema with given ID. Public endpoint.
+**Responses:**
+| Status | Description | Body |
+| :--- | :--- | :--- |
+| **200** | Success | `{ "cinemas": [ CinemaInstance, ... ] }` |
+| **404** | No cinemas found | `{ "message": "CINEMA_ERR_NOT_FOUND_ALL", "cinemas": [] }` |
 
-Path params
-- cinemaId (number) — must be >= TYPICAL_MIN_ID
+---
 
-Responses
-- 200: { cinemas: [ CinemaInstance ] }
-- 400: { message: CINEMA_ERR_ID, cinemas: [] } — invalid ID
-- 404: { message: CINEMA_ERR_NOT_FOUND, cinemas: [] } — not found
-- errors forwarded to next(error)
+### GET /id/:cinemaId
+Returns details of a specific cinema.
+* **Requirements:** Public.
+* **Path Params:** `cinemaId` (Number, $\ge$ `TYPICAL_MIN_ID`).
 
-#### PUT /update/:cinemaId
-Updates a cinema. Requires site-admin privileges (authorize "cinemas" and privileges level 3).
+**Responses:**
+| Status | Description | Body |
+| :--- | :--- | :--- |
+| **200** | Success | `{ "cinemas": [ CinemaInstance ] }` |
+| **400** | Invalid ID format | `{ "message": "CINEMA_ERR_ID", "cinemas": [] }` |
+| **404** | Not found | `{ "message": "CINEMA_ERR_NOT_FOUND", "cinemas": [] }` |
 
-Path params
-- cinemaId (number) — must be >= TYPICAL_MIN_ID
+---
 
-Request body (JSON) — at least one of:
+### PUT /update/:cinemaId
+Updates an existing cinema record.
+* **Requirements:** Site-admin (Authorize: "cinemas", Level 3).
+* **Path Params:** `cinemaId` (Number, $\ge$ `TYPICAL_MIN_ID`).
+
+**Request Body (JSON):**
+> At least one field must be provided.
 ```json
 {
-  "name": "string",         // required; trimmed length between CINEMA_NAME_MIN_LEN and CINEMA_NAME_MAX_LEN
-  "address": "string",      // required; must match CINEMA_POLISH_ADDRESS_REGEX
-  "latitude": 12.345,       // required; number between CINEMA_MIN_LATITUDE and CINEMA_MAX_LATITUDE
-  "longitude": 67.890       // required; number between CINEMA_MIN_LONGITUDE and CINEMA_MAX_LONGITUDE
+  "name": "string",
+  "address": "string",
+  "latitude": number,
+  "longitude": number
 }
 ```
 
-Responses
-- 200: { cinemas: [ CinemaInstance ] } — cinema after update
-- 400: { message: <error message>, cinemas: [] } — invalid ID, typing, validation or empty args
-- 404: { message: CINEMA_ERR_NOT_FOUND, cinemas: [] } — cinema not found
-- errors forwarded to next(error)
+**Responses:**
+| Status | Description | Body |
+| :--- | :--- | :--- |
+| **200** | Update Successful | `{ "cinemas": [ CinemaInstance ] }` |
+| **400** | Validation error / Empty body | `{ "message": "error string", "cinemas": [] }` |
+| **404** | Cinema not found | `{ "message": "CINEMA_ERR_NOT_FOUND", "cinemas": [] }` |
 
-#### DELETE /delete/:cinemaId
-Deletes a cinema. Requires site-admin privileges (authorize "cinemas" and privileges level 3).
+---
 
-Path params
-- cinemaId (number) — must be >= TYPICAL_MIN_ID
+### DELETE /delete/:cinemaId
+Removes a cinema from the database.
+* **Requirements:** Site-admin (Authorize: "cinemas", Level 3).
+* **Path Params:** `cinemaId` (Number, $\ge$ `TYPICAL_MIN_ID`).
 
-Responses
-- 200: { message: CINEMA_MSG_DEL } — successful deletion
-- 400: { message: CINEMA_ERR_ID } — invalid ID
-- 404: { message: CINEMA_ERR_NOT_FOUND } — nothing deleted
-- errors forwarded to next(error)
+**Responses:**
+| Status | Description | Body |
+| :--- | :--- | :--- |
+| **200** | Deletion Successful | `{ "message": "CINEMA_MSG_DEL" }` |
+| **400** | Invalid ID | `{ "message": "CINEMA_ERR_ID" }` |
+| **404** | Cinema not found | `{ "message": "CINEMA_ERR_NOT_FOUND" }` |
 
 </details>
