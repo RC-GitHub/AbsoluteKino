@@ -12,7 +12,7 @@ On Windows, it is recommended to use **PowerShell** or **Git Bash**.
    * Ensure Git is installed via [git-scm.com](https://git-scm.com/).
 2. **Setup:**
    ```powershell
-   git clone [https://github.com/RC-GitHub/AbsoluteKino.git](https://github.com/RC-GitHub/AbsoluteKino.git)
+   git clone https://github.com/RC-GitHub/AbsoluteKino.git
    cd AbsoluteKino
    npm install
    ```
