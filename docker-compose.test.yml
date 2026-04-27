@@ -8,7 +8,6 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-      - ./test.sqlite:/app/db.sqlite
     environment:
       - NODE_ENV=test
       - DB_STORAGE=test.sqlite
