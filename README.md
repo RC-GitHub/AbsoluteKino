@@ -76,8 +76,6 @@ The application relies on a `.env` file. **This step must be completed before ru
   1. `docker compose -f docker-compose.yml -f docker-compose.test.yml up -d`
   2. `docker compose exec api npm test`
   3. *To return to production mode:* `docker compose up -d`
-* **Use Site Admin CLI Utility:** `docker compose exec api npm run admin -- <option>`
-* **Cinema City Movie Fetching:** `docker compose exec api npm run scrape -- <amount>`
 
 ### Using Manual Setup
 * **Production:** `npm run start`
@@ -86,8 +84,6 @@ The application relies on a `.env` file. **This step must be completed before ru
   1. Set `NODE_ENV=test` in `.env`.
   2. Run `npm test`.
   3. *To return to dev mode:* Set `NODE_ENV=prod` in `.env`
-* **Use Site Admin CLI Utility:** `npm run admin -- <option>`
-* **Cinema City Movie Fetching:** `npm run scrape -- <amount>`
 
 ---
 
