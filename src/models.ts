@@ -1,8 +1,8 @@
 import { Sequelize, DataTypes, InferAttributes, InferCreationAttributes, Model, Dialect } from "sequelize";
 
-import { CONFIG } from './config.ts';
-import * as Constants from "./constants.ts";
-import * as Messages from "./messages.ts";
+import { CONFIG } from './config';
+import * as Constants from "./constants";
+import * as Messages from "./messages";
 
 const isSqlite = CONFIG.DB.DIALECT === 'sqlite';
 const isTest = CONFIG.NODE_ENV === 'test';

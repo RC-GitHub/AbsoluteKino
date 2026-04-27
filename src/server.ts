@@ -1,21 +1,21 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 
-import { CONFIG } from './config.ts';
+import { CONFIG } from './config';
 import * as Messages from './messages';
 import * as Constants from './constants';
 
-import sequelize, { User } from "./models.ts";
-import cinemaRouter from "./routes/cinema.ts";
-import roomRouter from "./routes/room.ts";
-import movieRouter from "./routes/movie.ts";
-import screeningRouter from "./routes/screening.ts";
-import userRouter from "./routes/user.ts";
-import reservationRouter from "./routes/reservation.ts";
-import productRouter from "./routes/product.ts";
-import seatRouter from "./routes/seat.ts";
+import sequelize, { User } from "./models";
+import cinemaRouter from "./routes/cinema";
+import roomRouter from "./routes/room";
+import movieRouter from "./routes/movie";
+import screeningRouter from "./routes/screening";
+import userRouter from "./routes/user";
+import reservationRouter from "./routes/reservation";
+import productRouter from "./routes/product";
+import seatRouter from "./routes/seat";
 
-import { registerSiteAdmin } from './owner.ts';
+import { registerSiteAdmin } from './owner';
 
 const app = express();
 const port: number = CONFIG.PORT;

@@ -1,9 +1,9 @@
-import sequelize, { Cinema, CinemaInstance, Room, RoomAttributes , RoomInstance, Seat } from "../models.js";
+import sequelize, { Cinema, CinemaInstance, Room, RoomAttributes , RoomInstance, Seat } from "../models";
 import express, { Request, Response, NextFunction } from "express";
 
-import * as Constants from "../constants.ts";
-import * as Messages from "../messages.ts";
-import * as Auth from "../middleware/auth.ts";
+import * as Constants from "../constants";
+import * as Messages from "../messages";
+import * as Auth from "../middleware/auth";
 
 const router = express.Router();
 

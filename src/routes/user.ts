@@ -1,12 +1,12 @@
 import { Op } from 'sequelize';
 import bcrypt from "bcryptjs";
 
-import { Cinema, User, UserAttributes, UserInstance } from "../models.js";
+import { Cinema, User, UserAttributes, UserInstance } from "../models";
 import { Request, Response, NextFunction, Router } from "express";
 
-import * as Messages from "../messages";
 import * as Constants from "../constants";
-import * as Auth from "../middleware/auth.ts"
+import * as Messages from "../messages";
+import * as Auth from "../middleware/auth";
 
 const router = Router();
 

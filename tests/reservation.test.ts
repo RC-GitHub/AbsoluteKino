@@ -3,7 +3,6 @@ import sequelize, { Cinema, Room, Seat, User, UserInstance, Reservation, Screeni
 import * as Constants from "../src/constants";
 import * as Messages from "../src/messages";
 import * as Utils from "./utils";
-import { win32 } from "path/posix";
 
 let siteAdmin: UserInstance;
 let regularUser: UserInstance;

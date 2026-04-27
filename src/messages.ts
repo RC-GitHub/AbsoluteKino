@@ -1,5 +1,5 @@
-import { CONFIG } from './config.ts';
-import * as Constants from './constants.ts';
+import { CONFIG } from './config';
+import * as Constants from './constants';
 
 //---------------------------------
 // App

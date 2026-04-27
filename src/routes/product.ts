@@ -2,11 +2,11 @@ import { Router, Request, Response, NextFunction } from "express";
 import {
     Cinema, CinemaAttributes, CinemaInstance,
     Product, ProductAttributes, ProductInstance
-} from "../models.js";
+} from "../models";
 
-import * as Constants from "../constants.ts";
-import * as Messages from "../messages.ts";
-import * as Auth from "../middleware/auth.ts";
+import * as Constants from "../constants";
+import * as Messages from "../messages";
+import * as Auth from "../middleware/auth";
 
 const router = Router();
 

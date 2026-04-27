@@ -3,11 +3,11 @@ import {
     Room, RoomInstance,
     Movie, MovieInstance,
     Screening, ScreeningAttributes, ScreeningInstance,
-} from "../models.js";
+} from "../models";
 
-import * as Constants from "../constants.ts";
-import * as Messages from "../messages.ts";
-import * as Auth from "../middleware/auth.ts";
+import * as Constants from "../constants";
+import * as Messages from "../messages";
+import * as Auth from "../middleware/auth";
 
 const router = express.Router();
 

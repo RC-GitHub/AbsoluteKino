@@ -1,15 +1,14 @@
 import express, { Request, Response, NextFunction } from "express";
-import sequelize from "../models.js";
-import {
+import sequelize, {
     Reservation, ReservationAttributes, ReservationInstance,
     Screening, ScreeningInstance,
     Seat, SeatInstance,
     User, UserInstance
-} from "../models.js";
+} from "../models";
 
-import * as Constants from "../constants.ts";
-import * as Messages from "../messages.ts";
-import * as Auth from "../middleware/auth.ts";
+import * as Constants from "../constants";
+import * as Messages from "../messages";
+import * as Auth from "../middleware/auth";
 
 const router = express.Router();
 
