@@ -88,11 +88,11 @@ The application relies on a `.env` file. **This step must be completed before ru
 ---
 
 <details>
-<summary><h3>Site Admin CLI Utility</h3></summary>
+<summary><h2>Site Admin CLI Utility</h2></summary>
 
 The Admin CLI is a command-line interface designed to manage **Site Admin privileges (Level 3)** directly via the terminal. This utility bypasses standard API routes to ensure the system owner can initialize the database or recover access.
 
-#### Usage
+### Usage
 All commands should be executed through `npm run` with arguments passed after the `--` separator.
 ```bash
 npm run admin -- [action] [parameters]
@@ -103,7 +103,7 @@ docker compose exec api npm run admin -- [action] [parameters]
 
 ---
 
-#### Add New Admin
+### Add New Admin
 Registers a new user directly into the database with Site Admin privileges.
 * **Requirements:** Direct database access (Terminal).
 * **Action:** `add`
@@ -124,7 +124,7 @@ docker compose exec api npm run admin -- add "John Doe" john@example.com SecretP
 
 ---
 
-#### Elevate Existing User
+### Elevate Existing User
 Promotes an existing user account to Site Admin status by their unique ID.
 * **Requirements:** Valid User ID existing in the database.
 * **Action:** `elevate`
@@ -142,7 +142,7 @@ docker compose exec api npm run admin -- elevate 5
 
 ---
 
-#### Revoke Admin Privileges
+### Revoke Admin Privileges
 Demotes a Site Admin back to a standard user account.
 * **Requirements:** Valid User ID.
 * **Action:** `revoke`
@@ -160,7 +160,7 @@ docker compose exec api npm run admin -- revoke 5
 
 ---
 
-#### Add Default Admin
+### Add Default Admin
 Automates the creation of the first Site Admin using credentials stored in the `.env` configuration file.
 * **Requirements:** `INITIAL_OWNER` variables defined in `CONFIG`.
 * **Action:** `add-default`
@@ -178,7 +178,7 @@ docker compose exec api npm run admin -- add-default
 ---
 
 <details>
-<summary><h3>Cinema City API Fetcher</h3></summary>
+<summary><h2>Cinema City API Fetcher</h2></summary>
 
 The Cinema City API Fetcher is a command-line interface designed to fill out the database with fresh Movies. By default it fetches only 10 Movies to prevent rate-limiting.
 
