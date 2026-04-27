@@ -36,8 +36,8 @@ Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubunt
    cd AbsoluteKino
    ```
 2. **Install Node.js & Dependencies:**
-   * **Arch/CachyOS:** `sudo pacman -S nodejs npm`
-   * **Debian/Ubuntu:** `sudo apt update && sudo apt install nodejs npm build-essential`
+   * **Arch-based:** `sudo pacman -S nodejs npm`
+   * **Debian-based:** `sudo apt update && sudo apt install nodejs npm build-essential`
    ```bash
    npm install
    ```
@@ -74,11 +74,11 @@ The application relies on a `.env` file. **This step must be completed before ru
 * **Development:** `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`
 * **Run Tests:**
   1. `docker compose -f docker-compose.yml -f docker-compose.test.yml up -d`
-  2. `docker compose exec api npm test`
+  2. `docker compose exec api npm run test`
   3. *To return to production mode:* `docker compose up -d`
 
 ### Using Manual Setup
-* **Production:** `npm run start`
+* **Production:**  `npm run start-js` or `npm run start`
 * **Development:** `npm run dev`
 * **Run Tests:**
   1. Set `NODE_ENV=test` in `.env`.

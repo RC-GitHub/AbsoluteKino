@@ -34,4 +34,4 @@ RUN touch db.sqlite && chmod 666 db.sqlite
 EXPOSE 3000
 
 # Startujemy aplikację używając czystego Node.js
-CMD ["node", "dist/server.js"]
+CMD ["npm", "run", "start-js"]
