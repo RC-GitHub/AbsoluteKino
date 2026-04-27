@@ -3,6 +3,96 @@ Backend for a platform capable of managing cinemas and related data.
 
 ---
 
+## Install
+### Windows Installation
+On Windows, it is recommended to use **PowerShell** or **Git Bash**.
+
+1. **Prerequisites:**
+   * Download and install [Node.js](https://nodejs.org/) (LTS version).
+   * Ensure Git is installed via [git-scm.com](https://git-scm.com/).
+2. **Setup:**
+   ```powershell
+   git clone <your-repo-url>
+   cd AbsoluteKino
+   npm install
+   ```
+
+---
+
+### Linux Installation
+Most modern distros (CachyOS, Ubuntu, Fedora) follow this flow. Ensure you have Node.js 18+ installed.
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/RC-GitHub/AbsoluteKino.git
+   cd AbsoluteKino
+   ```
+2. **Install Node.js & Dependencies:**
+   *If you use Arch-based distro:*
+   ```bash
+   sudo pacman -S nodejs npm
+   npm install
+   ```
+   *If you use Debian-based distro:*
+   ```bash
+   sudo apt update && sudo apt install nodejs npm
+   npm install
+   ```
+
+---
+
+## Environment Configuration
+The application relies on a `.env` file to manage database paths, security secrets, and initial admin credentials. **This step is mandatory.**
+
+1. **Create the file:**
+   ```bash
+   # Linux/macOS
+   cp .env.example .env
+   
+   # Windows (PowerShell)
+   copy .env.example .env
+   ```
+2. **Edit your variables:**
+   Open `.env` in your preferred editor (VS Code, Vim, Notepad) and configure the following:
+
+   * **JWT_SECRET:** Change this to a long, random string to secure your logins.
+   * **DB_STORAGE:** This defines the name of your SQLite file (e.g., `db.sqlite`).
+   * **INITIAL_OWNER_...:** These credentials will be used to create the very first "Site Admin" account. Ensure the email and password are secure.
+
+> [!IMPORTANT]
+> Never commit your `.env` file to GitHub. It is already included in the `.gitignore` to protect your secrets.
+
+---
+
+## Running & Testing
+
+### Development Mode
+Runs the server with `nodemon`. The process will restart automatically when you save changes to your code.
+```bash
+npm run dev
+```
+
+### Production Mode
+Runs the server once using `tsx` without a watcher.
+```bash
+npm run start
+```
+
+### Running Tests
+To verify that your installation was successful and all API logic is functioning correctly:
+
+1. **Edit your variables:**
+    Open `.env` in your preferred editor (VS Code, Vim, Notepad) and configure the following:
+    
+    * **NODE_ENV:** Change this to `test`.
+
+2. Run the test:
+```bash
+npm test
+```
+
+---
+
 ## Documentation
 
 ### Additional information

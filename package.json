@@ -15,7 +15,8 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "nodemon --exec tsx src/server.ts",
+    "start": "tsx src/server.ts",
+    "dev": "nodemon --exec tsx src/server.ts",
     "admin": "tsx scripts/owner-tool.ts",
     "scrape": "tsx scraping/scraper.ts",
     "test": "vitest run --reporter=verbose --no-isolate"
