@@ -28,6 +28,7 @@ Most modern distros (CachyOS, Ubuntu, Fedora) follow this flow. Ensure you have 
    cd AbsoluteKino
    ```
 2. **Install Node.js & Dependencies:**
+
    *If you use Arch-based distro:*
    ```bash
    sudo pacman -S nodejs npm
