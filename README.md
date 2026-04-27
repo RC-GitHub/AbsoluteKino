@@ -24,7 +24,7 @@ Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubunt
 1. **Prerequisites:** Install [Node.js](https://nodejs.org/) (LTS) and [Git](https://git-scm.com/).
 2. **Setup:**
    ```powershell
-   git clone https://github.com/RC-GitHub/AbsoluteKino.git
+   git clone 'https://github.com/RC-GitHub/AbsoluteKino.git'
    cd AbsoluteKino
    npm install
    ```
@@ -77,6 +77,7 @@ The application relies on a `.env` file. **This step must be completed before ru
   2. `docker compose exec api npm test`
   3. *To return to production mode:* `docker compose up -d`
 * **Use Site Admin CLI Utility:** `docker compose exec api npm run admin -- <option>`
+* **Cinema City Movie Fetching:** `docker compose exec api npm run scrape -- <amount>`
 
 ### Using Manual Setup
 * **Production:** `npm run start`
@@ -86,6 +87,7 @@ The application relies on a `.env` file. **This step must be completed before ru
   2. Run `npm test`.
   3. *To return to dev mode:* Set `NODE_ENV=prod` in `.env`
 * **Use Site Admin CLI Utility:** `npm run admin -- <option>`
+* **Cinema City Movie Fetching:** `npm run scrape -- <amount>`
 
 ---
 
@@ -160,7 +162,22 @@ Automates the creation of the first Site Admin using credentials stored in the `
 npm run admin -- add-default
 ```
 
+</details>
+
 ---
+
+<details>
+<summary><h3>Cinema City API Fetcher</h3></summary>
+
+The Cinema City API Fetcher is a command-line interface designed to fill out the database with fresh Movies. By default it fetches only 10 Movies to prevent rate-limiting.
+
+**Parameters:**
+1. `amount` (number)
+
+**Example:**
+```bash
+npm run admin -- revoke 5
+```
 
 </details>
 
