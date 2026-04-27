@@ -45,10 +45,10 @@ Creates a new user. If no data is provided, an unauthorized "Guest" account is c
 **Responses:**
 | Status | Description | Body |
 | :--- | :--- | :--- |
-| **200** | Registered successfully | `{ "message": USER_MSG_LOGIN, "users": [ UserInstance[^3] ] }` |
+| **200** | Registered successfully | `{ "message": USER_MSG_LOGIN, "users": [ UserInstance ] }`[^3] |
 | **400** | Validation Error | `{ "message": <error message>, "users": [] }` |
 
-[^3]: Without the password
+[^3]: Returned `UserInstance` is without the password.
 
 ---
 
@@ -68,7 +68,7 @@ Authenticates a user and sets an `auth_token` cookie.
 **Responses:**
 | Status | Description | Body |
 | :--- | :--- | :--- |
-| **200** | Logged in successfully | `{ "message": USER_MSG_LOGIN, "users": [ UserInstance[^3] ] }` |
+| **200** | Logged in successfully | `{ "message": USER_MSG_LOGIN, "users": [ UserInstance ] }`[^3] |
 | **400** | Validation Error | `{ "message": <error message>, "users": [] }` |
 | **401** | Invalid credentials | `{ "message": USER_ERR_LOGIN, "users": [] }` |
 
@@ -130,7 +130,7 @@ Updates user details. Users can update their own data (except for their account 
 **Responses:**
 | Status | Description | Body |
 | :--- | :--- | :--- |
-| **200** | Update Successful | `{ "message": USER_MSG_LOGIN, "users": [ UserInstance[^3] ] }` |
+| **200** | Update Successful | `{ "message": USER_MSG_LOGIN, "users": [ UserInstance ] }`[^3] |
 | **400** | Validation Error | `{ "message": <error message>, "users": [] }` |
 | **404** | User not found | `{ "message": USER_ERR_NOT_FOUND, "users": [] }` |
 
@@ -151,7 +151,7 @@ Changes the `accountType` for a specific user. Unauthorized users can elevate th
 **Responses:**
 | Status | Description | Body |
 | :--- | :--- | :--- |
-| **200** | Type updated | `{ "message": USER_MSG_LOGIN, "users": [ UserInstance[^3] ] }` |
+| **200** | Type updated | `{ "message": USER_MSG_LOGIN, "users": [ UserInstance ] }`[^3] |
 | **400** | Validation Error | `{ "message": <error message>, "users": [] }` |
 
 ---
@@ -522,7 +522,7 @@ Permanently removes a seat from the room layout.
 <summary><h3>/movie</h3></summary>
 
 #### POST /new
-Adds a new movie to the global database. Includes extensive validation for strings, URL formats (Poster/Trailer), and ISO date parsing.
+Adds a new movie to the global database. Includes extensive validation for strings, URL formats[^4] (Poster/Trailer), and ISO date parsing.
 * **Requirements:** Site Admin privileges (Level 3).
 
 **Request Body (JSON):**
@@ -532,8 +532,8 @@ Adds a new movie to the global database. Includes extensive validation for strin
   "viewingFormat": "string",  // required; length: MOVIE_VF_MIN_LEN to MOVIE_VF_MAX_LEN
   "duration": 120,            // required; range: MOVIE_DUR_MIN to MOVIE_DUR_MAX
   "description": "string",    // required; length: MOVIE_DESC_MIN_LEN to MOVIE_DESC_MAX_LEN
-  "posterUrl": "string",      // required; regex: isValidURL()[^4] pattern
-  "trailerUrl": "string",     // required; regex: isValidURL()[^4] pattern
+  "posterUrl": "string",      // required; regex: isValidURL() pattern
+  "trailerUrl": "string",     // required; regex: isValidURL() pattern
   "language": "string",       // required; length: MOVIE_LANG_MIN_LEN to MOVIE_LANG_MAX_LEN
   "premiereDate": "string",   // required; format: ISO 8601 (YYYY-MM-DD)
   "genre": "string",          // required; length: MOVIE_GENRE_MIN_LEN to MOVIE_GENRE_MAX_LEN
