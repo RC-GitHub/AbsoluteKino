@@ -211,7 +211,7 @@ router.put(
             .status(400)
             .json({ message: Messages.CINEMA_ERR_LONGITUDE_VAL, cinemas: [] });
         }
-        updateData.latitude = latitude;
+        updateData.longitude = longitude;
       }
       if (address !== undefined) {
         if (typeof address !== "string")
