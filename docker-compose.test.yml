@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./test.sqlite:/app/db.sqlite
+    environment:
+      - NODE_ENV=test
+      - DB_STORAGE=test.sqlite

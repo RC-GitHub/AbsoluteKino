@@ -4,12 +4,24 @@ Backend for a platform capable of managing cinemas and related data.
 ---
 
 ## Installation
-### Windows
-On Windows, it is recommended to use **PowerShell** or **Git Bash**.
+You can set up the project manually or use **Docker** for an isolated environment.
 
-1. **Prerequisites:**
-   * Download and install [Node.js](https://nodejs.org/) (LTS version).
-   * Ensure Git is installed via [git-scm.com](https://git-scm.com/).
+### Docker (Recommended for all platforms)
+Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubuntu) without worrying about local Node.js versions.
+
+1. **Prerequisites:** Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows) or `docker` + `docker-compose` (Linux).
+2. **Setup:**
+   ```bash
+   git clone https://github.com/RC-GitHub/AbsoluteKino.git
+   cd AbsoluteKino
+   # IMPORTANT: Complete the "Environment Configuration" section below first!
+   docker compose up -d --build
+   ```
+
+---
+
+### Manual Setup - Windows
+1. **Prerequisites:** Install [Node.js](https://nodejs.org/) (LTS) and [Git](https://git-scm.com/).
 2. **Setup:**
    ```powershell
    git clone https://github.com/RC-GitHub/AbsoluteKino.git
@@ -17,48 +29,37 @@ On Windows, it is recommended to use **PowerShell** or **Git Bash**.
    npm install
    ```
 
----
-
-### Linux
-Most modern distros (CachyOS, Ubuntu, Fedora) follow this flow. Ensure you have Node.js 18+ installed.
-
-1. **Clone the repository:**
+### Manual Setup - Linux
+1. **Clone:**
    ```bash
    git clone https://github.com/RC-GitHub/AbsoluteKino.git
    cd AbsoluteKino
    ```
 2. **Install Node.js & Dependencies:**
-
-   *If you use Arch-based distro:*
+   * **Arch/CachyOS:** `sudo pacman -S nodejs npm`
+   * **Debian/Ubuntu:** `sudo apt update && sudo apt install nodejs npm build-essential`
    ```bash
-   sudo pacman -S nodejs npm
-   npm install
-   ```
-   *If you use Debian-based distro:*
-   ```bash
-   sudo apt update && sudo apt install nodejs npm
    npm install
    ```
 
 ---
 
 ## Environment Configuration
-The application relies on a `.env` file to manage database paths, security secrets, and initial admin credentials. **This step is mandatory.**
+The application relies on a `.env` file. **This step must be completed before running the app or Docker.**
 
 1. **Create the file:**
    ```bash
-   # Linux/macOS
+   # Linux/macOS/Git Bash
    cp .env.example .env
    
    # Windows (PowerShell)
    copy .env.example .env
    ```
 2. **Edit your variables:**
-   Open `.env` in your preferred editor (VS Code, Vim, Notepad) and configure the following:
-
-   * **JWT_SECRET:** Change this to a long, random string to secure your logins.
-   * **DB_STORAGE:** This defines the name of your SQLite file (e.g., `db.sqlite`).
-   * **INITIAL_OWNER_...:** These credentials will be used to create the very first "Site Admin" account. Ensure the email and password are secure.
+   Open `.env` and configure:
+   * **JWT_SECRET:** A long, random string.
+   * **INITIAL_OWNER_...:** Credentials for your first Admin account.
+   * **DB_FORCE_SYNC:** Set to `true` for the first run to create tables.
 
 > [!IMPORTANT]
 > Never commit your `.env` file to GitHub. It is already included in the `.gitignore` to protect your secrets.
@@ -67,30 +68,24 @@ The application relies on a `.env` file to manage database paths, security secre
 
 ## Running & Testing
 
-### Development Mode
-Runs the server with `nodemon`. The process will restart automatically when you save changes to your code.
-```bash
-npm run dev
-```
+### Using Docker
+* **Start Server:** `docker compose up -d`
+* **View Logs:** `docker compose logs -f`
+* **Development:** `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`
+* **Run Tests:**
+  1. `docker compose -f docker-compose.yml -f docker-compose.test.yml up -d`
+  2. `docker compose exec api npm test`
+  3. *To return to production mode:* `docker compose up -d`
+* **Use Site Admin CLI Utility:** `docker compose exec api npm run admin -- <option>`
 
-### Production Mode
-Runs the server once using `tsx` without a watcher.
-```bash
-npm run start
-```
-
-### Running Tests
-To verify that your installation was successful and all API logic is functioning correctly:
-
-1. **Edit your variables:**
-    Open `.env` in your preferred editor (VS Code, Vim, Notepad) and configure the following:
-    
-    * **NODE_ENV:** Change this to `test`.
-
-2. Run the test:
-```bash
-npm test
-```
+### Using Manual Setup
+* **Production:** `npm run start`
+* **Development:** `npm run dev`
+* **Run Tests:**
+  1. Set `NODE_ENV=test` in `.env`.
+  2. Run `npm test`.
+  3. *To return to dev mode:* Set `NODE_ENV=prod` in `.env`
+* **Use Site Admin CLI Utility:** `npm run admin -- <option>`
 
 ---
 
