@@ -78,7 +78,7 @@ The application relies on a `.env` file. **This step must be completed before ru
   3. *To return to production mode:* `docker compose up -d`
 
 ### Using Manual Setup
-* **Production:**  `npm run start-js` or `npm run start`
+* **Production:**  `npm run start-js` or `npm run start` (TypeScript version)
 * **Development:** `npm run dev`
 * **Run Tests:**
   1. Set `NODE_ENV=test` in `.env`.
