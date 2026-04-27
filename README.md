@@ -3,8 +3,8 @@ Backend for a platform capable of managing cinemas and related data.
 
 ---
 
-## Install
-### Windows Installation
+## Installation
+### Windows
 On Windows, it is recommended to use **PowerShell** or **Git Bash**.
 
 1. **Prerequisites:**
@@ -19,7 +19,7 @@ On Windows, it is recommended to use **PowerShell** or **Git Bash**.
 
 ---
 
-### Linux Installation
+### Linux
 Most modern distros (CachyOS, Ubuntu, Fedora) follow this flow. Ensure you have Node.js 18+ installed.
 
 1. **Clone the repository:**
@@ -91,6 +91,83 @@ To verify that your installation was successful and all API logic is functioning
 ```bash
 npm test
 ```
+
+---
+
+<details>
+<summary><h3>Site Admin CLI Utility</h3></summary>
+
+The Admin CLI is a command-line interface designed to manage **Site Admin privileges (Level 3)** directly via the terminal. This utility bypasses standard API routes to ensure the system owner can initialize the database or recover access.
+
+#### Usage
+All commands should be executed through `npm run` with arguments passed after the `--` separator.
+```bash
+npm run admin -- [action] [parameters]
+```
+
+---
+
+#### Add New Admin
+Registers a new user directly into the database with Site Admin privileges.
+* **Requirements:** Direct database access (Terminal).
+* **Action:** `add`
+
+**Parameters:**
+1. `name` (string)
+2. `email` (string)
+3. `password` (string)
+4. `phone` (string/number)
+
+**Example:**
+```bash
+npm run admin -- add "John Doe" john@example.com SecretPass123 555666777
+```
+
+---
+
+#### Elevate Existing User
+Promotes an existing user account to Site Admin status by their unique ID.
+* **Requirements:** Valid User ID existing in the database.
+* **Action:** `elevate`
+
+**Parameters:**
+1. `id` (number)
+
+**Example:**
+```bash
+npm run admin -- elevate 5
+```
+
+---
+
+#### Revoke Admin Privileges
+Demotes a Site Admin back to a standard user account.
+* **Requirements:** Valid User ID.
+* **Action:** `revoke`
+
+**Parameters:**
+1. `id` (number)
+
+**Example:**
+```bash
+npm run admin -- revoke 5
+```
+
+---
+
+#### Add Default Admin
+Automates the creation of the first Site Admin using credentials stored in the `.env` configuration file.
+* **Requirements:** `INITIAL_OWNER` variables defined in `CONFIG`.
+* **Action:** `add-default`
+
+**Example:**
+```bash
+npm run admin -- add-default
+```
+
+---
+
+</details>
 
 ---
 
@@ -1103,82 +1180,5 @@ Deletes a product with the specified ID.
 | **200** | Success | `{ "message": PRODUCT_MSG_DEL }` |
 | **400** | Invalid ID | `{ "message": PRODUCT_ERR_ID }` |
 | **404** | Not Found | `{ "message": PRODUCT_ERR_NOT_FOUND, "products": [] }` |
-
-</details>
-
----
-
-<details>
-<summary><h3>Site Admin CLI Utility</h3></summary>
-
-The Admin CLI is a command-line interface designed to manage **Site Admin privileges (Level 3)** directly via the terminal. This utility bypasses standard API routes to ensure the system owner can initialize the database or recover access.
-
-#### Usage
-All commands should be executed through `npm run` with arguments passed after the `--` separator.
-```bash
-npm run admin -- [action] [parameters]
-```
-
----
-
-#### Add New Admin
-Registers a new user directly into the database with Site Admin privileges.
-* **Requirements:** Direct database access (Terminal).
-* **Action:** `add`
-
-**Parameters:**
-1. `name` (string)
-2. `email` (string)
-3. `password` (string)
-4. `phone` (string/number)
-
-**Example:**
-```bash
-npm run admin -- add "John Doe" john@example.com SecretPass123 555666777
-```
-
----
-
-#### Elevate Existing User
-Promotes an existing user account to Site Admin status by their unique ID.
-* **Requirements:** Valid User ID existing in the database.
-* **Action:** `elevate`
-
-**Parameters:**
-1. `id` (number)
-
-**Example:**
-```bash
-npm run admin -- elevate 5
-```
-
----
-
-#### Revoke Admin Privileges
-Demotes a Site Admin back to a standard user account.
-* **Requirements:** Valid User ID.
-* **Action:** `revoke`
-
-**Parameters:**
-1. `id` (number)
-
-**Example:**
-```bash
-npm run admin -- revoke 5
-```
-
----
-
-#### Add Default Admin
-Automates the creation of the first Site Admin using credentials stored in the `.env` configuration file.
-* **Requirements:** `INITIAL_OWNER` variables defined in `CONFIG`.
-* **Action:** `add-default`
-
-**Example:**
-```bash
-npm run admin -- add-default
-```
-
----
 
 </details>
