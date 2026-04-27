@@ -100,6 +100,9 @@ The Admin CLI is a command-line interface designed to manage **Site Admin privil
 All commands should be executed through `npm run` with arguments passed after the `--` separator.
 ```bash
 npm run admin -- [action] [parameters]
+
+# Or using Docker:
+docker compose exec api npm run admin -- [action] [parameters]
 ```
 
 ---
@@ -118,6 +121,9 @@ Registers a new user directly into the database with Site Admin privileges.
 **Example:**
 ```bash
 npm run admin -- add "John Doe" john@example.com SecretPass123 555666777
+
+# Or using Docker:
+docker compose exec api npm run admin -- add "John Doe" john@example.com SecretPass123 555666777
 ```
 
 ---
@@ -133,6 +139,9 @@ Promotes an existing user account to Site Admin status by their unique ID.
 **Example:**
 ```bash
 npm run admin -- elevate 5
+
+# Or using Docker:
+docker compose exec api npm run admin -- elevate 5
 ```
 
 ---
@@ -148,6 +157,9 @@ Demotes a Site Admin back to a standard user account.
 **Example:**
 ```bash
 npm run admin -- revoke 5
+
+# Or using Docker:
+docker compose exec api npm run admin -- revoke 5
 ```
 
 ---
@@ -160,6 +172,9 @@ Automates the creation of the first Site Admin using credentials stored in the `
 **Example:**
 ```bash
 npm run admin -- add-default
+
+# Or using Docker:
+docker compose exec api npm run admin -- add-default
 ```
 
 </details>
@@ -176,7 +191,10 @@ The Cinema City API Fetcher is a command-line interface designed to fill out the
 
 **Example:**
 ```bash
-npm run admin -- revoke 5
+npm run scrape -- 5
+
+# Or using Docker:
+docker compose exec api npm run scrape -- 5
 ```
 
 </details>
