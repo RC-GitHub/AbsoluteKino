@@ -4,10 +4,10 @@ Backend for a platform capable of managing cinemas and related data
 ## Documentation
 
 <details>
-<summary>Cinema API — Routes Documentation</summary>
+<summary><h3>/cinema</h3></summary>
 
 #### POST /new
-Adds a new cinema. Requires site-admin privileges (authorize "cinemas" and privileges level 3).
+Adds a new cinema. Requires site-admin privileges.
 
 Request body (JSON)
 ```json
@@ -53,10 +53,10 @@ Path params
 Request body (JSON) — at least one of:
 ```json
 {
-  "name": "string",       // optional; validated same as POST /new (trimmed and length limits)
-  "address": "string",    // optional; must match CINEMA_POLISH_ADDRESS_REGEX
-  "latitude": 12.345,     // optional; number within latitude bounds
-  "longitude": 67.890     // optional; number within longitude bounds
+  "name": "string",         // required; trimmed length between CINEMA_NAME_MIN_LEN and CINEMA_NAME_MAX_LEN
+  "address": "string",      // required; must match CINEMA_POLISH_ADDRESS_REGEX
+  "latitude": 12.345,       // required; number between CINEMA_MIN_LATITUDE and CINEMA_MAX_LATITUDE
+  "longitude": 67.890       // required; number between CINEMA_MIN_LONGITUDE and CINEMA_MAX_LONGITUDE
 }
 ```
 
