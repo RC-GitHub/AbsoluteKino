@@ -177,6 +177,27 @@ Assigns a specific cinema to a user (promoting them to Cinema Admin if they were
 
 ---
 
+#### DELETE /unassign-cinema
+Deletes the connection between a user and a cinema.
+* **Requirements:** Site Admin privileges (Level 3)
+
+**Request Body (JSON):**
+```json
+{
+  "userId": number,   // required; must exist in the database
+  "cinemaId": number  // required; must exist in the database
+}
+```
+
+**Responses:**
+| Status | Description | Body |
+| :--- | :--- | :--- |
+| **200** | Success | `{ "message": USER_MSG_CINEMA_UNASSIGN, "users": [ UserInstance ] }` |
+| **400** | Validation Error | `{ "message": <error message>, "users": [] }` |
+| **404** | Validation Error | `{ "message": <error message>, "users": [] }` |
+
+---
+
 #### DELETE /delete/:userId
 Deletes a non-Site Admin user from the system.
 * **Requirements:** Site-admin privileges (Level 3)
