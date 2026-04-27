@@ -189,6 +189,8 @@ Deletes a user from the system.
 
 </details>
 
+---
+
 <details>
 <summary><h3>/cinema</h3></summary>
 <br>
@@ -280,6 +282,8 @@ Removes a cinema from the database.
 | **404** | Cinema not found | `{ "message": "CINEMA_ERR_NOT_FOUND" }` |
 
 </details>
+
+---
 
 <details>
 <summary><h3>/room</h3></summary>
@@ -403,6 +407,8 @@ Permanently removes a room from the database.
 | **404** | Room not found | `{ "message": ROOM_ERR_NOT_FOUND_GLOBAL }` |
 
 </details>
+
+---
 
 <details>
 <summary><h3>/seat</h3></summary>
@@ -728,10 +734,6 @@ Removes a screening from the schedule.
 | **404** | Screening not found | `{ "message": SCREENING_ERR_NOT_FOUND_GLOBAL }` |
 
 </details>
-
----
-
-Following your request, here is the markdown documentation for the `/reservation` module. I have reverted to the "Requirements" and "Privileges" terminology and ensured the response structures match your established pattern.
 
 ---
 
