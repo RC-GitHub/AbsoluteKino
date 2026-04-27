@@ -159,6 +159,7 @@ export const USER_ERR_EMAIL_UNIQUE: string = `User with this email already exist
 export const USER_ERR_PHONE: string = `User phone number does not match the specified format (look into the documentation)`;
 export const USER_ERR_PHONE_UNIQUE: string = `User with this phone number already exists`;
 export const USER_MSG_CINEMA_ASSIGN = "Cinema Admin successfully assigned to cinema.";
+export const USER_MSG_CINEMA_UNASSIGN = "Cinema Admin successfully unassigned to cinema.";
 
 export const USER_ERR_DEL_SITE: string = `This user cannot be deleted using this method`
 export const USER_ERR_NOT_FOUND_ALL: string = "No users were found in the database";

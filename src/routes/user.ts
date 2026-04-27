@@ -483,7 +483,9 @@ router.put("/assign-cinema",
             return res.status(400).json({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
         }
 
-        if (typeof userId !== "number" || typeof cinemaId !== "number") {
+        if (typeof userId !== "number" || !Number.isInteger(userId) ||
+            typeof cinemaId !== "number" || !Number.isInteger(cinemaId))
+        {
             return res.status(400).json({ message: Messages.USER_ERR_TYPING, users: [] });
         }
 
@@ -524,6 +526,62 @@ router.put("/assign-cinema",
             message: Messages.USER_MSG_CINEMA_ASSIGN,
             users: [updatedUser]
         });
+    } catch (error: any) {
+        next(error);
+    }
+    });
+
+/**
+ * Only site admin can get to 200 with this endpoint
+ * ===============================
+ * Deletes the connection between a user and a cinema
+ */
+router.delete("/unassign-cinema",
+    Auth.authorize("users"),
+    Auth.validatePrivileges("users", 3),
+    async (req: Request, res: Response, next: NextFunction) =>
+{
+    try {
+        const { userId, cinemaId } = req.body;
+
+        if (userId == null || cinemaId == null) {
+            return res.status(400).json({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+        }
+
+        if (typeof userId !== "number" || !Number.isInteger(userId) ||
+            typeof cinemaId !== "number" || !Number.isInteger(cinemaId))
+        {
+            return res.status(400).json({ message: Messages.USER_ERR_TYPING, users: [] });
+        }
+
+        if (userId < Constants.TYPICAL_MIN_ID) {
+            return res.status(400).json({ message: Messages.USER_ERR_ID, users: [] });
+        }
+        if (cinemaId < Constants.TYPICAL_MIN_ID) {
+            return res.status(400).json({ message: Messages.CINEMA_ERR_ID, users: [] });
+        }
+
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
+        }
+
+        const cinema = await Cinema.findByPk(cinemaId);
+        if (!cinema) {
+            return res.status(404).json({ message: Messages.CINEMA_ERR_NOT_FOUND, users: [] });
+        }
+
+        await (user as any).removeCinema(cinema);
+
+        const updatedUser = await User.findByPk(userId, {
+            include: [{ model: Cinema, as: 'cinemas' }]
+        });
+
+        res.send({
+            message: Messages.USER_MSG_CINEMA_UNASSIGN,
+            users: [updatedUser]
+        });
+
     } catch (error: any) {
         next(error);
     }

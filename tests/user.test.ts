@@ -1,4 +1,4 @@
-import sequelize, { Cinema, User, UserInstance } from "../src/models";
+import sequelize, { Cinema, User, UserCinema, UserInstance } from "../src/models";
 
 import * as Utils from "./utils";
 import * as Messages from "../src/messages";
@@ -25,6 +25,7 @@ beforeAll(async () => {
 afterAll(async () => {
     await User.destroy({ where: {}, cascade: true })
     await Cinema.destroy({ where: {}, cascade: true })
+    await UserCinema.destroy({ where: {}, cascade: true })
 })
 
 describe("User Lifecycle Flow", () => {
@@ -714,7 +715,103 @@ describe("User Lifecycle Flow", () => {
     });
 
     //---------------------------------
-    // Step 7 - DELETE
+    // Step 7 - DELETE (Unassign Cinemas)
+    //---------------------------------
+    // The connection between a user and a cinema is removed
+    // Tests verify the removal of the link in the database state
+    // Then tests go over all cases which result in failure
+    //---------------------------------
+
+    describe("DELETE /user/unassign-cinema", () => {
+        it("(MODEL EXAMPLE) should respond with 200 and the user object without the unassigned cinema", async () => {
+            response = await Utils.sendRequest("/user/unassign-cinema", 200, "DELETE", {
+                userId: 1,
+                cinemaId: cinemaId
+            }, siteAdminCookie);
+
+            expect(response.body).toHaveProperty("message", Messages.USER_MSG_CINEMA_UNASSIGN);
+            expect(response.body.users[0]).toHaveProperty("id", 1);
+
+            const userCinemas = response.body.users[0].cinemas;
+            const found = userCinemas.find((c: any) => c.id === cinemaId);
+            expect(found).toBeUndefined();
+        });
+
+        it("should respond with 400 when required fields are missing", async () => {
+            // Missing userId
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { userId: null, cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+
+            // Missing cinemaId
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { cinemaId: null, userId: 1 }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_EMPTY_ARGS, users: [] });
+        });
+
+        it("should respond with 400 when field types are incorrect", async () => {
+            // userId as string
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { userId: "1", cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
+
+            // cinemaId as string
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { userId: 1, cinemaId: "1" }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_TYPING, users: [] });
+        });
+
+        it("should respond with 400 when IDs are below minimum value", async () => {
+            // Invalid userId
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { userId: 0, cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { userId: -1, cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_ID, users: [] });
+
+            // Invalid cinemaId
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { userId: 1, cinemaId: 0 }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, users: [] });
+            response = await Utils.sendRequest("/user/unassign-cinema", 400, "DELETE", { userId: 1, cinemaId: -1 }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_ID, users: [] });
+        });
+
+        it("should respond with 401 when no cookies are provided", async () => {
+            await Utils.noCookieCheck("/user/unassign-cinema", "DELETE", { userId: 1, cinemaId: cinemaId }, "users");
+        });
+
+        it("should respond with 401 when a deleted site admin user with valid cookies tries to access /assign-cinema", async () => {
+            await Utils.deletedAdminCheck("/user/unassign-cinema", "DELETE", { userId: 1, cinemaId: cinemaId }, "users");
+        });
+
+        it("should respond with 401 when accessing a protected route with a tampered cookie", async () => {
+            await Utils.tamperedCookieCheck("/user/unassign-cinema", "DELETE", { userId: 1, cinemaId: cinemaId }, "users", siteAdminCookie)
+        });
+
+        it("should respond with 403 when a regular user tries to unassign a cinema", async () => {
+            await Utils.unauthorizedCheck("/user/unassign-cinema", "DELETE", { userId: 1, cinemaId: cinemaId }, "users", regularCookie);
+        });
+
+        it("should respond with 404 when user does not exist", async () => {
+            response = await Utils.sendRequest("/user/unassign-cinema", 404, "DELETE", { userId: 99, cinemaId: cinemaId }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.USER_ERR_NOT_FOUND, users: [] });
+        });
+
+        it("should respond with 404 when cinema does not exist", async () => {
+            response = await Utils.sendRequest("/user/unassign-cinema", 404, "DELETE", { userId: 1, cinemaId: 99 }, siteAdminCookie);
+            expect(response.body).toEqual({ message: Messages.CINEMA_ERR_NOT_FOUND, users: [] });
+        });
+
+        it("should respond with 200 even if the connection did not exist", async () => {
+            // Try to unassign the same cinema again
+            response = await Utils.sendRequest("/user/unassign-cinema", 200, "DELETE", {
+                userId: 1,
+                cinemaId: cinemaId
+            }, siteAdminCookie);
+
+            expect(response.body.users[0].cinemas.length).toBe(0);
+        });
+    });
+
+    //---------------------------------
+    // Step 8 - DELETE
     //---------------------------------
     // All user objects are being deleted one by one
     // At the end of this step there are no user objects in the database
@@ -761,8 +858,6 @@ describe("User Lifecycle Flow", () => {
         it("should respond with 404 if user is already gone", async () => {
             response = await Utils.sendRequest("/user/delete/1", 404, "DELETE", {}, siteAdminCookie);
             expect(response.body).toEqual({ message: Messages.USER_ERR_NOT_FOUND });
-
-            // await deleteSiteAdmin(5);
         });
     });
 });
