@@ -9,8 +9,10 @@ You can set up the project manually or use **Docker** for an isolated environmen
 ### Docker (Recommended for all platforms)
 Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubuntu) without worrying about local Node.js versions.
 
-1. **Prerequisites:** Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows) or `docker` + `docker-compose` (Linux).
-2. **Setup:**
+1. **Prerequisites:**
+   * **Windows**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [Git](https://git-scm.com/)
+   * **Linux**: Install `docker` + `docker-compose` on your system.
+3. **Setup:**
    ```bash
    git clone https://github.com/RC-GitHub/AbsoluteKino.git
    cd AbsoluteKino
@@ -24,7 +26,7 @@ Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubunt
 ---
 
 ### Manual Setup - Windows
-1. **Prerequisites:** Install [Node.js](https://nodejs.org/) (LTS) and [Git](https://git-scm.com/).
+1. **Prerequisites:** Install [Node.js](https://nodejs.org/) (LTS).
 2. **Setup:**
    ```powershell
    git clone 'https://github.com/RC-GitHub/AbsoluteKino.git'
