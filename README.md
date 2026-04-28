@@ -67,7 +67,6 @@ The application relies on a `.env` file. **This step must be completed before ru
    * **INITIAL_OWNER_...:** Credentials for your first Admin account.
   
    On top of that the user might define their own database supported by [Sequelize](https://sequelize.org/)
-   
    (**Note:** That would however require adding necessary `npm` packages)
 
 > [!IMPORTANT]
