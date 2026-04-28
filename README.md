@@ -103,9 +103,11 @@ The Admin CLI is a command-line interface designed to manage **Site Admin privil
 All commands should be executed through `npm run` with arguments passed after the `--` separator.
 ```bash
 npm run admin -- [action] [parameters]
+npm run admin-js -- [action] [parameters]
 
 # Or using Docker:
 docker compose exec api npm run admin -- [action] [parameters]
+docker compose exec api npm run admin-js -- [action] [parameters]
 ```
 
 ---
@@ -124,9 +126,11 @@ Registers a new user directly into the database with Site Admin privileges.
 **Example:**
 ```bash
 npm run admin -- add "John Doe" john@example.com SecretPass123 555666777
+npm run admin-js -- add "John Doe" john@example.com SecretPass123 555666777
 
 # Or using Docker:
 docker compose exec api npm run admin -- add "John Doe" john@example.com SecretPass123 555666777
+docker compose exec api npm run admin-js -- add "John Doe" john@example.com SecretPass123 555666777
 ```
 
 ---
@@ -142,9 +146,11 @@ Promotes an existing user account to Site Admin status by their unique ID.
 **Example:**
 ```bash
 npm run admin -- elevate 5
+npm run admin-js -- elevate 5
 
 # Or using Docker:
 docker compose exec api npm run admin -- elevate 5
+docker compose exec api npm run admin-js -- elevate 5
 ```
 
 ---
@@ -160,9 +166,11 @@ Demotes a Site Admin back to a standard user account.
 **Example:**
 ```bash
 npm run admin -- revoke 5
+npm run admin-js -- revoke 5
 
 # Or using Docker:
 docker compose exec api npm run admin -- revoke 5
+docker compose exec api npm run admin-js -- revoke 5
 ```
 
 ---
@@ -175,9 +183,11 @@ Automates the creation of the first Site Admin using credentials stored in the `
 **Example:**
 ```bash
 npm run admin -- add-default
+npm run admin-js -- add-default
 
 # Or using Docker:
 docker compose exec api npm run admin -- add-default
+docker compose exec api npm run admin-js -- add-default
 ```
 
 </details>
@@ -195,9 +205,11 @@ The Cinema City API Fetcher is a command-line interface designed to fill out the
 **Example:**
 ```bash
 npm run scrape -- 5
+npm run scrape-js -- 5
 
 # Or using Docker:
 docker compose exec api npm run scrape -- 5
+docker compose exec api npm run scrape-js -- 5
 ```
 
 </details>
