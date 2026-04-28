@@ -5,12 +5,11 @@ const isTest = process.env.NODE_ENV === 'test';
 
 export const CONFIG = {
   NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.APP_PORT || '3000', 10),
+  PORT: parseInt(process.env.APP_PORT || '3000', 10), 
   JWT_SECRET: process.env.JWT_SECRET || 'fallback_secret',
 
   DB: {
     DIALECT: (process.env.DB_DIALECT || 'sqlite'),
-
     HOST: process.env.DB_HOST || 'localhost',
     PORT: parseInt(process.env.DB_PORT || '3306', 10),
     USER: process.env.DB_USER || 'root',
