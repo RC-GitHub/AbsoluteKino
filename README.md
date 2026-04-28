@@ -26,7 +26,7 @@ Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubunt
 ---
 
 ### Manual Setup - Windows
-1. **Prerequisites:** Install [Node.js](https://nodejs.org/) (LTS).
+1. **Prerequisites:** Install [Node.js](https://nodejs.org/) (LTS) and [Git](https://git-scm.com/).
 2. **Setup:**
    ```powershell
    git clone 'https://github.com/RC-GitHub/AbsoluteKino.git'
