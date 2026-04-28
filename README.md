@@ -7,7 +7,7 @@ Backend for a platform capable of managing cinemas and related data.
 You can set up the project manually or use **Docker** for an isolated environment.
 
 ### Docker (Recommended for all platforms)
-Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubuntu) without worrying about local Node.js versions.
+Docker ensures the app runs exactly the same on Windows and Linux without worrying about local Node.js versions.
 
 1. **Prerequisites:**
    * **Windows**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [Git](https://git-scm.com/), then run Docker Desktop
