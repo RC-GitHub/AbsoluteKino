@@ -1,10 +1,9 @@
 services:
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile 
     ports:
       - "3000:3000"
     env_file:
       - .env
-    volumes:
-      - .:/app
-      - /app/node_modules

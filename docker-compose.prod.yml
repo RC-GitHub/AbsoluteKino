@@ -10,6 +10,4 @@ services:
       - .env     
     environment:
       - NODE_ENV=prod
-    volumes:
-      - ./db.sqlite:/app/db.sqlite
     restart: always          
