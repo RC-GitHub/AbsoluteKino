@@ -20,17 +20,19 @@
     "dev": "npx nodemon --exec npx tsx src/server.ts",
     "admin": "tsx scripts/owner-tool.ts",
     "admin-js": "node dist/scripts/owner-tool.js",
-    "scrape": "tsx scraping/scraper.ts",
-    "scrape-js": "node dist/scraping/scraper.js",
+    "scrape": "tsx scripts/scraper.ts",
+    "scrape-js": "node dist/scripts/scraper.js",
     "test": "vitest run --reporter=verbose --no-isolate"
   },
   "dependencies": {
+    "@types/node-cron": "^3.0.11",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.2.1",
     "sequelize": "^6.37.7",
     "sqlite3": "^5.0.2"
   },

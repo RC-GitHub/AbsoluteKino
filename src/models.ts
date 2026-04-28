@@ -1,4 +1,4 @@
-import { Sequelize, DataTypes, InferAttributes, InferCreationAttributes, Model, Dialect } from "sequelize";
+import { Sequelize, Optional, DataTypes, InferAttributes, InferCreationAttributes, Model, Dialect } from "sequelize";
 
 import { CONFIG } from './config';
 import * as Constants from "./constants";
@@ -57,12 +57,16 @@ export interface UserAttributes {
   password: string | null;
   email: string | null;
   phoneNumber: string | number | null;
-  tokenVersion: number
+  tokenVersion: number,
+  createdAt: Date,
+  updatedAt: Date,
 }
+
+interface UserCreationAttributes extends Optional<UserAttributes, "id" | "createdAt" | "updatedAt"> {}
 
 export interface UserInstance extends Model<UserAttributes>, UserAttributes { }
 
-export const User = sequelize.define<UserInstance>("User", {
+export const User = sequelize.define<UserInstance, UserCreationAttributes>("User", {
   ...commonAttributes,
   name: {
     type: DataTypes.STRING,
@@ -122,6 +126,10 @@ export const User = sequelize.define<UserInstance>("User", {
     },
     defaultValue: Constants.USER_TOKEN_VER_MIN_VAL
   }
+},
+{
+  timestamps: true, 
+  tableName: "User", 
 });
 
 //---------------------------------
@@ -641,6 +649,8 @@ export interface ReservationAttributes {
   seatId: number;
   screeningId: number;
   userId: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ReservationInstance extends Model<ReservationAttributes>, ReservationAttributes {
@@ -649,7 +659,9 @@ export interface ReservationInstance extends Model<ReservationAttributes>, Reser
     User: UserInstance;
 }
 
-export const Reservation = sequelize.define<ReservationInstance>("Reservation", {
+interface ReservationCreationAttributes extends Optional<ReservationAttributes, 'id' | 'createdAt' | 'updatedAt'> {}
+
+export const Reservation = sequelize.define<ReservationInstance, ReservationCreationAttributes>("Reservation", {
   ...commonAttributes,
   reservationDate: {
     type: DataTypes.DATE,
@@ -711,7 +723,11 @@ export const Reservation = sequelize.define<ReservationInstance>("Reservation", 
         msg: Messages.USER_ERR_ID
       }
     }
-  },
+  }
+},
+{
+  timestamps: true, 
+  tableName: "Reservation", 
 });
 
 //---------------------------------

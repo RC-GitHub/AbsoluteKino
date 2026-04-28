@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 
 import { CONFIG } from './config';
+import { initCronJobs } from "../utils/cron";
 import * as Messages from './messages';
 import * as Constants from './constants';
 
@@ -50,6 +51,8 @@ const startServer = async () => {
     console.log(Messages.DB_SYNCED);
 
     if (CONFIG.NODE_ENV !== 'test') {
+      initCronJobs();
+
       const existingAdmin = await User.findOne({ where: { accountType: Constants.USER_ACC_TYPES[3] } });
 
       if (!existingAdmin) {
@@ -66,7 +69,6 @@ const startServer = async () => {
     app.listen(port, () => {
       console.log(Messages.APP_LISTENING);
     });
-
   } 
   catch (error: any) {
     console.error(Messages.DB_ERR_SYNCING, error);

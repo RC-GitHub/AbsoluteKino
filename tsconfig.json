@@ -17,6 +17,6 @@
     "src/**/*.ts", 
     "scripts/**/*.ts", 
     "scraping/**/*.ts"
-  ],
+, "utils/cleanup.ts", "utils/cron.ts"  ],
   "exclude": ["node_modules", "tests", "dist"]
 }
