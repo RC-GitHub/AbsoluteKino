@@ -19,7 +19,9 @@
     "start-js": "node dist/src/server.js",
     "dev": "npx nodemon --exec npx tsx src/server.ts",
     "admin": "tsx scripts/owner-tool.ts",
+    "admin-js": "node dist/scripts/owner-tool.js",
     "scrape": "tsx scraping/scraper.ts",
+    "scrape-js": "node dist/scraping/scraper.js",
     "test": "vitest run --reporter=verbose --no-isolate"
   },
   "dependencies": {
