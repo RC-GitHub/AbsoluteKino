@@ -140,6 +140,7 @@ export const USER_MSG_REVOKE = "Site Admin privileges have been successfully rev
 export const USER_MSG_UPDATE_SUCCESS = "Site Admin profile updated successfully.";
 export const USER_MSG_DEL_SUCCESS = "Site Admin user deleted successfully.";
 
+export const USER_MSG_REGISTER = "User successfully registered";
 export const USER_MSG_LOGIN = "User successfully logged in";
 export const USER_MSG_LOGOUT = "User successfully logged out";
 export const USER_ERR_TOKEN = "User version should be a positive integer"

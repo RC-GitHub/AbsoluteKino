@@ -1,3 +1,5 @@
+import { CONFIG } from "./config";
+
 //---------------------------------
 // Typical Values
 //---------------------------------
@@ -13,6 +15,15 @@ export const TYPICAL_MAX_LATITUDE: number = 90;
 
 export const TYPICAL_MIN_LONGITUDE: number = -180;
 export const TYPICAL_MAX_LONGITUDE: number = 180;
+
+//---------------------------------
+// Cinema
+//---------------------------------
+export const CRON_USER_INTERVAL: number = CONFIG.NODE_ENV === "cron" ? 1 : 5;
+export const CRON_RESERVATION_INTERVAL: number = CONFIG.NODE_ENV === "cron" ? 1 : 5;
+
+export const CLEANUP_USER_INTERVAL: number = CONFIG.NODE_ENV === "cron" ? 1 : 60;
+export const CLEANUP_RESERVATION_INTERVAL: number = CONFIG.NODE_ENV === "cron" ? 1 : 15;
 
 //---------------------------------
 // Cinema

@@ -1,8 +1,9 @@
 import cron from "node-cron";
+import * as Constants from "../src/constants";
 import { cleanUpExpiredReservations, cleanUpGuestUsers } from "./cleanup";
 
 export function initCronJobs() {
-    cron.schedule("*/5 * * * *", async () => {
+    cron.schedule(`*/${Constants.CRON_RESERVATION_INTERVAL} * * * *`, async () => {
         try {
             const count = await cleanUpExpiredReservations();
             if (count && count > 0) {
@@ -13,7 +14,7 @@ export function initCronJobs() {
         }
     });
 
-    cron.schedule("0 * * * *", async () => {
+    cron.schedule(`*/${Constants.CRON_USER_INTERVAL} * * * *`, async () => {
         try {
             const count = await cleanUpGuestUsers();
             if (count && count > 0) {

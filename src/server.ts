@@ -50,9 +50,9 @@ const startServer = async () => {
     await sequelize.sync({force: CONFIG.DB.FORCE_SYNC});
     console.log(Messages.DB_SYNCED);
 
-    if (CONFIG.NODE_ENV !== 'test') {
-      initCronJobs();
+    initCronJobs();
 
+    if (CONFIG.NODE_ENV !== 'test') {
       const existingAdmin = await User.findOne({ where: { accountType: Constants.USER_ACC_TYPES[3] } });
 
       if (!existingAdmin) {

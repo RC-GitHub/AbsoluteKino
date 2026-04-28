@@ -64,7 +64,7 @@ export interface UserAttributes {
 
 interface UserCreationAttributes extends Optional<UserAttributes, "id" | "createdAt" | "updatedAt"> {}
 
-export interface UserInstance extends Model<UserAttributes>, UserAttributes { }
+export interface UserInstance extends Model<UserAttributes, UserCreationAttributes>, UserAttributes { }
 
 export const User = sequelize.define<UserInstance, UserCreationAttributes>("User", {
   ...commonAttributes,
@@ -653,7 +653,7 @@ export interface ReservationAttributes {
   updatedAt: Date;
 }
 
-export interface ReservationInstance extends Model<ReservationAttributes>, ReservationAttributes {
+export interface ReservationInstance extends Model<ReservationAttributes, ReservationCreationAttributes>, ReservationAttributes {
     Screening: ScreeningInstance;
     Seat: SeatInstance;
     User: UserInstance;

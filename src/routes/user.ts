@@ -131,7 +131,7 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
         const { password: unusedPass, ...userWithoutPassword } = userJson;
 
         res.send({
-            message: Messages.USER_MSG_LOGIN,
+            message: Messages.USER_MSG_REGISTER,
             users: [userWithoutPassword]
         });
     }

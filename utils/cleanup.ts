@@ -5,7 +5,7 @@ import * as Constants from "../src/constants";
 
 export async function cleanUpExpiredReservations(): Promise<number | undefined> {
     try {
-        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+        const fifteenMinutesAgo = new Date(Date.now() - Constants.CLEANUP_RESERVATION_INTERVAL * 60 * 1000);
         
         return await Reservation.destroy({
             where: {
@@ -20,7 +20,7 @@ export async function cleanUpExpiredReservations(): Promise<number | undefined> 
 
 export async function cleanUpGuestUsers(): Promise<number | undefined> {
     try {
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const oneHourAgo = new Date(Date.now() - Constants.CLEANUP_USER_INTERVAL * 60 * 1000);
         
         return await User.destroy({
             where: {
