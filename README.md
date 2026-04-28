@@ -18,7 +18,7 @@ Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubunt
    # IMPORTANT: Complete the "Environment Configuration" section below first!
 
    # Standard compose up creates the production version
-   docker compose up -d --build
+   docker compose up
    ```
 
 ---
@@ -72,13 +72,13 @@ The application relies on a `.env` file. **This step must be completed before ru
 ## Running & Testing
 
 ### Using Docker
-* **Start Server:** `docker compose up -d` or `docker compose -f docker-compose.prod.yml up -d`
+* **Start Server:** `docker compose up` or `docker compose -f docker-compose.prod.yml up`
 * **View Logs:** `docker compose logs -f`
 * **Development:** `docker compose -f docker-compose.dev.yml up`
 * **Run Tests:**
-  1. `docker compose -f docker-compose.dev.yml up -d`
+  1. `docker compose -f docker-compose.dev.yml up`
   2. `docker compose exec api npm run test`
-  3. *To return to production mode:* `docker compose up -d` or `docker compose -f docker-compose.prod.yml up -d`
+  3. *To return to production mode:* `docker compose up` or `docker compose -f docker-compose.prod.yml up`
 
 ### Using Manual Setup
 * **Production:**  
