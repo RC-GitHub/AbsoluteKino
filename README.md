@@ -14,7 +14,10 @@ Docker ensures the app runs exactly the same on Windows and Linux (CachyOS/Ubunt
    ```bash
    git clone https://github.com/RC-GitHub/AbsoluteKino.git
    cd AbsoluteKino
+
    # IMPORTANT: Complete the "Environment Configuration" section below first!
+
+   # Standard compose up creates the production version
    docker compose up -d --build
    ```
 
@@ -69,16 +72,18 @@ The application relies on a `.env` file. **This step must be completed before ru
 ## Running & Testing
 
 ### Using Docker
-* **Start Server:** `docker compose up -d`
+* **Start Server:** `docker compose up -d` or `docker compose -f docker-compose.prod.yml up -d`
 * **View Logs:** `docker compose logs -f`
-* **Development:** `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`
+* **Development:** `docker compose -f docker-compose.dev.yml up`
 * **Run Tests:**
-  1. `docker compose -f docker-compose.yml -f docker-compose.test.yml up -d`
+  1. `docker compose -f docker-compose.dev.yml up -d`
   2. `docker compose exec api npm run test`
-  3. *To return to production mode:* `docker compose up -d`
+  3. *To return to production mode:* `docker compose up -d` or `docker compose -f docker-compose.prod.yml up -d`
 
 ### Using Manual Setup
-* **Production:**  `npm run start-js` or `npm run start` (TypeScript version)
+* **Production:**  
+  * `npm run build` then `npm run start-js` or 
+  * `npm run start` (TypeScript version)
 * **Development:** `npm run dev`
 * **Run Tests:**
   1. Set `NODE_ENV=test` in `.env`.

@@ -1,8 +1,11 @@
 services:
   api:
-    build: .
+    image: absolutekino-dev:latest  
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "3002:3000"
     env_file:
       - .env
     command: npm run dev
