@@ -64,7 +64,8 @@ The application relies on a `.env` file. **This step must be completed before ru
    Open `.env` and configure:
    * **EXTERNAL_PORT:** The port to call to send requests
    * **JWT_SECRET:** A long, random string.
-   * **INITIAL_OWNER_...:** Credentials for your first Admin account.
+   * **INITIAL_OWNER_...:** Credentials for your first Admin account.\
+  
    On top of that the user might define their own database supported by [Sequelize](https://sequelize.org/) (**Note:** That would however require adding necessary `npm` packages)
 
 > [!IMPORTANT]
