@@ -238,9 +238,9 @@ These statuses apply globally across all modules. If a request fails here, it ne
 
 | Status | Message Constant | Trigger Condition | Array Handling |
 | :--- | :--- | :--- | :--- |
+| **400** | `*_ERR_ID` | ID is not a number, NaN, or below `TYPICAL_MIN_ID`. | Returns empty arrays[^2]. |
 | **401** | `AUTH_REQUIRED` | Missing or malformed `auth_token` cookie. | Returns empty arrays[^2]. |
 | **401** | `AUTH_SESSION` | `tokenVersion` mismatch or expired JWT. | Clears cookie; returns empty arrays[^2]. |
-| **400** | `*_ERR_ID` | ID is not a number, NaN, or below `TYPICAL_MIN_ID`. | Returns empty arrays[^2]. |
 | **403** | `AUTH_FORBIDDEN` | Insufficient level or no membership/ownership link. | Returns empty arrays[^2]. |
 | **500** | `DB_ERR_ASSOCIATION` | Missing database relation (e.g., Seat has no associated Room). | Returns empty arrays[^2]. |
 
