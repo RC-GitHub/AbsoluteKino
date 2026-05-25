@@ -250,4 +250,4 @@ These statuses apply globally across all modules. If a request fails here, it ne
 ---
 
 ### Endpoints
-Endpoint documentation can be found in [`DOCUMENTATION.md`](https://github.com/RC-GitHub/AbsoluteKino/DOCUMENTATION.md).
+Endpoint documentation can be found in [`ENDPOINT_DOCUMENTATION.md`](https://github.com/RC-GitHub/AbsoluteKino/blob/main/ENDPOINT_DOCUMENTATION.md).
