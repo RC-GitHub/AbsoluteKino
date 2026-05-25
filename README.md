@@ -62,7 +62,7 @@ The application relies on a `.env` file. **This step must be completed before ru
    ```
 2. **Edit your variables:**
    Open `.env` and configure:
-   * **EXTERNAL_PORT:** The port to call to send requests
+   * **EXTERNAL_PORT:** The port to call to send requests (`http://localhost:<EXTERNAL_PORT>`)
    * **JWT_SECRET:** A long, random string.
    * **INITIAL_OWNER_...:** Credentials for your first Admin account.
   
@@ -221,6 +221,12 @@ docker compose exec api npm run scrape-js -- 5
 
 ## Documentation
 
+### Architecture
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Web Framework**: [Express](https://expressjs.com/en/)
+- **ORM**: [Sequelize](https://sequelize.org/)
+- **Database**: [SQLite](https://sqlite.org/) (by default)
+
 ### Additional information
 - Users with higher privilege level can access endpoints with lower privilege level requirement (if they meet all other side criteria as well[^1]).
 - All constants mentioned in the documentation can be found in [`constants.ts`](https://github.com/RC-GitHub/AbsoluteKino/blob/main/src/constants.ts) file.
@@ -242,7 +248,7 @@ These statuses apply globally across all modules. If a request fails here, it ne
 ---
 
 <details open>
-<summary><h3>/user</h3></summary>
+<summary><h3>/user</h3> endpoint</summary>
 
 #### POST /register
 Creates a new user. If no data is provided, an unauthorized "Guest" account is created. To create an authorized account, credentials must be provided.
@@ -431,7 +437,7 @@ Deletes a non-Site Admin user from the system.
 ---
 
 <details>
-<summary><h3>/cinema</h3></summary>
+<summary><h3>/cinema</h3> endpoint</summary>
 <br>
 
 #### POST /new
@@ -525,7 +531,7 @@ Removes a cinema from the database.
 ---
 
 <details>
-<summary><h3>/room</h3></summary>
+<summary><h3>/room</h3> endpoint</summary>
 
 #### POST /new
 Adds a new room to a specific cinema. 
@@ -654,7 +660,7 @@ Permanently removes a room from the database.
 ---
 
 <details>
-<summary><h3>/seat</h3></summary>
+<summary><h3>/seat</h3> endpoint</summary>
 
 #### POST /new
 Adds a single seat to a specific room. Validates coordinates and grid positions against the room's physical dimensions and constraints.
@@ -756,7 +762,7 @@ Permanently removes a seat from the room layout.
 ---
 
 <details>
-<summary><h3>/movie</h3></summary>
+<summary><h3>/movie</h3> endpoint</summary>
 
 #### POST /new
 Adds a new movie to the global database. Includes extensive validation for strings, URL formats[^4] (Poster/Trailer), and ISO date parsing.
@@ -864,7 +870,7 @@ Permanently removes a movie from the database.
 ---
 
 <details>
-<summary><h3>/screening</h3></summary>
+<summary><h3>/screening</h3> endpoint</summary>
 
 #### POST /new
 Creates a new screening, linking a specific movie to a room at a scheduled time.
@@ -982,7 +988,7 @@ Removes a screening from the schedule.
 ---
 
 <details>
-<summary><h3>/reservation</h3></summary>
+<summary><h3>/reservation</h3> endpoint</summary>
 
 #### POST /new
 Adds a new reservation for a specific seat at a screening.
@@ -1139,7 +1145,7 @@ Deletes a reservation with the specified ID.
 ---
 
 <details>
-<summary><h3>/products</h3></summary>
+<summary><h3>/products</h3> endpoint</summary>
 
 #### POST /new
 Adds a product to the database.
