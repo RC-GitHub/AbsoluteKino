@@ -97,6 +97,9 @@ The application relies on a `.env` file. **This step must be completed before ru
 
 ---
 
+## Front-end implementations
+* None
+
 ## CLI Utilities
 
 <details>
