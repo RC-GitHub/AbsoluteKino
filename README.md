@@ -11,7 +11,7 @@ Docker ensures the app runs exactly the same on Windows and Linux without worryi
 
 1. **Prerequisites:**
    * **Windows**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [Git](https://git-scm.com/), then run Docker Desktop
-   * **Linux**: Install `docker` + `docker-compose` on your system.
+   * **Linux**: Install `docker` + `docker-compose` on your system and make sure it's running.
 3. **Terminal setup:**
    ```bash
    git clone https://github.com/RC-GitHub/AbsoluteKino.git
